@@ -37,7 +37,9 @@ const ControleFrete: React.FC = () => {
     total_km: '',
     valor_frete: '',
     saldo_receber: '',
-    situacao: 'Pendente'
+    situacao: 'Pendente',
+    tipo_pagamento: '',
+    data_pagamento: ''
   });
 
   // Carregar dados iniciais
@@ -81,7 +83,9 @@ const ControleFrete: React.FC = () => {
       total_km: '',
       valor_frete: '',
       saldo_receber: '',
-      situacao: 'Pendente'
+      situacao: 'Pendente',
+      tipo_pagamento: '',
+      data_pagamento: ''
     });
     setEditingId(null);
     setShowForm(false);
@@ -103,7 +107,9 @@ const ControleFrete: React.FC = () => {
       total_km: frete.total_km?.toString() || '',
       valor_frete: frete.valor_frete.toString(),
       saldo_receber: frete.saldo_receber?.toString() || '',
-      situacao: frete.situacao
+      situacao: frete.situacao,
+      tipo_pagamento: frete.tipo_pagamento || '',
+      data_pagamento: frete.data_pagamento || ''
     });
     setEditingId(frete.id || null);
     setShowForm(true);
@@ -124,6 +130,18 @@ const ControleFrete: React.FC = () => {
         return;
       }
 
+      // Validações condicionais para pagamento
+      if (formData.situacao === 'Pago') {
+        if (!formData.tipo_pagamento) {
+          alert('Selecione o tipo de pagamento quando a situação for "Pago"');
+          return;
+        }
+        if (!formData.data_pagamento) {
+          alert('Informe a data do pagamento quando a situação for "Pago"');
+          return;
+        }
+      }
+
       const freteData = {
         data_emissao: formData.data_emissao,
         pecuarista: formData.pecuarista,
@@ -139,7 +157,9 @@ const ControleFrete: React.FC = () => {
         total_km: formData.total_km ? parseInt(formData.total_km) : undefined,
         valor_frete: parseFloat(formData.valor_frete),
         saldo_receber: formData.saldo_receber ? parseFloat(formData.saldo_receber) : parseFloat(formData.valor_frete),
-        situacao: formData.situacao
+        situacao: formData.situacao,
+        tipo_pagamento: formData.situacao === 'Pago' ? formData.tipo_pagamento : undefined,
+        data_pagamento: formData.situacao === 'Pago' ? formData.data_pagamento : undefined
       };
 
       if (editingId) {
@@ -485,8 +505,6 @@ const ControleFrete: React.FC = () => {
             >
               <option value="">Todas as Situações</option>
               <option value="Pendente">Pendente</option>
-              <option value="Em Andamento">Em Andamento</option>
-              <option value="Concluído">Concluído</option>
               <option value="Pago">Pago</option>
             </select>
           </div>
@@ -702,11 +720,37 @@ const ControleFrete: React.FC = () => {
                           required
                         >
                           <option value="Pendente">Pendente</option>
-                          <option value="Em Andamento">Em Andamento</option>
-                          <option value="Concluído">Concluído</option>
                           <option value="Pago">Pago</option>
                         </select>
                       </div>
+                      
+                      {formData.situacao === 'Pago' && (
+                        <>
+                          <div className="form-group">
+                            <label>Tipo de Pagamento *</label>
+                            <select
+                              value={formData.tipo_pagamento}
+                              onChange={(e) => setFormData({...formData, tipo_pagamento: e.target.value})}
+                              required
+                            >
+                              <option value="">Selecione o tipo</option>
+                              <option value="PIX">PIX</option>
+                              <option value="Dinheiro">Dinheiro</option>
+                              <option value="Cheque">Cheque</option>
+                              <option value="TED">TED</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label>Data do Pagamento *</label>
+                            <input
+                              type="date"
+                              value={formData.data_pagamento}
+                              onChange={(e) => setFormData({...formData, data_pagamento: e.target.value})}
+                              required
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -756,13 +800,15 @@ const ControleFrete: React.FC = () => {
                   <th>Total KM</th>
                   <th>Valor Frete</th>
                   <th>Saldo a Receber</th>
+                  <th>Tipo Pagamento</th>
+                  <th>Data Pagamento</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {fretesFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={16} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={18} style={{ textAlign: 'center', padding: '2rem' }}>
                       {filtroSituacao ? `Nenhum frete com situação "${filtroSituacao}"` : 'Nenhum frete cadastrado'}
                     </td>
                   </tr>
@@ -788,6 +834,8 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.total_km || '-'}</td>
                       <td>{formatCurrency(frete.valor_frete)}</td>
                       <td>{frete.saldo_receber ? formatCurrency(frete.saldo_receber) : '-'}</td>
+                      <td>{frete.tipo_pagamento || '-'}</td>
+                      <td>{frete.data_pagamento ? formatDate(frete.data_pagamento) : '-'}</td>
                       <td>
                         <div className="actions">
                           <button 
@@ -906,6 +954,8 @@ const ControleFrete: React.FC = () => {
                     <th>Base Cálculo</th>
                     <th>Valor</th>
                     <th>Situação</th>
+                    <th>Tipo Pagamento</th>
+                    <th>Data Pagamento</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -925,6 +975,8 @@ const ControleFrete: React.FC = () => {
                             {frete.situacao}
                           </span>
                         </td>
+                        <td>{frete.tipo_pagamento || '-'}</td>
+                        <td>{frete.data_pagamento ? formatDate(frete.data_pagamento) : '-'}</td>
                       </tr>
                     );
                   })}
