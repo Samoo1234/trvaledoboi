@@ -87,6 +87,14 @@
   background: #138496;
 }
 
+.btn-action.btn-danger {
+  background: #dc3545;
+}
+
+.btn-action.btn-danger:hover {
+  background: #c82333;
+}
+
 .btn-secondary {
   background: var(--primary-white);
   color: var(--primary-red);

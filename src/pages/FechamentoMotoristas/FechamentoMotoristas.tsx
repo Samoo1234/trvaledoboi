@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Download, Eye, Save, FileText, Printer } from 'lucide-react';
+import { Calculator, Download, Eye, Save, FileText, Printer, Trash2 } from 'lucide-react';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { pdfService } from '../../services/pdfService';
 import './FechamentoMotoristas.css';
@@ -87,6 +87,21 @@ const FechamentoMotoristas: React.FC = () => {
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       alert('Erro ao atualizar status.');
+    }
+  };
+
+  const deletarFechamento = async (id: number, nomeMotorista: string) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o fechamento do motorista "${nomeMotorista}"?`)) {
+      return;
+    }
+
+    try {
+      await fechamentoService.delete(id);
+      setFechamentos(fechamentos.filter(f => f.id !== id));
+      alert('Fechamento excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir fechamento:', error);
+      alert('Erro ao excluir fechamento. Tente novamente.');
     }
   };
 
@@ -302,6 +317,13 @@ const FechamentoMotoristas: React.FC = () => {
                         title="Baixar Relatório PDF"
                       >
                         <Download size={16} />
+                      </button>
+                      <button 
+                        className="btn-action btn-danger"
+                        onClick={() => fechamento.id && deletarFechamento(fechamento.id, fechamento.motorista?.nome || 'Motorista')}
+                        title="Excluir Fechamento"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
