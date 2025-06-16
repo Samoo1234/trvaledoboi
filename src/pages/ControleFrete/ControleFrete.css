@@ -1,0 +1,520 @@
+@import '../../styles/global.css';
+
+.controle-frete {
+  padding: 0;
+}
+
+.controle-frete .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.controle-frete .filtros {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.controle-frete .filtro-select {
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.controle-frete .filtro-select:focus {
+  outline: none;
+}
+
+.controle-frete .form-container.large {
+  max-width: 1000px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.controle-frete .form-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.controle-frete .form-section h3 {
+  margin: 0 0 1rem 0;
+  color: #8B0000;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.controle-frete .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.controle-frete .form-row:last-child {
+  margin-bottom: 0;
+}
+
+.controle-frete .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.controle-frete .form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Tabela de fretes - usando cores padrão do sistema */
+.controle-frete .table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.controle-frete .frete-table {
+  font-size: 0.9rem;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.controle-frete .frete-table th {
+  background: #8B0000;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+  padding: 1rem 0.75rem;
+  border: none;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.controle-frete .frete-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: center;
+  vertical-align: middle;
+  background: white;
+}
+
+.controle-frete .frete-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.controle-frete .frete-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.controle-frete .frete-table tbody tr:nth-child(even):hover {
+  background: #f0f0f0;
+}
+
+/* Situação com cores mais suaves e profissionais */
+.controle-frete .situacao {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  display: inline-block;
+  min-width: 90px;
+  letter-spacing: 0.5px;
+}
+
+.controle-frete .situacao.pendente {
+  background: #8B0000;
+  color: white;
+}
+
+.controle-frete .situacao.em-andamento {
+  background: #0066cc;
+  color: white;
+}
+
+.controle-frete .situacao.concluido {
+  background: #28a745;
+  color: white;
+}
+
+.controle-frete .situacao.pago {
+  background: #20c997;
+  color: white;
+}
+
+/* Larguras das colunas otimizadas */
+.controle-frete .frete-table th:nth-child(1) { width: 8%; }   /* Situação */
+.controle-frete .frete-table th:nth-child(2) { width: 7%; }   /* Data */
+.controle-frete .frete-table th:nth-child(3) { width: 10%; }  /* Pecuarista */
+.controle-frete .frete-table th:nth-child(4) { width: 8%; }   /* Origem */
+.controle-frete .frete-table th:nth-child(5) { width: 8%; }   /* Destino */
+.controle-frete .frete-table th:nth-child(6) { width: 6%; }   /* Nº Minuta */
+.controle-frete .frete-table th:nth-child(7) { width: 6%; }   /* Nº CTE */
+.controle-frete .frete-table th:nth-child(8) { width: 8%; }   /* Cliente */
+.controle-frete .frete-table th:nth-child(9) { width: 6%; }   /* Placa */
+.controle-frete .frete-table th:nth-child(10) { width: 8%; }  /* Tipo Veículo */
+.controle-frete .frete-table th:nth-child(11) { width: 10%; } /* Motorista */
+.controle-frete .frete-table th:nth-child(12) { width: 5%; }  /* Faixa */
+.controle-frete .frete-table th:nth-child(13) { width: 5%; }  /* Total KM */
+.controle-frete .frete-table th:nth-child(14) { width: 8%; }  /* Valor Frete */
+.controle-frete .frete-table th:nth-child(15) { width: 8%; }  /* Saldo a Receber */
+.controle-frete .frete-table th:nth-child(16) { width: 5%; }  /* Ações */
+
+/* Alinhamento de valores monetários */
+.controle-frete .frete-table td:nth-child(14),
+.controle-frete .frete-table td:nth-child(15) {
+  text-align: right;
+  font-weight: 600;
+  color: #8B0000;
+  font-family: 'Courier New', monospace;
+}
+
+/* Botões de ação com cores padrão */
+.controle-frete .actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.controle-frete .btn-edit {
+  background: #8B0000;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.controle-frete .btn-edit:hover {
+  background: #660000;
+  transform: translateY(-1px);
+}
+
+.controle-frete .btn-delete {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.controle-frete .btn-delete:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+}
+
+/* Melhorar aparência quando não há dados */
+.controle-frete .frete-table tbody tr td[colspan] {
+  padding: 3rem;
+  color: #666;
+  font-style: italic;
+  background: #f8f9fa;
+}
+
+/* Responsividade */
+@media (max-width: 1400px) {
+  .controle-frete .frete-table {
+    font-size: 0.8rem;
+  }
+  
+  .controle-frete .frete-table th,
+  .controle-frete .frete-table td {
+    padding: 0.6rem 0.4rem;
+  }
+  
+  .controle-frete .situacao {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+    min-width: 70px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .controle-frete .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .controle-frete .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .controle-frete .table-container {
+    overflow-x: auto;
+    border-radius: 0;
+  }
+  
+  .controle-frete .frete-table {
+    min-width: 1200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .controle-frete .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .controle-frete .form-container.large {
+    max-width: 95vw;
+    margin: 1rem;
+  }
+  
+  .controle-frete .frete-table {
+    font-size: 0.75rem;
+  }
+  
+  .controle-frete .frete-table th,
+  .controle-frete .frete-table td {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .controle-frete .situacao {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+    min-width: 60px;
+  }
+  
+  .controle-frete .actions {
+    gap: 0.25rem;
+  }
+  
+  .controle-frete .btn-edit,
+  .controle-frete .btn-delete {
+    padding: 0.4rem;
+  }
+}
+
+/* Abas de navegação */
+.tabs-container {
+  margin-bottom: 2rem;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border-gray);
+  background: var(--primary-white);
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.tab {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--dark-gray);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.tab:hover {
+  background-color: rgba(139, 0, 0, 0.05);
+  color: var(--primary-red);
+}
+
+.tab.active {
+  background-color: var(--primary-red);
+  color: var(--primary-white);
+  border-bottom: 3px solid var(--hover-red);
+}
+
+.tab.active:hover {
+  background-color: var(--hover-red);
+}
+
+/* Botão PDF específico */
+.btn-pdf {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-pdf:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+/* Tabela de acerto - layout mais compacto */
+.frete-table {
+  font-size: 0.85rem;
+}
+
+.frete-table th,
+.frete-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border: 1px solid var(--border-gray);
+}
+
+.frete-table th {
+  background: var(--primary-red);
+  color: var(--primary-white);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.frete-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+/* Responsividade para as abas */
+@media (max-width: 768px) {
+  .tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    text-align: center;
+    padding: 0.75rem;
+  }
+
+  .frete-table {
+    font-size: 0.75rem;
+  }
+
+  .frete-table th,
+  .frete-table td {
+    padding: 0.25rem;
+    max-width: 100px;
+  }
+}
+
+/* Seção de filtros do acerto */
+.acerto-filters {
+  background: var(--primary-white);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow);
+}
+
+.acerto-filters h3 {
+  color: var(--primary-red);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: var(--dark-gray);
+  font-size: 0.9rem;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 0.5rem;
+  border: 2px solid var(--border-gray);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--primary-red);
+}
+
+/* Botão de ação do acerto */
+.acerto-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-acerto {
+  background: var(--primary-red);
+  color: var(--primary-white);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-acerto:hover {
+  background: var(--hover-red);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+/* Resumo do acerto */
+.acerto-summary {
+  background: var(--light-gray);
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.acerto-summary .total {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary-red);
+}
+
+.acerto-summary .count {
+  color: var(--dark-gray);
+} 

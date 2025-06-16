@@ -1,0 +1,77 @@
+@import '../../styles/global.css';
+
+.cadastro-caminhoes {
+  padding: 0;
+}
+
+.cadastro-caminhoes .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cadastro-caminhoes .form-row:last-of-type {
+  grid-template-columns: 1fr;
+}
+
+.cadastro-caminhoes .status.ativo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.cadastro-caminhoes .status.inativo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.cadastro-caminhoes .status.manutenção {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.cadastro-caminhoes .actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.cadastro-caminhoes .btn-edit {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.cadastro-caminhoes .btn-edit:hover {
+  background: #0056b3;
+}
+
+.cadastro-caminhoes .btn-delete {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.cadastro-caminhoes .btn-delete:hover {
+  background: #c82333;
+}
+
+@media (max-width: 768px) {
+  .cadastro-caminhoes .form-row {
+    grid-template-columns: 1fr;
+  }
+} 

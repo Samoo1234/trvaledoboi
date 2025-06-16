@@ -1,0 +1,151 @@
+@import '../../styles/global.css';
+
+.cadastro-motoristas {
+  padding: 0;
+}
+
+.cadastro-motoristas .form-container.large {
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.cadastro-motoristas .form-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.cadastro-motoristas .form-section h3 {
+  margin: 0 0 1rem 0;
+  color: #8B0000;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cadastro-motoristas .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cadastro-motoristas .form-row:last-child {
+  margin-bottom: 0;
+}
+
+.cadastro-motoristas .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.cadastro-motoristas .form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.cadastro-motoristas .status.ativo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.cadastro-motoristas .status.inativo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.cadastro-motoristas .status.suspenso {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.cadastro-motoristas .tipo.próprio {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.cadastro-motoristas .tipo.terceiro {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.cadastro-motoristas .actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.cadastro-motoristas .btn-edit {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.cadastro-motoristas .btn-edit:hover {
+  background: #0056b3;
+}
+
+.cadastro-motoristas .btn-delete {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.cadastro-motoristas .btn-delete:hover {
+  background: #c82333;
+}
+
+.cadastro-motoristas .data-table th:nth-child(1) { width: 20%; }
+.cadastro-motoristas .data-table th:nth-child(2) { width: 12%; }
+.cadastro-motoristas .data-table th:nth-child(3) { width: 12%; }
+.cadastro-motoristas .data-table th:nth-child(4) { width: 8%; }
+.cadastro-motoristas .data-table th:nth-child(5) { width: 12%; }
+.cadastro-motoristas .data-table th:nth-child(6) { width: 12%; }
+.cadastro-motoristas .data-table th:nth-child(7) { width: 10%; }
+.cadastro-motoristas .data-table th:nth-child(8) { width: 8%; }
+.cadastro-motoristas .data-table th:nth-child(9) { width: 6%; }
+
+@media (max-width: 1024px) {
+  .cadastro-motoristas .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .cadastro-motoristas .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .cadastro-motoristas .form-container.large {
+    max-width: 95vw;
+    margin: 1rem;
+  }
+  
+  .cadastro-motoristas .data-table {
+    font-size: 0.8rem;
+  }
+  
+  .cadastro-motoristas .data-table th,
+  .cadastro-motoristas .data-table td {
+    padding: 0.5rem 0.25rem;
+  }
+} 
