@@ -41,7 +41,7 @@ export const freteService = {
         caminhao:caminhoes(placa, tipo),
         motorista:motoristas(nome)
       `)
-      .order('data_emissao', { ascending: false });
+      .order('data_emissao', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
@@ -130,7 +130,7 @@ export const freteService = {
         motorista:motoristas(nome)
       `)
       .eq('situacao', situacao)
-      .order('data_emissao', { ascending: false });
+      .order('data_emissao', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
@@ -150,7 +150,7 @@ export const freteService = {
       `)
       .gte('data_emissao', dataInicio)
       .lte('data_emissao', dataFim)
-      .order('data_emissao', { ascending: false });
+      .order('data_emissao', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
@@ -169,7 +169,7 @@ export const freteService = {
         motorista:motoristas(nome)
       `)
       .eq('motorista_id', motoristaId)
-      .order('data_emissao', { ascending: false });
+      .order('data_emissao', { ascending: true });
     
     if (error) {
       throw new Error(error.message);

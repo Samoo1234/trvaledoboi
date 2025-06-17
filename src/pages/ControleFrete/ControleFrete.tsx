@@ -165,15 +165,16 @@ const ControleFrete: React.FC = () => {
 
       if (editingId) {
         // Atualizar frete existente
-        const updatedFrete = await freteService.update(editingId, freteData);
-        setFretes(fretes.map(f => f.id === editingId ? updatedFrete : f));
+        await freteService.update(editingId, freteData);
         alert('Frete atualizado com sucesso!');
       } else {
         // Criar novo frete
-        const newFrete = await freteService.create(freteData);
-        setFretes([newFrete, ...fretes]);
+        await freteService.create(freteData);
         alert('Frete cadastrado com sucesso!');
       }
+      
+      // Recarregar dados para manter ordem correta
+      await loadData();
       
       resetForm();
     } catch (error) {
