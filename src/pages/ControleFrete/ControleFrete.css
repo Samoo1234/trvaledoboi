@@ -152,6 +152,11 @@
   color: white;
 }
 
+.controle-frete .situacao.frigorifico {
+  background: #007bff;
+  color: white;
+}
+
 .controle-frete .situacao.pago {
   background: #20c997;
   color: white;

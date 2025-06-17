@@ -213,6 +213,7 @@ const ControleFrete: React.FC = () => {
       case 'pendente': return 'pendente';
       case 'em andamento': return 'em-andamento';
       case 'concluído': case 'concluido': return 'concluido';
+      case 'frigorífico': return 'frigorifico';
       case 'pago': return 'pago';
       default: return 'pendente';
     }
@@ -723,6 +724,7 @@ const ControleFrete: React.FC = () => {
                           required
                         >
                           <option value="Pendente">Pendente</option>
+                          <option value="Frigorífico">Frigorífico</option>
                           <option value="Pago">Pago</option>
                         </select>
                       </div>
