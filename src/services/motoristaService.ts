@@ -17,6 +17,7 @@ export interface Motorista {
   data_nascimento: string;
   tipo_motorista: string;
   status: string;
+  porcentagem_comissao?: number;
   observacoes?: string;
   created_at?: string;
   updated_at?: string;

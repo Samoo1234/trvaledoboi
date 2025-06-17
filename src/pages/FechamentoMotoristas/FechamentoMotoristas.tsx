@@ -277,7 +277,10 @@ const FechamentoMotoristas: React.FC = () => {
                   <td>
                     {formatCurrency(fechamento.valor_comissao)}
                     <small style={{ display: 'block', color: '#666' }}>
-                      {fechamento.motorista?.tipo_motorista === 'Terceiro' ? '(90%)' : '(10%)'}
+                      {fechamento.motorista?.porcentagem_comissao 
+                        ? `(${fechamento.motorista.porcentagem_comissao}%)`
+                        : fechamento.motorista?.tipo_motorista === 'Terceiro' ? '(90%)' : '(10%)'
+                      }
                     </small>
                   </td>
                   <td>{formatCurrency(fechamento.descontos)}</td>

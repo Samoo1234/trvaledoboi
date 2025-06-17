@@ -57,7 +57,32 @@
 
 .sidebar-nav {
   flex: 1;
-  padding: 1rem 0;
+  padding: 1rem 0 2rem 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Custom scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  /* Ensure smooth scrolling */
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .nav-item {
@@ -96,5 +121,15 @@
   
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .sidebar-nav {
+    /* Adicionar padding extra no mobile para melhor usabilidade */
+    padding-bottom: 3rem;
+  }
+
+  .nav-item {
+    /* Links um pouco maiores no mobile */
+    padding: 1.2rem 1.5rem;
   }
 } 

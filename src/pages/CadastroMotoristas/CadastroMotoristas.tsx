@@ -24,6 +24,7 @@ const CadastroMotoristas: React.FC = () => {
     data_nascimento: '',
     tipo_motorista: 'Funcionário',
     status: 'Ativo',
+    porcentagem_comissao: '',
     observacoes: ''
   });
 
@@ -66,10 +67,11 @@ const CadastroMotoristas: React.FC = () => {
       cidade: '',
       estado: '',
       cep: '',
-      data_nascimento: '',
-      tipo_motorista: 'Funcionário',
-      status: 'Ativo',
-      observacoes: ''
+          data_nascimento: '',
+    tipo_motorista: 'Funcionário',
+    status: 'Ativo',
+    porcentagem_comissao: '',
+    observacoes: ''
     });
     setEditingId(null);
     setShowForm(false);
@@ -92,6 +94,7 @@ const CadastroMotoristas: React.FC = () => {
       data_nascimento: motorista.data_nascimento,
       tipo_motorista: motorista.tipo_motorista,
       status: motorista.status,
+      porcentagem_comissao: motorista.porcentagem_comissao?.toString() || '',
       observacoes: motorista.observacoes || ''
     });
     setEditingId(motorista.id || null);
@@ -174,6 +177,7 @@ const CadastroMotoristas: React.FC = () => {
         data_nascimento: formData.data_nascimento,
         tipo_motorista: formData.tipo_motorista,
         status: formData.status,
+        porcentagem_comissao: formData.porcentagem_comissao ? parseFloat(formData.porcentagem_comissao) : undefined,
         observacoes: formData.observacoes || undefined
       };
 
@@ -446,6 +450,21 @@ const CadastroMotoristas: React.FC = () => {
                       <option value="Inativo">Inativo</option>
                       <option value="Suspenso">Suspenso</option>
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label>% Comissão Personalizada</label>
+                    <input
+                      type="number"
+                      value={formData.porcentagem_comissao}
+                      onChange={(e) => setFormData({...formData, porcentagem_comissao: e.target.value})}
+                      placeholder={formData.tipo_motorista === 'Terceiro' ? 'Padrão: 90%' : 'Padrão: 10%'}
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                    <small style={{ color: '#666', fontSize: '0.8rem' }}>
+                      Deixe vazio para usar o padrão ({formData.tipo_motorista === 'Terceiro' ? '90%' : '10%'})
+                    </small>
                   </div>
                 </div>
                 <div className="form-row">

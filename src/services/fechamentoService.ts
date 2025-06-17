@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { valeService } from './valeService';
 
 export interface FechamentoMotorista {
   id?: number;
@@ -19,6 +20,7 @@ export interface FechamentoMotorista {
     id: number;
     nome: string;
     tipo_motorista: string;
+    porcentagem_comissao?: number;
   };
 }
 
@@ -34,12 +36,22 @@ export interface FechamentoDetalhado extends FechamentoMotorista {
 }
 
 class FechamentoService {
+  // Calcular porcentagem de comissão baseada no tipo e configuração personalizada
+  private calcularPorcentagemComissao(motorista: any): number {
+    // Se tem porcentagem personalizada, usar ela
+    if (motorista.porcentagem_comissao && motorista.porcentagem_comissao > 0) {
+      return motorista.porcentagem_comissao / 100; // Converter % para decimal
+    }
+    
+    // Usar padrão baseado no tipo
+    return motorista.tipo_motorista === 'Terceiro' ? 0.90 : 0.10;
+  }
   async getAll(): Promise<FechamentoMotorista[]> {
     const { data, error } = await supabase
       .from('fechamentos_motoristas')
       .select(`
         *,
-        motorista:motoristas(id, nome, tipo_motorista)
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
       `)
       .order('created_at', { ascending: false });
 
@@ -52,7 +64,7 @@ class FechamentoService {
       .from('fechamentos_motoristas')
       .select(`
         *,
-        motorista:motoristas(id, nome, tipo_motorista)
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
       `)
       .eq('periodo', periodo)
       .order('created_at', { ascending: false });
@@ -66,7 +78,7 @@ class FechamentoService {
       .from('fechamentos_motoristas')
       .select(`
         *,
-        motorista:motoristas(id, nome, tipo_motorista)
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
       `)
       .eq('id', id)
       .single();
@@ -90,12 +102,11 @@ class FechamentoService {
 
     if (fretesError) throw fretesError;
 
-    // Calcular comissão por frete
+    // Calcular comissão por frete usando porcentagem personalizada
+    const porcentagemComissao = this.calcularPorcentagemComissao(data.motorista);
     const fretesComComissao = fretes?.map(frete => ({
       ...frete,
-      valor_comissao: data.motorista?.tipo_motorista === 'Terceiro' 
-        ? frete.valor_frete * 0.90 // 90% para terceiros
-        : frete.valor_frete * 0.10 // 10% para funcionários
+      valor_comissao: frete.valor_frete * porcentagemComissao
     })) || [];
 
     return {
@@ -105,10 +116,10 @@ class FechamentoService {
   }
 
   async calcularFechamento(motoristaId: number, periodo: string): Promise<FechamentoMotorista> {
-    // Buscar motorista
+    // Buscar motorista com porcentagem de comissão
     const { data: motorista, error: motoristaError } = await supabase
       .from('motoristas')
-      .select('id, nome, tipo_motorista, status')
+      .select('id, nome, tipo_motorista, status, porcentagem_comissao')
       .eq('id', motoristaId)
       .single();
 
@@ -134,12 +145,19 @@ class FechamentoService {
       throw new Error(`Erro ao buscar fretes: ${fretesError.message}`);
     }
 
+    // Buscar total de vales do período
+    const totalVales = await valeService.getTotalByMotoristaAndPeriodo(motoristaId, periodo);
+
     // Calcular valores
     const totalFretes = fretes?.length || 0;
     const valorBruto = fretes?.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0) || 0;
-    const valorComissao = motorista.tipo_motorista === 'Terceiro' 
-      ? valorBruto * 0.90 // 90% para terceiros
-      : valorBruto * 0.10; // 10% para funcionários
+    
+    // Usar porcentagem personalizada ou padrão
+    const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
+    const valorComissao = valorBruto * porcentagemComissao;
+    
+    // Calcular valor líquido (comissão - vales)
+    const valorLiquido = valorComissao - totalVales;
 
     return {
       motorista_id: motoristaId,
@@ -148,8 +166,8 @@ class FechamentoService {
       total_fretes: totalFretes,
       valor_bruto: valorBruto,
       valor_comissao: valorComissao,
-      descontos: 0,
-      valor_liquido: valorComissao,
+      descontos: totalVales,
+      valor_liquido: valorLiquido,
       status: 'Pendente',
       observacoes: undefined,
       motorista
@@ -169,7 +187,7 @@ class FechamentoService {
       .insert([fechamentoParaBanco])
       .select(`
         *,
-        motorista:motoristas(id, nome, tipo_motorista)
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
       `)
       .single();
 
@@ -195,7 +213,7 @@ class FechamentoService {
       .eq('id', id)
       .select(`
         *,
-        motorista:motoristas(id, nome, tipo_motorista)
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
       `)
       .single();
 
@@ -217,7 +235,7 @@ class FechamentoService {
     // Incluir também motoristas sem status definido (considerá-los como ativos)
     const { data: motoristas, error: motoristasError } = await supabase
       .from('motoristas')
-      .select('id, nome, tipo_motorista, status')
+      .select('id, nome, tipo_motorista, status, porcentagem_comissao')
       .or('status.eq.Ativo,status.is.null');
 
     if (motoristasError) {
