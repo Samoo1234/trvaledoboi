@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { abastecimentoService, Abastecimento } from '../services/abastecimentoService';
 import { caminhaoService, Caminhao } from '../services/caminhaoService';
 import { motoristaService, Motorista } from '../services/motoristaService';
+import { formatDisplayDate } from '../services/dateUtils';
 import './ControleAbastecimento.css';
 
 const ControleAbastecimento: React.FC = () => {
@@ -165,7 +166,8 @@ const ControleAbastecimento: React.FC = () => {
   };
 
   const formatarData = (data: string) => {
-    return new Date(data).toLocaleDateString('pt-BR');
+    // CORREÇÃO: Usar formatDisplayDate para evitar problema de UTC
+    return formatDisplayDate(data);
   };
 
   const formatarMoeda = (valor: number) => {

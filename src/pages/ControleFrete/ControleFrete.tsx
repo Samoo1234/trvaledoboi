@@ -4,6 +4,7 @@ import CurrencyInput from 'react-currency-input-field';
 import { freteService, Frete } from '../../services/freteService';
 import { caminhaoService, Caminhao } from '../../services/caminhaoService';
 import { motoristaService, Motorista } from '../../services/motoristaService';
+import { formatDisplayDate } from '../../services/dateUtils';
 import './ControleFrete.css';
 
 const ControleFrete: React.FC = () => {
@@ -202,7 +203,8 @@ const ControleFrete: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // CORREÇÃO: Usar formatDisplayDate para evitar problema de UTC
+    return formatDisplayDate(dateString);
   };
 
   const getSituacaoClass = (situacao: string) => {
@@ -388,7 +390,7 @@ const ControleFrete: React.FC = () => {
         const caminhao = caminhoes.find(c => c.id === frete.caminhao_id);
         
         const rowData = [
-          new Date(frete.data_emissao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+          formatDisplayDate(frete.data_emissao).substring(0, 5), // DD/MM apenas
           caminhao?.tipo?.toUpperCase() || 'N/A',
           caminhao?.placa || 'N/A',
           frete.pecuarista.toUpperCase(),

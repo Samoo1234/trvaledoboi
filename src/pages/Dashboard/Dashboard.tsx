@@ -4,6 +4,7 @@ import { caminhaoService } from '../../services/caminhaoService';
 import { motoristaService } from '../../services/motoristaService';
 import { freteService } from '../../services/freteService';
 import { abastecimentoService } from '../../services/abastecimentoService';
+import { formatDisplayDate } from '../../services/dateUtils';
 import './Dashboard.css';
 
 interface DashboardStats {
@@ -123,7 +124,8 @@ const Dashboard: React.FC = () => {
   };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // CORREÇÃO: Usar formatDisplayDate para evitar problema de UTC
+    return formatDisplayDate(dateString);
   };
 
   const dashboardStats = [
