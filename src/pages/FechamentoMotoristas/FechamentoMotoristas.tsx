@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calculator, Download, Eye, Save, FileText, Printer, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calculator, Download, Eye, FileText, Trash2 } from 'lucide-react';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { pdfService } from '../../services/pdfService';
 import './FechamentoMotoristas.css';
@@ -13,12 +13,7 @@ const FechamentoMotoristas: React.FC = () => {
   });
   const [calculandoFechamento, setCalculandoFechamento] = useState(false);
 
-  // Carregar fechamentos do período selecionado
-  useEffect(() => {
-    loadFechamentos();
-  }, [selectedPeriodo]);
-
-  const loadFechamentos = async () => {
+  const loadFechamentos = useCallback(async () => {
     try {
       setLoading(true);
       const data = await fechamentoService.getByPeriodo(selectedPeriodo);
@@ -29,7 +24,12 @@ const FechamentoMotoristas: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriodo]);
+
+  // Carregar fechamentos do período selecionado
+  useEffect(() => {
+    loadFechamentos();
+  }, [loadFechamentos]);
 
   const calcularFechamento = async () => {
     if (calculandoFechamento) return;
