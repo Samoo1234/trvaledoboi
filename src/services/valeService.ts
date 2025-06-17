@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { extractPeriod } from './dateUtils';
 
 export interface Vale {
   id?: number;
@@ -81,24 +82,34 @@ class ValeService {
 
   // Calcular total de vales por motorista e período
   async getTotalByMotoristaAndPeriodo(motoristaId: number, periodo: string): Promise<number> {
+    console.log(`[VALE SERVICE] Buscando vales - motorista: ${motoristaId}, período: ${periodo}`);
+    
     const { data, error } = await supabase
       .from('vales_motoristas')
-      .select('valor')
+      .select('valor, periodo, data_vale')
       .eq('motorista_id', motoristaId)
       .eq('periodo', periodo);
     
     if (error) {
+      console.error(`[VALE SERVICE] Erro na consulta:`, error);
       throw new Error(error.message);
     }
     
-    return data?.reduce((total, vale) => total + (parseFloat(vale.valor) || 0), 0) || 0;
+    console.log(`[VALE SERVICE] Vales encontrados:`, data);
+    const total = data?.reduce((total, vale) => total + (parseFloat(vale.valor) || 0), 0) || 0;
+    console.log(`[VALE SERVICE] Total calculado: R$ ${total}`);
+    
+    return total;
   }
 
   // Criar um novo vale
   async create(valeData: ValeCreateData): Promise<Vale> {
-    // Extrair período da data
-    const dataVale = new Date(valeData.data_vale);
-    const periodo = `${(dataVale.getMonth() + 1).toString().padStart(2, '0')}/${dataVale.getFullYear()}`;
+    // CORREÇÃO: Extrair período da data sem problema de fuso horário
+    const periodo = extractPeriod(valeData.data_vale);
+    
+    console.log(`[VALE SERVICE] Criando vale:`);
+    console.log(`  Data original: ${valeData.data_vale}`);
+    console.log(`  Período calculado: ${periodo}`);
     
     const { data, error } = await supabase
       .from('vales_motoristas')
@@ -123,10 +134,13 @@ class ValeService {
   async update(id: number, valeData: Partial<ValeCreateData>): Promise<Vale> {
     let updateData: any = { ...valeData };
     
-    // Se a data foi alterada, recalcular o período
+    // CORREÇÃO: Se a data foi alterada, recalcular o período sem problema de fuso horário
     if (valeData.data_vale) {
-      const dataVale = new Date(valeData.data_vale);
-      updateData.periodo = `${(dataVale.getMonth() + 1).toString().padStart(2, '0')}/${dataVale.getFullYear()}`;
+      updateData.periodo = extractPeriod(valeData.data_vale);
+      
+      console.log(`[VALE SERVICE] Atualizando vale ID ${id}:`);
+      console.log(`  Nova data: ${valeData.data_vale}`);
+      console.log(`  Novo período: ${updateData.periodo}`);
     }
     
     const { data, error } = await supabase

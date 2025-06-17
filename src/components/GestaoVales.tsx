@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 import { valeService, Vale, ValeCreateData } from '../services/valeService';
 import { motoristaService, Motorista } from '../services/motoristaService';
+import { formatDisplayDate } from '../services/dateUtils';
 
 const GestaoVales: React.FC = () => {
   const [vales, setVales] = useState<Vale[]>([]);
@@ -137,7 +138,8 @@ const GestaoVales: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('pt-BR');
+    // CORREÇÃO: Usar função sem problema de fuso horário
+    return formatDisplayDate(dateString);
   };
 
   const totalVales = vales.reduce((sum, vale) => sum + parseFloat(vale.valor.toString()), 0);

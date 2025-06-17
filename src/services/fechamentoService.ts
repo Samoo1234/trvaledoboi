@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { valeService } from './valeService';
+import { getCurrentDate } from './dateUtils';
 
 export interface FechamentoMotorista {
   id?: number;
@@ -10,6 +11,7 @@ export interface FechamentoMotorista {
   valor_bruto: number;
   valor_comissao: number; // 90% para terceiros, 10% para funcionários
   descontos: number;
+  bonus: number;
   valor_liquido: number;
   status: string; // Pendente, Pago, Atrasado
   observacoes?: string;
@@ -146,7 +148,9 @@ class FechamentoService {
     }
 
     // Buscar total de vales do período
+    console.log(`[DEBUG] Buscando vales para motorista ${motoristaId} no período ${periodo}`);
     const totalVales = await valeService.getTotalByMotoristaAndPeriodo(motoristaId, periodo);
+    console.log(`[DEBUG] Total de vales encontrados: R$ ${totalVales}`);
 
     // Calcular valores
     const totalFretes = fretes?.length || 0;
@@ -156,17 +160,26 @@ class FechamentoService {
     const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
     const valorComissao = valorBruto * porcentagemComissao;
     
-    // Calcular valor líquido (comissão - vales)
-    const valorLiquido = valorComissao - totalVales;
+    // Calcular valor líquido (comissão - vales + bonus)
+    const bonus = 0; // Bônus inicia como 0, pode ser editado depois
+    const valorLiquido = valorComissao - totalVales + bonus;
+
+    console.log(`[DEBUG] Cálculo final para ${motorista.nome}:`);
+    console.log(`  Valor bruto: R$ ${valorBruto}`);
+    console.log(`  Comissão (${(porcentagemComissao * 100).toFixed(0)}%): R$ ${valorComissao}`);
+    console.log(`  Descontos (vales): R$ ${totalVales}`);
+    console.log(`  Bônus: R$ ${bonus}`);
+    console.log(`  Valor líquido: R$ ${valorLiquido}`);
 
     return {
       motorista_id: motoristaId,
       periodo,
-      data_fechamento: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+      data_fechamento: getCurrentDate(), // CORREÇÃO: Data sem problema de fuso horário
       total_fretes: totalFretes,
       valor_bruto: valorBruto,
       valor_comissao: valorComissao,
       descontos: totalVales,
+      bonus: bonus,
       valor_liquido: valorLiquido,
       status: 'Pendente',
       observacoes: undefined,
@@ -208,7 +221,7 @@ class FechamentoService {
       .from('fechamentos_motoristas')
       .update({
         ...fechamento,
-        updated_at: new Date().toISOString()
+        updated_at: getCurrentDate() + 'T' + new Date().toTimeString().split(' ')[0] // CORREÇÃO: Manter hora mas corrigir data
       })
       .eq('id', id)
       .select(`

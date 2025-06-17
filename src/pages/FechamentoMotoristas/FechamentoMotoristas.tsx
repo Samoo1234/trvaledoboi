@@ -12,6 +12,8 @@ const FechamentoMotoristas: React.FC = () => {
     return `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
   });
   const [calculandoFechamento, setCalculandoFechamento] = useState(false);
+  const [editandoBonus, setEditandoBonus] = useState<number | null>(null);
+  const [novoBonus, setNovoBonus] = useState('');
 
   const loadFechamentos = useCallback(async () => {
     try {
@@ -53,12 +55,13 @@ const FechamentoMotoristas: React.FC = () => {
         const existente = fechamentos.find(f => f.motorista_id === fechamento.motorista_id);
         
         if (existente) {
-          // Atualizar fechamento existente
+          // Atualizar fechamento existente - CORRIGIR: usar valores recalculados
           const atualizado = await fechamentoService.update(existente.id!, {
             total_fretes: fechamento.total_fretes,
             valor_bruto: fechamento.valor_bruto,
             valor_comissao: fechamento.valor_comissao,
-            valor_liquido: fechamento.valor_comissao - (existente.descontos || 0)
+            descontos: fechamento.descontos, // CORREÇÃO: usar descontos recalculados
+            valor_liquido: fechamento.valor_liquido // CORREÇÃO: usar valor_liquido recalculado
           });
           fechamentosSalvos.push(atualizado);
         } else {
@@ -87,6 +90,78 @@ const FechamentoMotoristas: React.FC = () => {
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       alert('Erro ao atualizar status.');
+    }
+  };
+
+  const iniciarEdicaoBonus = (id: number, bonusAtual: number) => {
+    setEditandoBonus(id);
+    setNovoBonus(bonusAtual.toString());
+  };
+
+  const cancelarEdicaoBonus = () => {
+    setEditandoBonus(null);
+    setNovoBonus('');
+  };
+
+  const salvarBonus = async (id: number) => {
+    try {
+      const valorBonus = parseFloat(novoBonus) || 0;
+      const fechamento = fechamentos.find(f => f.id === id);
+      if (!fechamento) return;
+
+      // CORREÇÃO: Recalcular valor líquido corretamente: comissão - descontos + bonus
+      const novoValorLiquido = fechamento.valor_comissao - (fechamento.descontos || 0) + valorBonus;
+
+      console.log(`[DEBUG] Recalculando valor líquido para motorista ${fechamento.motorista?.nome}:`);
+      console.log(`  Comissão: R$ ${fechamento.valor_comissao}`);
+      console.log(`  Descontos: R$ ${fechamento.descontos || 0}`);
+      console.log(`  Bônus novo: R$ ${valorBonus}`);
+      console.log(`  Valor líquido: R$ ${novoValorLiquido}`);
+
+      const fechamentoAtualizado = await fechamentoService.update(id, { 
+        bonus: valorBonus,
+        valor_liquido: novoValorLiquido
+      });
+      
+      setFechamentos(fechamentos.map(f => f.id === id ? fechamentoAtualizado : f));
+      setEditandoBonus(null);
+      setNovoBonus('');
+      alert('Bônus atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar bônus:', error);
+      alert('Erro ao atualizar bônus.');
+    }
+  };
+
+  const recalcularDescontos = async (id: number) => {
+    try {
+      const fechamento = fechamentos.find(f => f.id === id);
+      if (!fechamento) return;
+
+      // Recalcular descontos buscando vales atualizados
+      const fechamentoRecalculado = await fechamentoService.calcularFechamento(
+        fechamento.motorista_id, 
+        selectedPeriodo
+      );
+
+      console.log(`[DEBUG] Recalculando descontos para ${fechamento.motorista?.nome}:`);
+      console.log(`  Descontos antigos: R$ ${fechamento.descontos || 0}`);
+      console.log(`  Descontos novos: R$ ${fechamentoRecalculado.descontos}`);
+
+      // Manter o bônus atual e recalcular valor líquido
+      const bonusAtual = fechamento.bonus || 0;
+      const novoValorLiquido = fechamentoRecalculado.valor_comissao - fechamentoRecalculado.descontos + bonusAtual;
+
+      const fechamentoAtualizado = await fechamentoService.update(id, {
+        descontos: fechamentoRecalculado.descontos,
+        valor_liquido: novoValorLiquido
+      });
+
+      setFechamentos(fechamentos.map(f => f.id === id ? fechamentoAtualizado : f));
+      alert('Descontos recalculados com sucesso!');
+    } catch (error) {
+      console.error('Erro ao recalcular descontos:', error);
+      alert('Erro ao recalcular descontos.');
     }
   };
 
@@ -241,6 +316,12 @@ const FechamentoMotoristas: React.FC = () => {
               {formatCurrency(fechamentos.reduce((sum, f) => sum + f.valor_comissao, 0))}
             </p>
           </div>
+          <div className="resumo-card">
+            <h3>Total de Bônus</h3>
+            <p className="valor-destaque">
+              {formatCurrency(fechamentos.reduce((sum, f) => sum + (f.bonus || 0), 0))}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -261,6 +342,7 @@ const FechamentoMotoristas: React.FC = () => {
                 <th>Valor Bruto</th>
                 <th>Comissão</th>
                 <th>Descontos</th>
+                <th>Bônus</th>
                 <th>Valor Líquido</th>
                 <th>Status</th>
                 <th>Ações</th>
@@ -283,7 +365,60 @@ const FechamentoMotoristas: React.FC = () => {
                       }
                     </small>
                   </td>
-                  <td>{formatCurrency(fechamento.descontos)}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>{formatCurrency(fechamento.descontos || 0)}</span>
+                      <button
+                        onClick={() => fechamento.id && recalcularDescontos(fechamento.id)}
+                        style={{ 
+                          padding: '2px 6px', 
+                          fontSize: '10px', 
+                          background: '#17a2b8', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                        title="Recalcular descontos baseado nos vales atuais"
+                      >
+                        ↻
+                      </button>
+                    </div>
+                  </td>
+                  <td>
+                    {editandoBonus === fechamento.id ? (
+                      <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={novoBonus}
+                          onChange={(e) => setNovoBonus(e.target.value)}
+                          style={{ width: '80px', padding: '2px 4px' }}
+                          placeholder="0.00"
+                        />
+                        <button 
+                          onClick={() => fechamento.id && salvarBonus(fechamento.id)}
+                          style={{ padding: '2px 6px', fontSize: '12px', background: '#28a745', color: 'white', border: 'none', borderRadius: '3px' }}
+                        >
+                          ✓
+                        </button>
+                        <button 
+                          onClick={cancelarEdicaoBonus}
+                          style={{ padding: '2px 6px', fontSize: '12px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '3px' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div 
+                        style={{ cursor: 'pointer', padding: '4px' }}
+                        onClick={() => fechamento.id && iniciarEdicaoBonus(fechamento.id, fechamento.bonus || 0)}
+                        title="Clique para editar bônus"
+                      >
+                        {formatCurrency(fechamento.bonus || 0)}
+                      </div>
+                    )}
+                  </td>
                   <td>{formatCurrency(fechamento.valor_liquido)}</td>
                   <td>
                     <select
