@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
     {
       path: '/fechamento-motoristas',
       icon: Calculator,
-      label: 'Fechamento Motoristas Terceiros',
+      label: 'Fechamento Motoristas',
     },
   ];
 
