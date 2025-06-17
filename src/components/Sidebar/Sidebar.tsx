@@ -11,7 +11,12 @@ import {
 } from 'lucide-react';
 import './Sidebar.css';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const location = useLocation();
 
   const menuItems = [
@@ -52,8 +57,14 @@ const Sidebar: React.FC = () => {
     },
   ];
 
+  const handleLinkClick = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div className="logo-container">
           <img 
@@ -79,6 +90,7 @@ const Sidebar: React.FC = () => {
               key={item.path}
               to={item.path}
               className={`nav-item ${isActive ? 'active' : ''}`}
+              onClick={handleLinkClick}
             >
               <Icon size={20} />
               <span>{item.label}</span>
