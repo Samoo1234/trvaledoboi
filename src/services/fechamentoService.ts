@@ -7,7 +7,7 @@ export interface FechamentoMotorista {
   data_fechamento?: string;
   total_fretes: number;
   valor_bruto: number;
-  valor_comissao: number; // 11% para terceiros, 0 para próprios
+  valor_comissao: number; // 90% para terceiros, 10% para funcionários
   descontos: number;
   valor_liquido: number;
   status: string; // Pendente, Pago, Atrasado
@@ -95,7 +95,7 @@ class FechamentoService {
       ...frete,
       valor_comissao: data.motorista?.tipo_motorista === 'Terceiro' 
         ? frete.valor_frete * 0.90 // 90% para terceiros
-        : frete.valor_frete * 0.10 // 10% para próprios
+        : frete.valor_frete * 0.10 // 10% para funcionários
     })) || [];
 
     return {
@@ -139,7 +139,7 @@ class FechamentoService {
     const valorBruto = fretes?.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0) || 0;
     const valorComissao = motorista.tipo_motorista === 'Terceiro' 
       ? valorBruto * 0.90 // 90% para terceiros
-      : valorBruto * 0.10; // 10% para próprios
+      : valorBruto * 0.10; // 10% para funcionários
 
     return {
       motorista_id: motoristaId,
@@ -213,7 +213,7 @@ class FechamentoService {
   }
 
   async calcularFechamentoCompleto(periodo: string): Promise<FechamentoMotorista[]> {
-    // Buscar todos os motoristas ativos (terceiros e próprios)
+    // Buscar todos os motoristas ativos (terceiros e funcionários)
     // Incluir também motoristas sem status definido (considerá-los como ativos)
     const { data: motoristas, error: motoristasError } = await supabase
       .from('motoristas')

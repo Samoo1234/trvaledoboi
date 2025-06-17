@@ -95,7 +95,7 @@ export const motoristaService = {
     }
   },
 
-  // Buscar motoristas por tipo (Próprio/Terceiro)
+  // Buscar motoristas por tipo (Funcionário/Terceiro)
   async getByTipo(tipo: string): Promise<Motorista[]> {
     const { data, error } = await supabase
       .from('motoristas')

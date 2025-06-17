@@ -22,7 +22,7 @@ const CadastroMotoristas: React.FC = () => {
     estado: '',
     cep: '',
     data_nascimento: '',
-    tipo_motorista: 'Próprio',
+    tipo_motorista: 'Funcionário',
     status: 'Ativo',
     observacoes: ''
   });
@@ -67,7 +67,7 @@ const CadastroMotoristas: React.FC = () => {
       estado: '',
       cep: '',
       data_nascimento: '',
-      tipo_motorista: 'Próprio',
+      tipo_motorista: 'Funcionário',
       status: 'Ativo',
       observacoes: ''
     });
@@ -431,7 +431,7 @@ const CadastroMotoristas: React.FC = () => {
                       onChange={(e) => setFormData({...formData, tipo_motorista: e.target.value})}
                       required
                     >
-                      <option value="Próprio">Próprio</option>
+                      <option value="Funcionário">Funcionário</option>
                       <option value="Terceiro">Terceiro</option>
                     </select>
                   </div>
