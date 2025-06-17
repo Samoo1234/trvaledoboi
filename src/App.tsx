@@ -7,6 +7,7 @@ import CadastroMotoristas from './pages/CadastroMotoristas/CadastroMotoristas';
 import ControleFrete from './pages/ControleFrete/ControleFrete';
 import ControleAbastecimento from './pages/ControleAbastecimento/ControleAbastecimento';
 import FechamentoMotoristas from './pages/FechamentoMotoristas/FechamentoMotoristas';
+import ManutencaoCaminhoes from './pages/ManutencaoCaminhoes/ManutencaoCaminhoes';
 import CadastroFornecedores from './components/CadastroFornecedores';
 import GestaoVales from './components/GestaoVales';
 import './App.css';
@@ -23,6 +24,7 @@ function App() {
             <Route path="/controle-frete" element={<ControleFrete />} />
             <Route path="/controle-abastecimento" element={<ControleAbastecimento />} />
             <Route path="/fechamento-motoristas" element={<FechamentoMotoristas />} />
+            <Route path="/manutencao-caminhoes" element={<ManutencaoCaminhoes />} />
             <Route path="/gestao-vales" element={<GestaoVales />} />
             <Route path="/cadastro-fornecedores" element={<CadastroFornecedores />} />
           </Routes>

@@ -8,7 +8,8 @@ import {
   Calculator,
   BarChart3,
   Building2,
-  DollarSign
+  DollarSign,
+  Wrench
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -45,6 +46,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       path: '/controle-abastecimento',
       icon: Fuel,
       label: 'Controle de Abastecimento',
+    },
+    {
+      path: '/manutencao-caminhoes',
+      icon: Wrench,
+      label: 'Manutenção de Caminhões',
     },
     {
       path: '/cadastro-fornecedores',
