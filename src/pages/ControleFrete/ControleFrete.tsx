@@ -289,197 +289,260 @@ const ControleFrete: React.FC = () => {
       
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 10;
-      const contentWidth = pageWidth - (margin * 2);
       
-      let pageNumber = 1;
-      let currentY = 15;
-      
-      // Função para criar nova página
-      const addNewPage = () => {
-        if (pageNumber > 1) {
-          doc.addPage();
-        }
-        currentY = 15;
-        addPageHeader();
-      };
-
-      // Cabeçalho da página
-      const addPageHeader = () => {
-        // Título
-      doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-      doc.setTextColor(255, 0, 0);
-        doc.text('TR VALE DO BOI', pageWidth / 2, currentY, { align: 'center' });
-      
-        currentY += 6;
-      doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
-        doc.text('TRANSPORTE DE BOVINOS', pageWidth / 2, currentY, { align: 'center' });
-
-        // Dados da empresa (lado direito)
-        currentY += 8;
-      doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.text('(66) 9 9238-8551', pageWidth - margin, currentY, { align: 'right' });
-        doc.text('CNPJ: 27.244.973/0001-22', pageWidth - margin, currentY + 4, { align: 'right' });
-
-        // Cliente e título do relatório
-        currentY += 12;
-      doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.text(`CLIENTE: ${clienteSelecionado.toUpperCase()}`, margin, currentY);
-
-        currentY += 6;
-        doc.setFontSize(12);
-        doc.text('ACERTO DE FRETE', pageWidth / 2, currentY, { align: 'center' });
-        
-        // Número da página
-        if (pageNumber > 1) {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.text(`Página ${pageNumber}`, pageWidth - margin, currentY, { align: 'right' });
-        }
-        
-        currentY += 8;
-      };
-
-      // Cabeçalho da tabela
-      const drawTableHeader = () => {
-        const headers = ['DATA', 'TIPO', 'PLACA', 'REMETENTE', 'DESTINATÁRIO', 'KM', 'VALOR'];
-        const colWidths = [18, 25, 18, 35, 35, 15, 24];
-
-        // Fundo do cabeçalho
-      doc.setFillColor(255, 204, 153);
-      doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.3);
-        doc.rect(margin, currentY, contentWidth, 8, 'FD');
-        
-        // Texto do cabeçalho
-      doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7);
-        doc.setTextColor(0, 0, 0);
-      
-        let x = margin;
-      headers.forEach((header, i) => {
-          doc.text(header, x + colWidths[i]/2, currentY + 5, { align: 'center' });
-          // Linha vertical
-          doc.line(x, currentY, x, currentY + 8);
-          x += colWidths[i];
-        });
-        doc.line(x, currentY, x, currentY + 8); // Última linha vertical
-        
-        currentY += 8;
-        return colWidths;
-      };
-      
-      // Função para verificar espaço na página
-      const checkSpace = (needed: number = 10) => {
-        if (currentY + needed > pageHeight - 40) {
-          pageNumber++;
-          addNewPage();
-          return drawTableHeader();
-        }
-        return null;
-      };
-
-      // Primeira página
-      addPageHeader();
-      let colWidths = drawTableHeader();
-
-      // Dados dos fretes
-      let total = 0;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6);
-
-      fretesAcerto.forEach((frete) => {
-        // Verificar se há espaço
-        const newWidths = checkSpace(8);
-        if (newWidths) colWidths = newWidths;
-        
-        const caminhao = caminhoes.find(c => c.id === frete.caminhao_id);
-        
-        // Função para truncar texto
-        const truncate = (text: string, max: number) => {
-          return text.length > max ? text.substring(0, max - 2) + '..' : text;
-        };
-        
-        const rowData = [
-          formatDisplayDate(frete.data_emissao).substring(0, 5),
-          truncate(caminhao?.tipo || 'N/A', 8),
-          caminhao?.placa || 'N/A',
-          truncate(frete.pecuarista.toUpperCase(), 12),
-          truncate(frete.origem.toUpperCase(), 12),
-          frete.total_km ? frete.total_km.toString() : '-',
-          formatCurrency(frete.valor_frete)
-        ];
-
-                 // Desenhar dados
-         let x = margin;
-        rowData.forEach((data, i) => {
-           let textX = x + 1;
-           
-           if (i === 6) { // Valor à direita
-             textX = x + colWidths[i] - 1;
-             doc.text(data, textX, currentY + 5, { align: 'right' });
-           } else if (i === 0 || i === 2 || i === 5) { // Centralizados
-             textX = x + colWidths[i]/2;
-             doc.text(data, textX, currentY + 5, { align: 'center' });
-          } else {
-             doc.text(data, textX, currentY + 5);
+      // Função para adicionar logo
+      const addLogo = async (x: number, y: number, width: number, height: number): Promise<void> => {
+        try {
+          const response = await fetch('/assets/images/logo.png');
+          if (response.ok) {
+            const blob = await response.blob();
+            const reader = new FileReader();
+            
+            return new Promise((resolve) => {
+              reader.onload = function(e) {
+                if (e.target?.result) {
+                  try {
+                    doc.addImage(e.target.result as string, 'PNG', x, y, width, height);
+                  } catch (error) {
+                    console.log('Erro ao adicionar logo no PDF:', error);
+                  }
+                }
+                resolve();
+              };
+              reader.readAsDataURL(blob);
+            });
           }
-           
-           // Linha vertical esquerda de cada coluna
-           doc.line(x, currentY, x, currentY + 7);
-           x += colWidths[i];
-        });
-         // Linha vertical direita final da tabela
-         doc.line(margin + contentWidth, currentY, margin + contentWidth, currentY + 7);
+        } catch (error) {
+          console.log('Logo não encontrada, continuando sem logo:', error);
+        }
+      };
 
-        // Linha horizontal
-        doc.line(margin, currentY + 7, margin + contentWidth, currentY + 7);
-
-        total += frete.valor_frete;
-        currentY += 7;
-      });
-
-      // Linha de total
-      checkSpace(15);
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, currentY, contentWidth, 10, 'F');
+      // Configurar fonte
+      doc.setFont('helvetica');
       
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text('TOTAL GERAL:', margin + contentWidth - 80, currentY + 6);
-      doc.text(formatCurrency(total), margin + contentWidth - 2, currentY + 6, { align: 'right' });
-
-             // Bordas do total
-       doc.setDrawColor(0, 0, 0);
-       doc.setLineWidth(0.3);
-       doc.rect(margin, currentY, contentWidth, 10, 'D');
+      // Adicionar logo
+      await addLogo(20, 10, 30, 30);
       
-      currentY += 15;
-
-      // Dados bancários
-      checkSpace(35);
-      doc.setFillColor(255, 204, 153);
-      doc.rect(margin, currentY, 120, 30, 'FD');
+      // Cabeçalho da empresa
+      doc.setFontSize(20);
+      doc.setTextColor(139, 0, 0); // Cor vermelha
+      doc.text('SISTEMA LOGÍSTICA', pageWidth / 2, 20, { align: 'center' });
       
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(16);
       doc.setTextColor(0, 0, 0);
-      doc.text('DADOS BANCÁRIOS', margin + 2, currentY + 6);
+      doc.text('Relatório de Acerto de Frete', pageWidth / 2, 30, { align: 'center' });
+      
+      // Linha separadora
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(139, 0, 0);
+      doc.line(20, 35, pageWidth - 20, 35);
+      
+      // Informações do cliente
+      let yPos = 50;
+      doc.setFontSize(14);
+      doc.setTextColor(139, 0, 0);
+      doc.text('DADOS DO CLIENTE', 20, yPos);
+      
+      yPos += 10;
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Cliente: ${clienteSelecionado.toUpperCase()}`, 20, yPos);
+      yPos += 8;
+      
+      if (dataInicioAcerto && dataFimAcerto) {
+        doc.text(`Período: ${formatDisplayDate(dataInicioAcerto)} a ${formatDisplayDate(dataFimAcerto)}`, 20, yPos);
+        yPos += 8;
+      }
+      
+      doc.text(`Data do Relatório: ${new Date().toLocaleDateString('pt-BR')}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Total de Fretes: ${fretesAcerto.length}`, 20, yPos);
+      
+      // Resumo financeiro
+      const total = fretesAcerto.reduce((sum, f) => sum + f.valor_frete, 0);
+      yPos += 20;
+      doc.setFontSize(14);
+      doc.setTextColor(139, 0, 0);
+      doc.text('RESUMO FINANCEIRO', 20, yPos);
+      
+      yPos += 15;
+      // Desenhar tabela de resumo
+      doc.setFillColor(139, 0, 0);
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      
+      // Cabeçalho do resumo
+      doc.rect(20, yPos, 100, 10, 'F');
+      doc.text('Descrição', 22, yPos + 7);
+      doc.rect(120, yPos, 60, 10, 'F');
+      doc.text('Valor', 150, yPos + 7, { align: 'center' });
+      
+      yPos += 10;
+      
+      // Dados do resumo
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      
+      const resumoData = [
+        ['Quantidade de Fretes', fretesAcerto.length.toString()],
+        ['Valor Total dos Fretes', formatCurrency(total)]
+      ];
+      
+      resumoData.forEach((row, index) => {
+        const bgColor = index % 2 === 1 ? [245, 245, 245] : [255, 255, 255];
+        doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+        doc.rect(20, yPos, 100, 8, 'F');
+        doc.rect(120, yPos, 60, 8, 'F');
+        
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(20, yPos, 100, 8);
+        doc.rect(120, yPos, 60, 8);
+        
+        doc.text(row[0], 22, yPos + 6);
+        doc.text(row[1], 178, yPos + 6, { align: 'right' });
+        yPos += 8;
+      });
+      
+      // Detalhamento dos fretes
+      yPos += 20;
+      doc.setFontSize(14);
+      doc.setTextColor(139, 0, 0);
+      doc.text('DETALHAMENTO DOS FRETES', 20, yPos);
+      
+      yPos += 15;
+      
+      // Função para desenhar tabela de fretes
+      const drawFretesTable = (startY: number) => {
+        const headers = ['Data', 'Tipo', 'Placa', 'Remetente', 'Destinatário', 'KM', 'Valor'];
+        const colWidths = [20, 25, 18, 35, 35, 15, 22];
+        let currentY = startY;
+        
+        // Cabeçalho da tabela
+        doc.setFillColor(139, 0, 0);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        
+        let currentX = 20;
+        headers.forEach((header, i) => {
+          doc.rect(currentX, currentY, colWidths[i], 10, 'F');
+          doc.text(header, currentX + colWidths[i]/2, currentY + 7, { align: 'center' });
+          currentX += colWidths[i];
+        });
+        
+        currentY += 10;
+        
+        // Dados dos fretes
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        
+        fretesAcerto.forEach((frete, index) => {
+          // Verificar quebra de página
+          if (currentY + 8 > pageHeight - 40) {
+            doc.addPage();
+            currentY = 20;
+            
+            // Redesenhar cabeçalho na nova página
+            doc.setFillColor(139, 0, 0);
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            
+            currentX = 20;
+            headers.forEach((header, i) => {
+              doc.rect(currentX, currentY, colWidths[i], 10, 'F');
+              doc.text(header, currentX + colWidths[i]/2, currentY + 7, { align: 'center' });
+              currentX += colWidths[i];
+            });
+            
+            currentY += 10;
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+          }
+          
+          const caminhao = caminhoes.find(c => c.id === frete.caminhao_id);
+          
+          // Alternar cor de fundo
+          if (index % 2 === 1) {
+            doc.setFillColor(245, 245, 245);
+            doc.rect(20, currentY, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+          }
+          
+          const rowData = [
+            formatDisplayDate(frete.data_emissao).substring(0, 5),
+            (caminhao?.tipo || 'N/A').substring(0, 8),
+            caminhao?.placa || 'N/A',
+            frete.pecuarista.substring(0, 12),
+            frete.origem.substring(0, 12),
+            frete.total_km ? frete.total_km.toString() : '-',
+            formatCurrency(frete.valor_frete)
+          ];
+          
+          currentX = 20;
+          rowData.forEach((data, i) => {
+            // Desenhar borda da célula
+            doc.setDrawColor(200, 200, 200);
+            doc.rect(currentX, currentY, colWidths[i], 8);
+            
+            // Texto
+            if (i === 6) { // Valor à direita
+              doc.text(data, currentX + colWidths[i] - 2, currentY + 6, { align: 'right' });
+            } else if (i === 0 || i === 2 || i === 5) { // Centralizados
+              doc.text(data, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+            } else {
+              doc.text(data, currentX + 2, currentY + 6);
+            }
+            
+            currentX += colWidths[i];
+          });
+          
+          currentY += 8;
+        });
+        
+        return currentY;
+      };
+      
+      const finalY = drawFretesTable(yPos);
+      
+      // Dados bancários
+      let dadosY = finalY + 20;
+      if (dadosY + 40 > pageHeight - 20) {
+        doc.addPage();
+        dadosY = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.setTextColor(139, 0, 0);
+      doc.text('DADOS BANCÁRIOS', 20, dadosY);
+      
+      dadosY += 15;
+      doc.setFillColor(245, 245, 245);
+      doc.rect(20, dadosY, 120, 35, 'F');
+      doc.setDrawColor(139, 0, 0);
+      doc.rect(20, dadosY, 120, 35);
       
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.text('BANCO: 756 SICOOB', margin + 2, currentY + 12);
-      doc.text('AG: 4349  CC: 141.105-5', margin + 2, currentY + 17);
-      doc.text('PIX-CNPJ: 27.244.973/0001-22', margin + 2, currentY + 22);
-      doc.text('VALE DO BOI CARNES LTDA', margin + 2, currentY + 27);
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text('BANCO: 756 SICOOB', 25, dadosY + 8);
+      doc.text('AGÊNCIA: 4349  CONTA CORRENTE: 141.105-5', 25, dadosY + 16);
+      doc.text('PIX-CNPJ: 27.244.973/0001-22', 25, dadosY + 24);
+      doc.text('VALE DO BOI CARNES LTDA', 25, dadosY + 32);
+      
+      // Rodapé
+      const rodapeY = pageHeight - 15;
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Relatório gerado automaticamente pelo Sistema Logística', pageWidth / 2, rodapeY - 5, { align: 'center' });
+      doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, rodapeY, { align: 'center' });
 
       // Salvar PDF
       const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
-      const nomeArquivo = `acerto_${clienteSelecionado.replace(/\s+/g, '_')}_${dataAtual}.pdf`;
+      const nomeArquivo = `acerto_frete_${clienteSelecionado.replace(/\s+/g, '_')}_${dataAtual}.pdf`;
       doc.save(nomeArquivo);
       
     } catch (error) {
