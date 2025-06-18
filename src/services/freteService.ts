@@ -17,8 +17,8 @@ export interface Frete {
   valor_frete: number;
   saldo_receber?: number;
   situacao: string;
-  tipo_pagamento?: string;
-  data_pagamento?: string;
+  tipo_pagamento?: string | null;
+  data_pagamento?: string | null;
   created_at?: string;
   updated_at?: string;
   // Dados relacionados (joins)

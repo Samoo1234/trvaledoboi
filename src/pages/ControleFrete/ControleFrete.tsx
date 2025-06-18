@@ -159,8 +159,9 @@ const ControleFrete: React.FC = () => {
         valor_frete: parseFloat(formData.valor_frete),
         saldo_receber: formData.saldo_receber ? parseFloat(formData.saldo_receber) : parseFloat(formData.valor_frete),
         situacao: formData.situacao,
-        tipo_pagamento: formData.situacao === 'Pago' ? formData.tipo_pagamento : undefined,
-        data_pagamento: formData.situacao === 'Pago' ? formData.data_pagamento : undefined
+        // CORREÇÃO: Explicitamente definir como null quando não for "Pago"
+        tipo_pagamento: formData.situacao === 'Pago' ? formData.tipo_pagamento : null,
+        data_pagamento: formData.situacao === 'Pago' ? formData.data_pagamento : null
       };
 
       if (editingId) {
@@ -725,7 +726,20 @@ const ControleFrete: React.FC = () => {
                         <label>Situação *</label>
                         <select
                           value={formData.situacao}
-                          onChange={(e) => setFormData({...formData, situacao: e.target.value})}
+                          onChange={(e) => {
+                            const novaSituacao = e.target.value;
+                            // Se mudou para algo diferente de "Pago", limpar campos de pagamento
+                            if (novaSituacao !== 'Pago') {
+                              setFormData({
+                                ...formData, 
+                                situacao: novaSituacao,
+                                tipo_pagamento: '',
+                                data_pagamento: ''
+                              });
+                            } else {
+                              setFormData({...formData, situacao: novaSituacao});
+                            }
+                          }}
                           required
                         >
                           <option value="Pendente">Pendente</option>
@@ -844,8 +858,8 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.total_km || '-'}</td>
                       <td>{formatCurrency(frete.valor_frete)}</td>
                       <td>{frete.saldo_receber ? formatCurrency(frete.saldo_receber) : '-'}</td>
-                      <td>{frete.tipo_pagamento || '-'}</td>
-                      <td>{frete.data_pagamento ? formatDate(frete.data_pagamento) : '-'}</td>
+                      <td>{frete.situacao === 'Pago' ? (frete.tipo_pagamento || '-') : '-'}</td>
+                      <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
                       <td>
                         <div className="actions">
                           <button 
@@ -985,8 +999,8 @@ const ControleFrete: React.FC = () => {
                             {frete.situacao}
                           </span>
                         </td>
-                        <td>{frete.tipo_pagamento || '-'}</td>
-                        <td>{frete.data_pagamento ? formatDate(frete.data_pagamento) : '-'}</td>
+                        <td>{frete.situacao === 'Pago' ? (frete.tipo_pagamento || '-') : '-'}</td>
+                        <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
                       </tr>
                     );
                   })}
