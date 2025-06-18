@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calculator, Download, Eye, FileText, Trash2 } from 'lucide-react';
+import { Calculator, Eye, FileText, Trash2 } from 'lucide-react';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { pdfService } from '../../services/pdfService';
+import { formatDisplayDate } from '../../services/dateUtils';
 import './FechamentoMotoristas.css';
 
 const FechamentoMotoristas: React.FC = () => {
@@ -14,6 +15,7 @@ const FechamentoMotoristas: React.FC = () => {
   const [calculandoFechamento, setCalculandoFechamento] = useState(false);
   const [editandoBonus, setEditandoBonus] = useState<number | null>(null);
   const [novoBonus, setNovoBonus] = useState('');
+  const [mostrandoDetalhes, setMostrandoDetalhes] = useState<number | null>(null);
 
   const loadFechamentos = useCallback(async () => {
     try {
@@ -207,6 +209,10 @@ const FechamentoMotoristas: React.FC = () => {
       console.error('Erro ao gerar relatório consolidado:', error);
       alert('Erro ao gerar relatório consolidado.');
     }
+  };
+
+  const toggleDetalhes = (fechamentoId: number) => {
+    setMostrandoDetalhes(mostrandoDetalhes === fechamentoId ? null : fechamentoId);
   };
 
   const gerarPeriodos = () => {
@@ -441,20 +447,21 @@ const FechamentoMotoristas: React.FC = () => {
                     <div className="actions">
                       <button 
                         className="btn-action"
-                        onClick={() => fechamento.id && gerarRelatorioPDF(fechamento.id)}
-                        title="Gerar Relatório PDF"
+                        onClick={() => fechamento.id && toggleDetalhes(fechamento.id)}
+                        title="Ver Detalhes"
+                        style={{ 
+                          backgroundColor: mostrandoDetalhes === fechamento.id ? '#17a2b8' : '',
+                          color: mostrandoDetalhes === fechamento.id ? 'white' : ''
+                        }}
                       >
-                        <FileText size={16} />
-                      </button>
-                      <button className="btn-action" title="Ver Detalhes">
                         <Eye size={16} />
                       </button>
                       <button 
                         className="btn-action"
                         onClick={() => fechamento.id && gerarRelatorioPDF(fechamento.id)}
-                        title="Baixar Relatório PDF"
+                        title="Gerar Relatório PDF"
                       >
-                        <Download size={16} />
+                        <FileText size={16} />
                       </button>
                       <button 
                         className="btn-action btn-danger"
@@ -467,6 +474,41 @@ const FechamentoMotoristas: React.FC = () => {
                   </td>
                 </tr>
               ))}
+              {mostrandoDetalhes && fechamentos.find(f => f.id === mostrandoDetalhes) && (
+                <tr className="detalhes-row">
+                  <td colSpan={11} style={{ backgroundColor: '#f8f9fa', padding: '15px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      <div>
+                        <h4 style={{ marginBottom: '10px', color: '#495057' }}>📊 Informações Detalhadas</h4>
+                        <p><strong>Data do Fechamento:</strong> {fechamentos.find(f => f.id === mostrandoDetalhes)?.data_fechamento ? formatDisplayDate(fechamentos.find(f => f.id === mostrandoDetalhes)?.data_fechamento!) : 'Não informada'}</p>
+                        <p><strong>Porcentagem de Comissão:</strong> {
+                          fechamentos.find(f => f.id === mostrandoDetalhes)?.motorista?.porcentagem_comissao 
+                            ? `${fechamentos.find(f => f.id === mostrandoDetalhes)?.motorista?.porcentagem_comissao}% (personalizada)`
+                            : `${fechamentos.find(f => f.id === mostrandoDetalhes)?.motorista?.tipo_motorista === 'Terceiro' ? '90' : '10'}% (padrão)`
+                        }</p>
+                        <p><strong>Valor por Frete:</strong> {fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes! > 0 ? formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_bruto! / fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes!) : 'N/A'}</p>
+                        <p><strong>Comissão por Frete:</strong> {fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes! > 0 ? formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_comissao! / fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes!) : 'N/A'}</p>
+                      </div>
+                      <div>
+                        <h4 style={{ marginBottom: '10px', color: '#495057' }}>💰 Breakdown Financeiro</h4>
+                        <p><strong>Valor Bruto:</strong> <span style={{ color: '#28a745' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_bruto!)}</span></p>
+                        <p><strong>(-) Comissão:</strong> <span style={{ color: '#007bff' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_comissao!)}</span></p>
+                        <p><strong>(-) Descontos/Vales:</strong> <span style={{ color: '#dc3545' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.descontos || 0)}</span></p>
+                        <p><strong>(+) Bônus:</strong> <span style={{ color: '#ffc107' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.bonus || 0)}</span></p>
+                        <p style={{ borderTop: '1px solid #dee2e6', paddingTop: '5px', marginTop: '10px' }}>
+                          <strong>Valor Líquido:</strong> <span style={{ color: '#28a745', fontSize: '1.1em' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_liquido!)}</span>
+                        </p>
+                        {fechamentos.find(f => f.id === mostrandoDetalhes)?.observacoes && (
+                          <div style={{ marginTop: '10px' }}>
+                            <strong>Observações:</strong>
+                            <p style={{ fontStyle: 'italic', color: '#6c757d' }}>{fechamentos.find(f => f.id === mostrandoDetalhes)?.observacoes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
