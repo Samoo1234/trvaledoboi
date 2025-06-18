@@ -49,7 +49,7 @@ export const abastecimentoService = {
         caminhao:caminhoes(placa, tipo, modelo),
         motorista:motoristas(nome, tipo_motorista)
       `)
-      .order('data_abastecimento', { ascending: false });
+      .order('data_abastecimento', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
@@ -139,7 +139,7 @@ export const abastecimentoService = {
       `)
       .gte('data_abastecimento', dataInicio)
       .lte('data_abastecimento', dataFim)
-      .order('data_abastecimento', { ascending: false });
+      .order('data_abastecimento', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
@@ -158,7 +158,7 @@ export const abastecimentoService = {
         motorista:motoristas(nome, tipo_motorista)
       `)
       .eq('caminhao_id', caminhaoId)
-      .order('data_abastecimento', { ascending: false });
+      .order('data_abastecimento', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
@@ -177,7 +177,7 @@ export const abastecimentoService = {
         motorista:motoristas(nome, tipo_motorista)
       `)
       .eq('motorista_id', motoristaId)
-      .order('data_abastecimento', { ascending: false });
+      .order('data_abastecimento', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
