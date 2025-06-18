@@ -386,7 +386,6 @@ const ControleFrete: React.FC = () => {
       doc.setFontSize(9);
       
       const resumoData = [
-        ['Quantidade de Fretes', fretesAcerto.length.toString()],
         ['Valor Total dos Fretes', formatCurrency(total)]
       ];
       
