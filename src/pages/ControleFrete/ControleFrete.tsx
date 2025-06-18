@@ -276,7 +276,7 @@ const ControleFrete: React.FC = () => {
     setFretesAcerto(fretesFiltrados);
   };
 
-    const gerarPDFAcerto = async () => {
+  const gerarPDFAcerto = async () => {
     if (fretesAcerto.length === 0) {
       alert('Nenhum frete encontrado para o acerto');
       return;
@@ -302,33 +302,33 @@ const ControleFrete: React.FC = () => {
         currentY = 15;
         addPageHeader();
       };
-      
+
       // Cabeçalho da página
       const addPageHeader = () => {
         // Título
-        doc.setFont('helvetica', 'bold');
+      doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
-        doc.setTextColor(255, 0, 0);
+      doc.setTextColor(255, 0, 0);
         doc.text('TR VALE DO BOI', pageWidth / 2, currentY, { align: 'center' });
-        
+      
         currentY += 6;
-        doc.setTextColor(0, 0, 0);
+      doc.setTextColor(0, 0, 0);
         doc.setFontSize(10);
         doc.text('TRANSPORTE DE BOVINOS', pageWidth / 2, currentY, { align: 'center' });
-        
+
         // Dados da empresa (lado direito)
         currentY += 8;
-        doc.setFont('helvetica', 'normal');
+      doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.text('(66) 9 9238-8551', pageWidth - margin, currentY, { align: 'right' });
         doc.text('CNPJ: 27.244.973/0001-22', pageWidth - margin, currentY + 4, { align: 'right' });
-        
+
         // Cliente e título do relatório
         currentY += 12;
-        doc.setFont('helvetica', 'bold');
+      doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.text(`CLIENTE: ${clienteSelecionado.toUpperCase()}`, margin, currentY);
-        
+
         currentY += 6;
         doc.setFontSize(12);
         doc.text('ACERTO DE FRETE', pageWidth / 2, currentY, { align: 'center' });
@@ -342,25 +342,25 @@ const ControleFrete: React.FC = () => {
         
         currentY += 8;
       };
-      
+
       // Cabeçalho da tabela
       const drawTableHeader = () => {
         const headers = ['DATA', 'TIPO', 'PLACA', 'REMETENTE', 'DESTINATÁRIO', 'KM', 'VALOR'];
         const colWidths = [18, 25, 18, 35, 35, 15, 24];
-        
+
         // Fundo do cabeçalho
-        doc.setFillColor(255, 204, 153);
-        doc.setDrawColor(0, 0, 0);
+      doc.setFillColor(255, 204, 153);
+      doc.setDrawColor(0, 0, 0);
         doc.setLineWidth(0.3);
         doc.rect(margin, currentY, contentWidth, 8, 'FD');
         
         // Texto do cabeçalho
-        doc.setFont('helvetica', 'bold');
+      doc.setFont('helvetica', 'bold');
         doc.setFontSize(7);
         doc.setTextColor(0, 0, 0);
-        
+      
         let x = margin;
-        headers.forEach((header, i) => {
+      headers.forEach((header, i) => {
           doc.text(header, x + colWidths[i]/2, currentY + 5, { align: 'center' });
           // Linha vertical
           doc.line(x, currentY, x, currentY + 8);
@@ -385,12 +385,12 @@ const ControleFrete: React.FC = () => {
       // Primeira página
       addPageHeader();
       let colWidths = drawTableHeader();
-      
+
       // Dados dos fretes
       let total = 0;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6);
-      
+
       fretesAcerto.forEach((frete) => {
         // Verificar se há espaço
         const newWidths = checkSpace(8);
@@ -412,10 +412,10 @@ const ControleFrete: React.FC = () => {
           frete.total_km ? frete.total_km.toString() : '-',
           formatCurrency(frete.valor_frete)
         ];
-        
+
                  // Desenhar dados
          let x = margin;
-         rowData.forEach((data, i) => {
+        rowData.forEach((data, i) => {
            let textX = x + 1;
            
            if (i === 6) { // Valor à direita
@@ -424,24 +424,24 @@ const ControleFrete: React.FC = () => {
            } else if (i === 0 || i === 2 || i === 5) { // Centralizados
              textX = x + colWidths[i]/2;
              doc.text(data, textX, currentY + 5, { align: 'center' });
-           } else {
+          } else {
              doc.text(data, textX, currentY + 5);
-           }
+          }
            
            // Linha vertical esquerda de cada coluna
            doc.line(x, currentY, x, currentY + 7);
            x += colWidths[i];
-         });
+        });
          // Linha vertical direita final da tabela
          doc.line(margin + contentWidth, currentY, margin + contentWidth, currentY + 7);
-        
+
         // Linha horizontal
         doc.line(margin, currentY + 7, margin + contentWidth, currentY + 7);
-        
+
         total += frete.valor_frete;
         currentY += 7;
       });
-      
+
       // Linha de total
       checkSpace(15);
       doc.setFillColor(240, 240, 240);
@@ -451,14 +451,14 @@ const ControleFrete: React.FC = () => {
       doc.setFontSize(8);
       doc.text('TOTAL GERAL:', margin + contentWidth - 80, currentY + 6);
       doc.text(formatCurrency(total), margin + contentWidth - 2, currentY + 6, { align: 'right' });
-      
+
              // Bordas do total
        doc.setDrawColor(0, 0, 0);
        doc.setLineWidth(0.3);
        doc.rect(margin, currentY, contentWidth, 10, 'D');
       
       currentY += 15;
-      
+
       // Dados bancários
       checkSpace(35);
       doc.setFillColor(255, 204, 153);

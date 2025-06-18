@@ -45,55 +45,86 @@ export class PDFService {
     let currentY = startY;
     const rowHeight = 8;
     const headerHeight = 10;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginBottom = 30;
+    
+    console.log(`[PDF DEBUG] Iniciando tabela com ${data.length} linhas`);
 
-    // Desenhar cabeçalho
-    doc.setFillColor(139, 0, 0); // Cor vermelha
-    doc.setTextColor(255, 255, 255); // Texto branco
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
+    // Função para desenhar cabeçalho em uma posição específica
+    const drawHeader = (yPosition: number): number => {
+      let currentX = startX;
+      doc.setFillColor(139, 0, 0); // Cor vermelha
+      doc.setTextColor(255, 255, 255); // Texto branco
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      
+      for (let i = 0; i < headers.length; i++) {
+        doc.rect(currentX, yPosition, colWidths[i], headerHeight, 'F');
+        doc.text(headers[i], currentX + 2, yPosition + 7);
+        currentX += colWidths[i];
+      }
+      return yPosition + headerHeight; // Retorna a nova posição Y
+    };
 
-    let currentX = startX;
-    for (let i = 0; i < headers.length; i++) {
-      doc.rect(currentX, currentY, colWidths[i], headerHeight, 'F');
-      doc.text(headers[i], currentX + 2, currentY + 7);
-      currentX += colWidths[i];
-    }
+    // Desenhar cabeçalho inicial
+    currentY = drawHeader(currentY);
 
-    currentY += headerHeight;
-
-    // Desenhar dados
+    // Configurar para desenhar dados
     doc.setTextColor(0, 0, 0); // Texto preto
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
 
+    // Desenhar cada linha de dados
     for (let row = 0; row < data.length; row++) {
-      currentX = startX;
+      console.log(`[PDF DEBUG] Processando linha ${row + 1} de ${data.length} - Y atual: ${currentY}`);
       
-      // Alternar cor de fundo das linhas
+      // Verificar se precisa quebrar página ANTES de desenhar a linha
+      if (currentY + rowHeight + marginBottom > pageHeight) {
+        console.log(`[PDF DEBUG] Quebra de página na linha ${row + 1}`);
+        doc.addPage();
+        currentY = 20; // Reset para topo da nova página
+        currentY = drawHeader(currentY); // Redesenhar cabeçalho e atualizar Y
+        console.log(`[PDF DEBUG] Nova página criada, cabeçalho redesenhado - novo Y: ${currentY}`);
+        
+        // Reconfigurar fonte para dados após redesenhar cabeçalho
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+      }
+
+      let currentX = startX;
+      
+      // Alternar cor de fundo das linhas (zebrado)
       if (row % 2 === 1) {
         doc.setFillColor(245, 245, 245);
         doc.rect(startX, currentY, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
       }
 
+      // Desenhar cada célula da linha
       for (let col = 0; col < data[row].length; col++) {
         // Desenhar borda da célula
         doc.setDrawColor(200, 200, 200);
         doc.rect(currentX, currentY, colWidths[col], rowHeight);
         
-        // Adicionar texto
+        // Adicionar texto na célula
         const text = data[row][col] || '';
-        // Alinhar valores monetários à direita
         if (text.includes('R$')) {
+          // Alinhar valores monetários à direita
           doc.text(text, currentX + colWidths[col] - 5, currentY + 6, { align: 'right' });
         } else {
+          // Alinhar texto à esquerda
           doc.text(text, currentX + 2, currentY + 6);
         }
         
         currentX += colWidths[col];
       }
+      
+      // Avançar para próxima linha
       currentY += rowHeight;
+      console.log(`[PDF DEBUG] Linha ${row + 1} desenhada - próximo Y: ${currentY}`);
     }
 
+    console.log(`[PDF DEBUG] Tabela finalizada. ${data.length} linhas processadas`);
     return currentY;
   }
 
@@ -145,29 +176,40 @@ export class PDFService {
     doc.text('RESUMO FINANCEIRO', 20, yPos);
     
     yPos += 15;
-    
-    // Tabela resumo
+    // Montar dados do resumo financeiro
     const resumoData = [
       ['Total de Fretes', fechamento.total_fretes.toString()],
       ['Valor Bruto Total', this.formatCurrency(fechamento.valor_bruto)],
-      ['Percentual de Comissão', fechamento.motorista?.tipo_motorista === 'Terceiro' ? '90%' : '10%'],
+      ['Percentual de Comissão',
+        fechamento.motorista?.porcentagem_comissao
+          ? `${fechamento.motorista.porcentagem_comissao}%`
+          : (fechamento.motorista?.tipo_motorista === 'Terceiro' ? '90%' : '10%')
+      ],
       ['Valor da Comissão', this.formatCurrency(fechamento.valor_comissao)],
-      ['Descontos', this.formatCurrency(fechamento.descontos)],
-      ['Valor Líquido a Receber', this.formatCurrency(fechamento.valor_liquido)],
-      ['Status', fechamento.status]
+      ['Vales/Adiantamentos', this.formatCurrency(fechamento.descontos)]
     ];
+    if (fechamento.bonus && fechamento.bonus > 0) {
+      resumoData.push(['Bonificação', this.formatCurrency(fechamento.bonus)]);
+    }
+    resumoData.push([
+      'Valor Líquido a Receber',
+      this.formatCurrency(fechamento.valor_liquido)
+    ]);
+    resumoData.push(['Status', fechamento.status]);
     
     const finalYResumo = this.drawTable(
-      doc, 
-      yPos, 
-      ['Descrição', 'Valor'], 
-      resumoData, 
+      doc,
+      yPos,
+      ['Descrição', 'Valor'],
+      resumoData,
       [100, 80]
     );
     
     // Detalhamento dos fretes
     let finalYFretes = finalYResumo;
     if (fechamento.fretes && fechamento.fretes.length > 0) {
+      console.log(`[PDF DEBUG] Processando ${fechamento.fretes.length} fretes para o PDF`);
+      
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
       doc.text('DETALHAMENTO DOS FRETES', 20, finalYResumo + 20);
@@ -180,6 +222,8 @@ export class PDFService {
         this.formatCurrency(frete.valor_comissao)
       ]);
       
+      console.log(`[PDF DEBUG] Array fretesData montado com ${fretesData.length} linhas`);
+      
       finalYFretes = this.drawTable(
         doc,
         finalYResumo + 30,
@@ -187,6 +231,8 @@ export class PDFService {
         fretesData,
         [25, 45, 45, 30, 30]
       );
+    } else {
+      console.log(`[PDF DEBUG] Nenhum frete encontrado para exibir`);
     }
     
     // Rodapé
