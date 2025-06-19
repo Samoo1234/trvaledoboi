@@ -522,4 +522,131 @@
 
 .acerto-summary .count {
   color: var(--dark-gray);
+}
+
+/* Novos estilos para a seção de filtros expandida */
+.controle-frete .filtros-container {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+  border: 1px solid #e0e0e0;
+}
+
+.controle-frete .filtros-container h3 {
+  margin: 0 0 1.5rem 0;
+  color: #8B0000;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.controle-frete .filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.controle-frete .filtro-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.controle-frete .filtro-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.controle-frete .filtro-group .filtro-select,
+.controle-frete .filtro-group .filtro-input {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.controle-frete .filtro-group .filtro-select:focus,
+.controle-frete .filtro-group .filtro-input:focus {
+  outline: none;
+  border-color: #8B0000;
+  box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.1);
+}
+
+.controle-frete .btn-clear-filters {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  height: fit-content;
+}
+
+.controle-frete .btn-clear-filters:hover {
+  background: #5a6268;
+}
+
+/* Estilos para o resumo dos filtros */
+.controle-frete .filtros-resumo {
+  background: #f8f9fa;
+  padding: 1rem 1.5rem;
+  border-radius: 6px;
+  border-left: 4px solid #8B0000;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.controle-frete .filtros-resumo p {
+  margin: 0;
+  color: #495057;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.controle-frete .filtros-resumo strong {
+  color: #8B0000;
+  font-weight: 700;
+}
+
+@media (max-width: 1024px) {
+  .controle-frete .filtros-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+  
+  .controle-frete .filtros-container {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .controle-frete .filtros-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .controle-frete .filtros-container {
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+  
+  .controle-frete .filtros-resumo {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .controle-frete .filtros-resumo p {
+    font-size: 0.9rem;
+  }
 } 

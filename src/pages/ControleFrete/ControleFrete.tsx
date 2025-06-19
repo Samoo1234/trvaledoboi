@@ -16,6 +16,13 @@ const ControleFrete: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [filtroSituacao, setFiltroSituacao] = useState<string>('');
   
+  // Estados para os novos filtros
+  const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
+  const [filtroDataFim, setFiltroDataFim] = useState<string>('');
+  const [filtroCliente, setFiltroCliente] = useState<string>('');
+  const [filtroMotorista, setFiltroMotorista] = useState<string>('');
+  const [filtroCaminhao, setFiltroCaminhao] = useState<string>('');
+  
   // Estados para relatório de acerto
   const [activeTab, setActiveTab] = useState<'fretes' | 'acerto'>('fretes');
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
@@ -220,9 +227,85 @@ const ControleFrete: React.FC = () => {
     }
   };
 
-  const fretesFiltrados = filtroSituacao 
-    ? fretes.filter(f => f.situacao === filtroSituacao)
-    : fretes;
+  // Funções para obter listas únicas para os filtros
+  const getClientesUnicos = (): string[] => {
+    const clientes = fretes
+      .map(f => f.cliente)
+      .filter((cliente): cliente is string => Boolean(cliente && cliente.trim()))
+      .filter((cliente, index, arr) => arr.indexOf(cliente) === index);
+    return clientes.sort();
+  };
+
+  const getMotoristasUnicos = (): {id: number, nome: string}[] => {
+    const motoristasMap = new Map<number, {id: number, nome: string}>();
+    
+    fretes.forEach(frete => {
+      if (frete.motorista && frete.motorista_id) {
+        motoristasMap.set(frete.motorista_id, {
+          id: frete.motorista_id,
+          nome: frete.motorista.nome
+        });
+      }
+    });
+    
+    return Array.from(motoristasMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+  };
+
+  const getCaminhoesUnicos = (): {id: number, placa: string, tipo: string}[] => {
+    const caminhoesMap = new Map<number, {id: number, placa: string, tipo: string}>();
+    
+    fretes.forEach(frete => {
+      if (frete.caminhao && frete.caminhao_id) {
+        caminhoesMap.set(frete.caminhao_id, {
+          id: frete.caminhao_id,
+          placa: frete.caminhao.placa,
+          tipo: frete.caminhao.tipo
+        });
+      }
+    });
+    
+    return Array.from(caminhoesMap.values()).sort((a, b) => a.placa.localeCompare(b.placa));
+  };
+
+  // Aplicar todos os filtros
+  const fretesFiltrados = fretes.filter(frete => {
+    // Filtro por situação
+    if (filtroSituacao && frete.situacao !== filtroSituacao) {
+      return false;
+    }
+
+    // Filtro por período de data
+    if (filtroDataInicio || filtroDataFim) {
+      const dataFrete = new Date(frete.data_emissao);
+      
+      if (filtroDataInicio) {
+        const dataInicio = new Date(filtroDataInicio);
+        if (dataFrete < dataInicio) return false;
+      }
+      
+      if (filtroDataFim) {
+        const dataFim = new Date(filtroDataFim);
+        if (dataFrete > dataFim) return false;
+      }
+    }
+
+    // Filtro por cliente
+    if (filtroCliente && frete.cliente !== filtroCliente) {
+      return false;
+    }
+
+    // Filtro por motorista
+    if (filtroMotorista && frete.motorista_id.toString() !== filtroMotorista) {
+      return false;
+    }
+
+    // Filtro por caminhão
+    if (filtroCaminhao && frete.caminhao_id.toString() !== filtroCaminhao) {
+      return false;
+    }
+
+    return true;
+  });
 
   // Handler para mudança no valor do frete (sem cálculo de desconto)
   const handleValorFreteChange = (value: string | undefined) => {
@@ -247,13 +330,6 @@ const ControleFrete: React.FC = () => {
   };
 
   // Funções para relatório de acerto
-  const getClientesUnicos = (): string[] => {
-    const clientes = fretes
-      .map(f => f.cliente)
-      .filter((cliente): cliente is string => Boolean(cliente && cliente.trim()))
-      .filter((cliente, index, arr) => arr.indexOf(cliente) === index);
-    return clientes.sort();
-  };
 
   const filtrarFretesAcerto = () => {
     if (!clienteSelecionado) {
@@ -568,18 +644,6 @@ const ControleFrete: React.FC = () => {
       <div className="page-header">
         <h1>Controle de Fretes</h1>
         <div className="header-actions">
-          <div className="filtros">
-            <Filter size={16} />
-            <select
-              value={filtroSituacao}
-              onChange={(e) => setFiltroSituacao(e.target.value)}
-              className="filtro-select"
-            >
-              <option value="">Todas as Situações</option>
-              <option value="Pendente">Pendente</option>
-              <option value="Pago">Pago</option>
-            </select>
-          </div>
           <button 
             className="btn-primary"
             onClick={() => setShowForm(true)}
@@ -612,6 +676,129 @@ const ControleFrete: React.FC = () => {
 
       {activeTab === 'fretes' && (
         <>
+          {/* Seção de Filtros */}
+          <div className="filtros-container">
+            <h3>
+              <Filter size={18} />
+              Filtros
+            </h3>
+            <div className="filtros-grid">
+              <div className="filtro-group">
+                <label>Situação</label>
+                <select
+                  value={filtroSituacao}
+                  onChange={(e) => setFiltroSituacao(e.target.value)}
+                  className="filtro-select"
+                >
+                  <option value="">Todas as Situações</option>
+                  <option value="Pendente">Pendente</option>
+                  <option value="Pago">Pago</option>
+                </select>
+              </div>
+              
+              <div className="filtro-group">
+                <label>Data Início</label>
+                <input
+                  type="date"
+                  value={filtroDataInicio}
+                  onChange={(e) => setFiltroDataInicio(e.target.value)}
+                  className="filtro-input"
+                />
+              </div>
+              
+              <div className="filtro-group">
+                <label>Data Fim</label>
+                <input
+                  type="date"
+                  value={filtroDataFim}
+                  onChange={(e) => setFiltroDataFim(e.target.value)}
+                  className="filtro-input"
+                />
+              </div>
+              
+              <div className="filtro-group">
+                <label>Cliente</label>
+                <select
+                  value={filtroCliente}
+                  onChange={(e) => setFiltroCliente(e.target.value)}
+                  className="filtro-select"
+                >
+                  <option value="">Todos os Clientes</option>
+                  {getClientesUnicos().map((cliente) => (
+                    <option key={cliente} value={cliente}>
+                      {cliente}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="filtro-group">
+                <label>Motorista</label>
+                <select
+                  value={filtroMotorista}
+                  onChange={(e) => setFiltroMotorista(e.target.value)}
+                  className="filtro-select"
+                >
+                  <option value="">Todos os Motoristas</option>
+                  {getMotoristasUnicos().map((motorista) => (
+                    <option key={motorista.id} value={motorista.id.toString()}>
+                      {motorista.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="filtro-group">
+                <label>Caminhão</label>
+                <select
+                  value={filtroCaminhao}
+                  onChange={(e) => setFiltroCaminhao(e.target.value)}
+                  className="filtro-select"
+                >
+                  <option value="">Todos os Caminhões</option>
+                  {getCaminhoesUnicos().map((caminhao) => (
+                    <option key={caminhao.id} value={caminhao.id.toString()}>
+                      {caminhao.placa} - {caminhao.tipo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="filtro-group">
+                <button 
+                  type="button" 
+                  className="btn-clear-filters"
+                  onClick={() => {
+                    setFiltroSituacao('');
+                    setFiltroDataInicio('');
+                    setFiltroDataFim('');
+                    setFiltroCliente('');
+                    setFiltroMotorista('');
+                    setFiltroCaminhao('');
+                  }}
+                >
+                  Limpar Filtros
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Resumo dos filtros */}
+          {(filtroSituacao || filtroDataInicio || filtroDataFim || filtroCliente || filtroMotorista || filtroCaminhao) && (
+            <div className="filtros-resumo">
+              <p>
+                <strong>{fretesFiltrados.length}</strong> frete{fretesFiltrados.length !== 1 ? 's' : ''} 
+                {fretesFiltrados.length !== 1 ? ' encontrados' : ' encontrado'}
+                {filtroSituacao && ` • Situação: ${filtroSituacao}`}
+                {filtroDataInicio && ` • De: ${formatDisplayDate(filtroDataInicio)}`}
+                {filtroDataFim && ` • Até: ${formatDisplayDate(filtroDataFim)}`}
+                {filtroCliente && ` • Cliente: ${filtroCliente}`}
+                {filtroMotorista && ` • Motorista: ${getMotoristasUnicos().find(m => m.id.toString() === filtroMotorista)?.nome}`}
+                {filtroCaminhao && ` • Caminhão: ${getCaminhoesUnicos().find(c => c.id.toString() === filtroCaminhao)?.placa}`}
+              </p>
+            </div>
+          )}
+
           {showForm && (
             <div className="form-modal">
               <div className="form-container large">
