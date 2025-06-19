@@ -9,7 +9,8 @@ import {
   BarChart3,
   Building2,
   DollarSign,
-  Wrench
+  Wrench,
+  FileText
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -66,6 +67,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       path: '/fechamento-motoristas',
       icon: Calculator,
       label: 'Fechamento Motoristas',
+    },
+    {
+      path: '/capa-transporte',
+      icon: FileText,
+      label: 'Capa de Transporte',
     },
   ];
 
