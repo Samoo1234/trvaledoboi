@@ -17,6 +17,13 @@
   font-size: 1rem;
   background: var(--primary-white);
   color: var(--dark-gray);
+  min-width: 180px;
+}
+
+.periodo-select:focus {
+  outline: none;
+  border-color: var(--primary-red);
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
 }
 
 .resumo-periodo {
@@ -131,13 +138,21 @@
   .header-actions {
     flex-direction: column;
     width: 100%;
+    gap: 0.75rem;
   }
   
   .periodo-select {
     width: 100%;
+    min-width: unset;
   }
   
   .resumo-cards {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .header-actions {
+    flex-wrap: wrap;
   }
 } 

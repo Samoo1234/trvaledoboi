@@ -10,12 +10,21 @@ const FechamentoMotoristas: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPeriodo, setSelectedPeriodo] = useState(() => {
     const now = new Date();
-    return `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+    // Usar meio-dia para evitar problemas de fuso horário
+    const safeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+    return `${(safeDate.getMonth() + 1).toString().padStart(2, '0')}/${safeDate.getFullYear()}`;
   });
   const [calculandoFechamento, setCalculandoFechamento] = useState(false);
   const [editandoBonus, setEditandoBonus] = useState<number | null>(null);
   const [novoBonus, setNovoBonus] = useState('');
   const [mostrandoDetalhes, setMostrandoDetalhes] = useState<number | null>(null);
+  const [filtroTipoMotorista, setFiltroTipoMotorista] = useState<string>('Todos');
+
+  // Filtrar fechamentos por tipo de motorista
+  const fechamentosFiltrados = fechamentos.filter(fechamento => {
+    if (filtroTipoMotorista === 'Todos') return true;
+    return fechamento.motorista?.tipo_motorista === filtroTipoMotorista;
+  });
 
   const loadFechamentos = useCallback(async () => {
     try {
@@ -198,13 +207,16 @@ const FechamentoMotoristas: React.FC = () => {
 
   const gerarRelatorioConsolidado = async () => {
     try {
-      if (fechamentos.length === 0) {
+      if (fechamentosFiltrados.length === 0) {
         alert('Nenhum fechamento disponível para gerar relatório.');
         return;
       }
       
       const periodo = gerarPeriodos().find(p => p.valor === selectedPeriodo)?.nome || selectedPeriodo;
-      await pdfService.gerarRelatorioConsolidado(fechamentos, periodo);
+      const tituloComFiltro = filtroTipoMotorista !== 'Todos' 
+        ? `${periodo} - ${filtroTipoMotorista}` 
+        : periodo;
+      await pdfService.gerarRelatorioConsolidado(fechamentosFiltrados, tituloComFiltro);
     } catch (error) {
       console.error('Erro ao gerar relatório consolidado:', error);
       alert('Erro ao gerar relatório consolidado.');
@@ -220,12 +232,20 @@ const FechamentoMotoristas: React.FC = () => {
     const hoje = new Date();
     
     for (let i = 0; i < 12; i++) {
-      const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      // Usar meio-dia do primeiro dia do mês para evitar problemas de fuso horário
+      const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1, 12, 0, 0);
       const mes = (data.getMonth() + 1).toString().padStart(2, '0');
       const ano = data.getFullYear();
       const valor = `${mes}/${ano}`;
-      const nome = data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-      periodos.push({ valor, nome: nome.charAt(0).toUpperCase() + nome.slice(1) });
+      
+      // Usar formatação manual para evitar problemas de localização
+      const meses = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+      ];
+      const nome = `${meses[data.getMonth()]} ${ano}`;
+      
+      periodos.push({ valor, nome });
     }
     
     return periodos;
@@ -276,6 +296,20 @@ const FechamentoMotoristas: React.FC = () => {
               </option>
             ))}
           </select>
+          <select 
+            value={filtroTipoMotorista}
+            onChange={(e) => setFiltroTipoMotorista(e.target.value)}
+            className="periodo-select"
+            title="Filtrar por tipo de motorista"
+          >
+            <option value="Todos">Todos os Tipos</option>
+            <option value="Funcionário">
+              Funcionário ({fechamentos.filter(f => f.motorista?.tipo_motorista === 'Funcionário').length})
+            </option>
+            <option value="Terceiro">
+              Terceiro ({fechamentos.filter(f => f.motorista?.tipo_motorista === 'Terceiro').length})
+            </option>
+          </select>
           <button 
             className="btn-primary"
             onClick={calcularFechamento}
@@ -284,7 +318,7 @@ const FechamentoMotoristas: React.FC = () => {
             <Calculator size={20} />
             {calculandoFechamento ? 'Calculando...' : 'Calcular Fechamento'}
           </button>
-          {fechamentos.length > 0 && (
+          {fechamentosFiltrados.length > 0 && (
             <button 
               className="btn-secondary"
               onClick={gerarRelatorioConsolidado}
@@ -298,44 +332,57 @@ const FechamentoMotoristas: React.FC = () => {
       </div>
 
       <div className="resumo-periodo">
-        <h2>Resumo do Período - {gerarPeriodos().find(p => p.valor === selectedPeriodo)?.nome}</h2>
+        <h2>
+          Resumo do Período - {gerarPeriodos().find(p => p.valor === selectedPeriodo)?.nome}
+          {filtroTipoMotorista !== 'Todos' && (
+            <span style={{ color: '#007bff', fontSize: '0.9em', fontWeight: 'normal' }}>
+              {' '}(Filtro: {filtroTipoMotorista})
+            </span>
+          )}
+        </h2>
         <div className="resumo-cards">
           <div className="resumo-card">
             <h3>Total de Motoristas</h3>
-            <p className="valor-destaque">{fechamentos.length}</p>
+            <p className="valor-destaque">{fechamentosFiltrados.length}</p>
           </div>
           <div className="resumo-card">
             <h3>Total de Fretes</h3>
             <p className="valor-destaque">
-              {fechamentos.reduce((sum, f) => sum + f.total_fretes, 0)}
+              {fechamentosFiltrados.reduce((sum, f) => sum + f.total_fretes, 0)}
             </p>
           </div>
           <div className="resumo-card">
             <h3>Valor Bruto Total</h3>
             <p className="valor-destaque">
-              {formatCurrency(fechamentos.reduce((sum, f) => sum + f.valor_bruto, 0))}
+              {formatCurrency(fechamentosFiltrados.reduce((sum, f) => sum + f.valor_bruto, 0))}
             </p>
           </div>
           <div className="resumo-card">
             <h3>Total de Comissões</h3>
             <p className="valor-destaque">
-              {formatCurrency(fechamentos.reduce((sum, f) => sum + f.valor_comissao, 0))}
+              {formatCurrency(fechamentosFiltrados.reduce((sum, f) => sum + f.valor_comissao, 0))}
             </p>
           </div>
           <div className="resumo-card">
             <h3>Total de Bônus</h3>
             <p className="valor-destaque">
-              {formatCurrency(fechamentos.reduce((sum, f) => sum + (f.bonus || 0), 0))}
+              {formatCurrency(fechamentosFiltrados.reduce((sum, f) => sum + (f.bonus || 0), 0))}
             </p>
           </div>
         </div>
       </div>
 
       <div className="table-container">
-        {fechamentos.length === 0 ? (
+        {fechamentosFiltrados.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>Nenhum fechamento encontrado para este período.</p>
-            <p>Clique em "Calcular Fechamento" para processar os fretes do período.</p>
+            {fechamentos.length === 0 ? (
+              <>
+                <p>Nenhum fechamento encontrado para este período.</p>
+                <p>Clique em "Calcular Fechamento" para processar os fretes do período.</p>
+              </>
+            ) : (
+              <p>Nenhum fechamento encontrado para o filtro selecionado.</p>
+            )}
           </div>
         ) : (
           <table className="data-table">
@@ -355,7 +402,7 @@ const FechamentoMotoristas: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {fechamentos.map((fechamento) => (
+              {fechamentosFiltrados.map((fechamento) => (
                 <tr key={fechamento.id}>
                   <td>{fechamento.motorista?.nome || 'Nome não encontrado'}</td>
                   <td>{fechamento.motorista?.tipo_motorista || '-'}</td>
@@ -474,34 +521,34 @@ const FechamentoMotoristas: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {mostrandoDetalhes && fechamentos.find(f => f.id === mostrandoDetalhes) && (
+              {mostrandoDetalhes && fechamentosFiltrados.find(f => f.id === mostrandoDetalhes) && (
                 <tr className="detalhes-row">
                   <td colSpan={11} style={{ backgroundColor: '#f8f9fa', padding: '15px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                       <div>
                         <h4 style={{ marginBottom: '10px', color: '#495057' }}>📊 Informações Detalhadas</h4>
-                        <p><strong>Data do Fechamento:</strong> {fechamentos.find(f => f.id === mostrandoDetalhes)?.data_fechamento ? formatDisplayDate(fechamentos.find(f => f.id === mostrandoDetalhes)?.data_fechamento!) : 'Não informada'}</p>
+                        <p><strong>Data do Fechamento:</strong> {fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.data_fechamento ? formatDisplayDate(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.data_fechamento!) : 'Não informada'}</p>
                         <p><strong>Porcentagem de Comissão:</strong> {
-                          fechamentos.find(f => f.id === mostrandoDetalhes)?.motorista?.porcentagem_comissao 
-                            ? `${fechamentos.find(f => f.id === mostrandoDetalhes)?.motorista?.porcentagem_comissao}% (personalizada)`
-                            : `${fechamentos.find(f => f.id === mostrandoDetalhes)?.motorista?.tipo_motorista === 'Terceiro' ? '90' : '10'}% (padrão)`
+                          fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.motorista?.porcentagem_comissao 
+                            ? `${fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.motorista?.porcentagem_comissao}% (personalizada)`
+                            : `${fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.motorista?.tipo_motorista === 'Terceiro' ? '90' : '10'}% (padrão)`
                         }</p>
-                        <p><strong>Valor por Frete:</strong> {fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes! > 0 ? formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_bruto! / fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes!) : 'N/A'}</p>
-                        <p><strong>Comissão por Frete:</strong> {fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes! > 0 ? formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_comissao! / fechamentos.find(f => f.id === mostrandoDetalhes)?.total_fretes!) : 'N/A'}</p>
+                        <p><strong>Valor por Frete:</strong> {fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.total_fretes! > 0 ? formatCurrency(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.valor_bruto! / fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.total_fretes!) : 'N/A'}</p>
+                        <p><strong>Comissão por Frete:</strong> {fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.total_fretes! > 0 ? formatCurrency(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.valor_comissao! / fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.total_fretes!) : 'N/A'}</p>
                       </div>
                       <div>
                         <h4 style={{ marginBottom: '10px', color: '#495057' }}>💰 Breakdown Financeiro</h4>
-                        <p><strong>Valor Bruto:</strong> <span style={{ color: '#28a745' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_bruto!)}</span></p>
-                        <p><strong>(-) Comissão:</strong> <span style={{ color: '#007bff' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_comissao!)}</span></p>
-                        <p><strong>(-) Descontos/Vales:</strong> <span style={{ color: '#dc3545' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.descontos || 0)}</span></p>
-                        <p><strong>(+) Bônus:</strong> <span style={{ color: '#ffc107' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.bonus || 0)}</span></p>
+                        <p><strong>Valor Bruto:</strong> <span style={{ color: '#28a745' }}>{formatCurrency(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.valor_bruto!)}</span></p>
+                        <p><strong>(-) Comissão:</strong> <span style={{ color: '#007bff' }}>{formatCurrency(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.valor_comissao!)}</span></p>
+                        <p><strong>(-) Descontos/Vales:</strong> <span style={{ color: '#dc3545' }}>{formatCurrency(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.descontos || 0)}</span></p>
+                        <p><strong>(+) Bônus:</strong> <span style={{ color: '#ffc107' }}>{formatCurrency(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.bonus || 0)}</span></p>
                         <p style={{ borderTop: '1px solid #dee2e6', paddingTop: '5px', marginTop: '10px' }}>
-                          <strong>Valor Líquido:</strong> <span style={{ color: '#28a745', fontSize: '1.1em' }}>{formatCurrency(fechamentos.find(f => f.id === mostrandoDetalhes)?.valor_liquido!)}</span>
+                          <strong>Valor Líquido:</strong> <span style={{ color: '#28a745', fontSize: '1.1em' }}>{formatCurrency(fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.valor_liquido!)}</span>
                         </p>
-                        {fechamentos.find(f => f.id === mostrandoDetalhes)?.observacoes && (
+                        {fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.observacoes && (
                           <div style={{ marginTop: '10px' }}>
                             <strong>Observações:</strong>
-                            <p style={{ fontStyle: 'italic', color: '#6c757d' }}>{fechamentos.find(f => f.id === mostrandoDetalhes)?.observacoes}</p>
+                            <p style={{ fontStyle: 'italic', color: '#6c757d' }}>{fechamentosFiltrados.find(f => f.id === mostrandoDetalhes)?.observacoes}</p>
                           </div>
                         )}
                       </div>

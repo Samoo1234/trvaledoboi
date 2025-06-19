@@ -221,7 +221,7 @@ class FechamentoService {
       .from('fechamentos_motoristas')
       .update({
         ...fechamento,
-        updated_at: getCurrentDate() + 'T' + new Date().toTimeString().split(' ')[0] // CORREÇÃO: Manter hora mas corrigir data
+        updated_at: new Date().toISOString() // Usar timestamp completo ISO
       })
       .eq('id', id)
       .select(`

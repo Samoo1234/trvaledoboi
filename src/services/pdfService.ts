@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { FechamentoDetalhado } from './fechamentoService';
+import { formatDisplayDate, getCurrentDate } from './dateUtils';
 
 export class PDFService {
   private formatCurrency(value: number): string {
@@ -10,7 +11,8 @@ export class PDFService {
   }
 
   private formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // Usar função do dateUtils para evitar problemas de fuso horário
+    return formatDisplayDate(dateString);
   }
 
   private async addLogo(doc: jsPDF, x: number, y: number, width: number, height: number): Promise<void> {
@@ -167,7 +169,7 @@ export class PDFService {
     yPos += 8;
     doc.text(`Período: ${fechamento.periodo}`, 20, yPos);
     yPos += 8;
-    doc.text(`Data do Fechamento: ${this.formatDate(fechamento.data_fechamento || new Date().toISOString())}`, 20, yPos);
+    doc.text(`Data do Fechamento: ${this.formatDate(fechamento.data_fechamento || getCurrentDate())}`, 20, yPos);
     
     // Resumo financeiro
     yPos += 20;
@@ -240,7 +242,10 @@ export class PDFService {
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text('Relatório gerado automaticamente pelo Sistema Logística', pageWidth / 2, pageHeight - 20, { align: 'center' });
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+    // Usar formatação manual para evitar problemas de fuso horário
+    const agora = new Date();
+    const dataHora = `${agora.getDate().toString().padStart(2, '0')}/${(agora.getMonth() + 1).toString().padStart(2, '0')}/${agora.getFullYear()} ${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
+    doc.text(`Gerado em: ${dataHora}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
     
     // Observações se houver
     if (fechamento.observacoes) {
@@ -336,7 +341,10 @@ export class PDFService {
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text('Relatório gerado automaticamente pelo Sistema Logística', pageWidth / 2, pageHeight - 20, { align: 'center' });
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+    // Usar formatação manual para evitar problemas de fuso horário
+    const agoraConsolidado = new Date();
+    const dataHoraConsolidado = `${agoraConsolidado.getDate().toString().padStart(2, '0')}/${(agoraConsolidado.getMonth() + 1).toString().padStart(2, '0')}/${agoraConsolidado.getFullYear()} ${agoraConsolidado.getHours().toString().padStart(2, '0')}:${agoraConsolidado.getMinutes().toString().padStart(2, '0')}`;
+    doc.text(`Gerado em: ${dataHoraConsolidado}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
     
     // Nome do arquivo
     const nomeArquivo = `relatorio_consolidado_${periodo.replace('/', '_')}.pdf`;
