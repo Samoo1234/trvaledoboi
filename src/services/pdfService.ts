@@ -15,6 +15,194 @@ export class PDFService {
     return formatDisplayDate(dateString);
   }
 
+  private drawFretesTableLikeAcerto(doc: jsPDF, startY: number, fretes: any[], pageHeight: number): number {
+    const headers = ['Data', 'Origem', 'Destino', 'KM', 'Valor Bruto'];
+    const colWidths = [25, 45, 45, 25, 35];
+    let currentY = startY;
+    
+    // Cabeçalho da tabela
+    doc.setFillColor(139, 0, 0);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    
+    let currentX = 20;
+    headers.forEach((header, i) => {
+      // Garantir que a cor de fundo está sendo aplicada
+      doc.setFillColor(139, 0, 0);
+      doc.rect(currentX, currentY, colWidths[i], 10, 'F');
+      
+      // Garantir que a cor do texto está branca
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      
+      doc.text(header, currentX + colWidths[i]/2, currentY + 7, { align: 'center' });
+      currentX += colWidths[i];
+    });
+    
+    currentY += 10;
+    
+    // Dados dos fretes
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    
+    fretes.forEach((frete, index) => {
+      // Verificar quebra de página (com mais margem de segurança)
+      if (currentY + 20 > pageHeight - 40) {
+        doc.addPage();
+        currentY = 20;
+        
+        // Redesenhar cabeçalho na nova página
+        doc.setFillColor(139, 0, 0);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        
+        currentX = 20;
+        headers.forEach((header, i) => {
+          // Garantir que a cor de fundo está sendo aplicada
+          doc.setFillColor(139, 0, 0);
+          doc.rect(currentX, currentY, colWidths[i], 10, 'F');
+          
+          // Garantir que a cor do texto está branca
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          
+          doc.text(header, currentX + colWidths[i]/2, currentY + 7, { align: 'center' });
+          currentX += colWidths[i];
+        });
+        
+        currentY += 10;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+      }
+      
+      // Alternar cor de fundo
+      if (index % 2 === 1) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(20, currentY, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+      }
+      
+      const rowData = [
+        this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM
+        frete.origem.substring(0, 12),
+        frete.destino.substring(0, 12),
+        frete.total_km ? frete.total_km.toString() : '-',
+        this.formatCurrency(frete.valor_frete)
+      ];
+      
+      currentX = 20;
+      rowData.forEach((data, i) => {
+        // Desenhar borda da célula
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(currentX, currentY, colWidths[i], 8);
+        
+        // Texto - todos centralizados
+        doc.text(data, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+        
+        currentX += colWidths[i];
+      });
+      
+      currentY += 8;
+    });
+    
+    return currentY;
+  }
+
+  private drawAbastecimentosTable(doc: jsPDF, startY: number, abastecimentos: any[], pageHeight: number): number {
+    const headers = ['Data', 'Posto', 'Combust.', 'Qt Litros', 'Valor'];
+    const colWidths = [25, 45, 25, 25, 35];
+    let currentY = startY;
+
+    // Função para desenhar cabeçalho em uma posição específica
+    const drawHeader = (yPosition: number): number => {
+      let currentX = 20;
+      doc.setFillColor(139, 0, 0);
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      
+      headers.forEach((header, i) => {
+        // Garantir que a cor de fundo está sendo aplicada
+        doc.setFillColor(139, 0, 0);
+        doc.rect(currentX, yPosition, colWidths[i], 10, 'F');
+        
+        // Garantir que a cor do texto está branca
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        
+        doc.text(header, currentX + colWidths[i]/2, yPosition + 7, { align: 'center' });
+        currentX += colWidths[i];
+      });
+      return yPosition + 10; // Retorna a nova posição Y
+    };
+
+    // Verificar se há espaço suficiente para cabeçalho + pelo menos uma linha
+    if (currentY + 30 > pageHeight - 40) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    // Desenhar cabeçalho inicial
+    currentY = drawHeader(currentY);
+    
+    // Dados dos abastecimentos
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    
+    abastecimentos.forEach((abastecimento, index) => {
+      // Verificar quebra de página ANTES de desenhar a linha
+      if (currentY + 8 + 20 > pageHeight - 40) {
+        doc.addPage();
+        currentY = 20;
+        
+        // Redesenhar cabeçalho na nova página
+        currentY = drawHeader(currentY);
+        
+        // Reconfigurar fonte para dados após redesenhar cabeçalho
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+      }
+      
+      // Alternar cor de fundo
+      if (index % 2 === 1) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(20, currentY, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+      }
+      
+      const rowData = [
+        this.formatDate(abastecimento.data_abastecimento).substring(0, 5), // Apenas DD/MM
+        (abastecimento.posto_tanque || '').substring(0, 12),
+        abastecimento.combustivel.substring(0, 8),
+        abastecimento.quantidade_litros ? abastecimento.quantidade_litros.toFixed(0) + 'L' : '-',
+        abastecimento.preco_total ? this.formatCurrency(abastecimento.preco_total) : '-'
+      ];
+      
+      let currentX = 20;
+      rowData.forEach((data, i) => {
+        // Desenhar borda da célula
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(currentX, currentY, colWidths[i], 8);
+        
+        // Texto - todos centralizados
+        doc.text(data, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+        
+        currentX += colWidths[i];
+      });
+      
+      currentY += 8;
+    });
+    
+    return currentY;
+  }
+
   private async addLogo(doc: jsPDF, x: number, y: number, width: number, height: number): Promise<void> {
     try {
       // Tentar carregar a logo
@@ -137,25 +325,29 @@ export class PDFService {
     // Configurar fonte
     doc.setFont('helvetica');
     
-    // Adicionar logo (se existir)
+    // Adicionar logo
     await this.addLogo(doc, 20, 10, 30, 30);
     
     // Cabeçalho da empresa
     doc.setFontSize(20);
     doc.setTextColor(139, 0, 0); // Cor vermelha
-    doc.text('SISTEMA LOGÍSTICA', pageWidth / 2, 20, { align: 'center' });
+    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
     
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text('Relatório de Fechamento - Motorista', pageWidth / 2, 30, { align: 'center' });
+    doc.text('Relatório de Fechamento - Motorista', pageWidth / 2, 38, { align: 'center' });
     
     // Linha separadora
     doc.setLineWidth(0.5);
     doc.setDrawColor(139, 0, 0);
-    doc.line(20, 35, pageWidth - 20, 35);
+    doc.line(20, 43, pageWidth - 20, 43);
     
     // Informações do motorista
-    let yPos = 50;
+    let yPos = 58;
     doc.setFontSize(14);
     doc.setTextColor(139, 0, 0);
     doc.text('DADOS DO MOTORISTA', 20, yPos);
@@ -182,13 +374,16 @@ export class PDFService {
     const resumoData = [
       ['Total de Fretes', fechamento.total_fretes.toString()],
       ['Valor Bruto Total', this.formatCurrency(fechamento.valor_bruto)],
-      ['Percentual de Comissão',
+      [fechamento.motorista?.tipo_motorista === 'Terceiro' ? 'Percentual de Comissão Transportadora' : 'Percentual de Comissão',
         fechamento.motorista?.porcentagem_comissao
-          ? `${fechamento.motorista.porcentagem_comissao}%`
-          : (fechamento.motorista?.tipo_motorista === 'Terceiro' ? '90%' : '10%')
+          ? (fechamento.motorista?.tipo_motorista === 'Terceiro' 
+              ? `${100 - fechamento.motorista.porcentagem_comissao}%` 
+              : `${fechamento.motorista.porcentagem_comissao}%`)
+          : (fechamento.motorista?.tipo_motorista === 'Terceiro' ? '10%' : '10%')
       ],
       ['Valor da Comissão', this.formatCurrency(fechamento.valor_comissao)],
-      ['Vales/Adiantamentos', this.formatCurrency(fechamento.descontos)]
+      [fechamento.motorista?.tipo_motorista === 'Terceiro' ? 'Descontos/Abastecimentos' : 'Vales/Adiantamentos', 
+       this.formatCurrency(fechamento.descontos)]
     ];
     if (fechamento.bonus && fechamento.bonus > 0) {
       resumoData.push(['Bonificação', this.formatCurrency(fechamento.bonus)]);
@@ -197,7 +392,7 @@ export class PDFService {
       'Valor Líquido a Receber',
       this.formatCurrency(fechamento.valor_liquido)
     ]);
-    resumoData.push(['Status', fechamento.status]);
+    // Remover linha de Status conforme solicitado
     
     const finalYResumo = this.drawTable(
       doc,
@@ -216,25 +411,32 @@ export class PDFService {
       doc.setTextColor(139, 0, 0);
       doc.text('DETALHAMENTO DOS FRETES', 20, finalYResumo + 20);
       
-      const fretesData = fechamento.fretes.map(frete => [
-        this.formatDate(frete.data_emissao),
-        frete.origem,
-        frete.destino,
-        this.formatCurrency(frete.valor_frete),
-        this.formatCurrency(frete.valor_comissao)
-      ]);
-      
-      console.log(`[PDF DEBUG] Array fretesData montado com ${fretesData.length} linhas`);
-      
-      finalYFretes = this.drawTable(
+      // Implementar tabela igual ao relatório de acerto
+      finalYFretes = this.drawFretesTableLikeAcerto(
         doc,
         finalYResumo + 30,
-        ['Data', 'Origem', 'Destino', 'Valor Frete', 'Comissão'],
-        fretesData,
-        [25, 45, 45, 30, 30]
+        fechamento.fretes,
+        doc.internal.pageSize.getHeight()
       );
     } else {
       console.log(`[PDF DEBUG] Nenhum frete encontrado para exibir`);
+    }
+
+    // Detalhamento dos abastecimentos (apenas para terceiros)
+    let finalYAbastecimentos = finalYFretes;
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.abastecimentos && fechamento.abastecimentos.length > 0) {
+      console.log(`[PDF DEBUG] Processando ${fechamento.abastecimentos.length} abastecimentos para o PDF`);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(139, 0, 0);
+      doc.text('DETALHAMENTO DE ABASTECIMENTO', 20, finalYFretes + 20);
+      
+      finalYAbastecimentos = this.drawAbastecimentosTable(
+        doc,
+        finalYFretes + 30,
+        fechamento.abastecimentos,
+        doc.internal.pageSize.getHeight()
+      );
     }
     
     // Rodapé
@@ -249,7 +451,7 @@ export class PDFService {
     
     // Observações se houver
     if (fechamento.observacoes) {
-      const observacoesY = finalYFretes + 20;
+      const observacoesY = finalYAbastecimentos + 20;
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       doc.text('Observações:', 20, observacoesY);
@@ -270,21 +472,25 @@ export class PDFService {
     // Cabeçalho
     doc.setFont('helvetica');
     
-    // Adicionar logo (se existir)
+    // Adicionar logo
     await this.addLogo(doc, 20, 10, 30, 30);
     
     doc.setFontSize(20);
     doc.setTextColor(139, 0, 0);
-    doc.text('SISTEMA LOGÍSTICA', pageWidth / 2, 20, { align: 'center' });
+    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
     
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Relatório Consolidado - ${periodo}`, pageWidth / 2, 30, { align: 'center' });
+    doc.text(`Relatório Consolidado - ${periodo}`, pageWidth / 2, 38, { align: 'center' });
     
     // Linha separadora
     doc.setLineWidth(0.5);
     doc.setDrawColor(139, 0, 0);
-    doc.line(20, 35, pageWidth - 20, 35);
+    doc.line(20, 43, pageWidth - 20, 43);
     
     // Resumo geral
     const totalMotoristas = fechamentos.length;
@@ -292,7 +498,7 @@ export class PDFService {
     const valorBrutoTotal = fechamentos.reduce((sum, f) => sum + f.valor_bruto, 0);
     const totalComissoes = fechamentos.reduce((sum, f) => sum + f.valor_comissao, 0);
     
-    let yPos = 50;
+    let yPos = 58;
     doc.setFontSize(14);
     doc.setTextColor(139, 0, 0);
     doc.text('RESUMO GERAL', 20, yPos);

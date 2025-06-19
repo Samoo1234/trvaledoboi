@@ -34,6 +34,15 @@ export interface FechamentoDetalhado extends FechamentoMotorista {
     destino: string;
     valor_frete: number;
     valor_comissao: number;
+    total_km?: number;
+  }>;
+  abastecimentos?: Array<{
+    id: number;
+    data_abastecimento: string;
+    posto_tanque: string;
+    combustivel: string;
+    quantidade_litros: number;
+    preco_total: number;
   }>;
 }
 
@@ -96,7 +105,7 @@ class FechamentoService {
 
     const { data: fretes, error: fretesError } = await supabase
       .from('fretes')
-      .select('id, data_emissao, origem, destino, valor_frete')
+      .select('id, data_emissao, origem, destino, valor_frete, total_km')
       .eq('motorista_id', data.motorista_id)
       .gte('data_emissao', inicioMes)
       .lte('data_emissao', fimMes)
@@ -111,9 +120,28 @@ class FechamentoService {
       valor_comissao: frete.valor_frete * porcentagemComissao
     })) || [];
 
+    // Buscar abastecimentos se for motorista terceiro
+    let abastecimentos: any[] = [];
+    if (data.motorista?.tipo_motorista === 'Terceiro') {
+      const { data: abastecimentosData, error: abastecimentosError } = await supabase
+        .from('abastecimentos')
+        .select('id, data_abastecimento, posto_tanque, combustivel, quantidade_litros, preco_total')
+        .eq('motorista_id', data.motorista_id)
+        .gte('data_abastecimento', inicioMes)
+        .lte('data_abastecimento', fimMes)
+        .order('data_abastecimento', { ascending: true });
+
+      if (abastecimentosError) {
+        console.warn('Erro ao buscar abastecimentos:', abastecimentosError);
+      } else {
+        abastecimentos = abastecimentosData || [];
+      }
+    }
+
     return {
       ...data,
-      fretes: fretesComComissao
+      fretes: fretesComComissao,
+      abastecimentos: abastecimentos.length > 0 ? abastecimentos : undefined
     };
   }
 
