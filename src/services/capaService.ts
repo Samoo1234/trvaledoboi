@@ -143,25 +143,25 @@ export class CapaService {
       // Origem → Destino (em uma linha)
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
-      const rota = `${transporte.origem.substring(0, 8)} → ${transporte.destino.substring(0, 8)}`;
-      doc.text(rota, currentColumn + 8, yPos);
+      const rota = `${transporte.origem.length > 12 ? transporte.origem.substring(0, 12) + '...' : transporte.origem} → ${transporte.destino.length > 12 ? transporte.destino.substring(0, 12) + '...' : transporte.destino}`;
+      doc.text(rota, currentColumn + 4, yPos);
       
       yPos += 3;
       
       // Cliente
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6);
-      doc.text(`Cliente: ${transporte.cliente.substring(0, 15)}`, currentColumn + 2, yPos);
+      doc.text(`Cliente: ${transporte.cliente.substring(0, 15)}`, currentColumn + 1, yPos);
       
       yPos += 2.5;
       
       // Motorista
-      doc.text(`Motorista: ${transporte.motorista.substring(0, 15)}`, currentColumn + 2, yPos);
+      doc.text(`Motorista: ${transporte.motorista.substring(0, 15)}`, currentColumn + 1, yPos);
       
       yPos += 2.5;
       
       // Caminhão
-      doc.text(`Caminhão: ${transporte.caminhao_placa} (${transporte.caminhao_tipo.substring(0, 6)})`, currentColumn + 2, yPos);
+      doc.text(`Caminhão: ${transporte.caminhao_placa} (${transporte.caminhao_tipo.substring(0, 6)})`, currentColumn + 1, yPos);
       
       yPos += 5; // Espaço entre transportes
     });

@@ -491,7 +491,7 @@ const ControleFrete: React.FC = () => {
       // Função para desenhar tabela de fretes
       const drawFretesTable = (startY: number) => {
         const headers = ['Data', 'Tipo Veículo', 'Placa', 'Origem', 'Destino', 'KM', 'Valor'];
-        const colWidths = [22, 35, 22, 30, 30, 18, 25];
+        const colWidths = [20, 30, 20, 40, 40, 15, 25];
         let currentY = startY;
         
         // Cabeçalho da tabela
@@ -565,10 +565,10 @@ const ControleFrete: React.FC = () => {
           
           const rowData = [
             formatDisplayDate(frete.data_emissao).substring(0, 5),
-            (caminhao?.tipo || 'N/A').substring(0, 12),
+            (caminhao?.tipo || 'N/A').substring(0, 15),
             caminhao?.placa || 'N/A',
-            frete.origem.substring(0, 12),
-            frete.destino.substring(0, 12),
+            frete.origem.length > 20 ? frete.origem.substring(0, 20) + '...' : frete.origem,
+            frete.destino.length > 20 ? frete.destino.substring(0, 20) + '...' : frete.destino,
             frete.total_km ? frete.total_km.toString() : '-',
             formatCurrency(frete.valor_frete)
           ];

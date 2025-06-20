@@ -17,7 +17,7 @@ export class PDFService {
 
   private drawFretesTableLikeAcerto(doc: jsPDF, startY: number, fretes: any[], pageHeight: number): number {
     const headers = ['Data', 'Origem', 'Destino', 'KM', 'Valor Bruto'];
-    const colWidths = [25, 45, 45, 25, 35];
+    const colWidths = [25, 50, 50, 25, 35];
     let currentY = startY;
     
     // Cabeçalho da tabela
@@ -89,8 +89,8 @@ export class PDFService {
       
       const rowData = [
         this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM
-        frete.origem.substring(0, 12),
-        frete.destino.substring(0, 12),
+        frete.origem.length > 25 ? frete.origem.substring(0, 25) + '...' : frete.origem,
+        frete.destino.length > 25 ? frete.destino.substring(0, 25) + '...' : frete.destino,
         frete.total_km ? frete.total_km.toString() : '-',
         this.formatCurrency(frete.valor_frete)
       ];
