@@ -157,7 +157,7 @@
 
 .transportes-header {
   display: grid;
-  grid-template-columns: 60px 2fr 1.5fr 1.5fr 1.5fr 1fr;
+  grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1fr;
   background: #8B0000;
   color: white;
   font-weight: 600;
@@ -176,17 +176,13 @@
 
 .transporte-item {
   display: grid;
-  grid-template-columns: 60px 2fr 1.5fr 1.5fr 1.5fr 1fr;
+  grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1fr;
   border-bottom: 1px solid #eee;
   transition: background-color 0.2s;
 }
 
 .transporte-item:hover {
   background: #f8f9fa;
-}
-
-.transporte-item.selecionado {
-  background: #e8f5e8;
 }
 
 /* Cores para layout individual */
@@ -211,14 +207,7 @@
   border-right: none;
 }
 
-.item-checkbox {
-  justify-content: center;
-}
 
-.item-checkbox input[type="checkbox"] {
-  transform: scale(1.2);
-  cursor: pointer;
-}
 
 .item-rota {
   font-size: 14px;
@@ -303,7 +292,7 @@
   
   .transportes-header,
   .transporte-item {
-    grid-template-columns: 50px 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     font-size: 12px;
   }
   
@@ -314,7 +303,7 @@
   
   .transportes-header,
   .transporte-item {
-    grid-template-columns: 50px 2fr 1fr;
+    grid-template-columns: 2fr 1fr;
   }
   
   .resumo-stats {
