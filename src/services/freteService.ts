@@ -7,7 +7,7 @@ export interface Frete {
   origem: string;
   destino: string;
   numero_minuta?: string;
-  numero_cte?: string;
+  numero_cb?: string;
   cliente?: string;
   observacoes?: string;
   caminhao_id: number;

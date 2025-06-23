@@ -9,7 +9,6 @@ export interface Abastecimento {
   posto_tanque?: string;
   caminhao_id: number;
   motorista_id: number;
-  horimetro?: number;
   km_rodado?: number;
   numero_ticket?: string;
   preco_total?: number;

@@ -36,7 +36,7 @@ const ControleFrete: React.FC = () => {
     origem: '',
     destino: '',
     numero_minuta: '',
-    numero_cte: '',
+    numero_cb: '',
     cliente: '',
     observacoes: '',
     caminhao_id: '',
@@ -82,7 +82,7 @@ const ControleFrete: React.FC = () => {
       origem: '',
       destino: '',
       numero_minuta: '',
-      numero_cte: '',
+      numero_cb: '',
       cliente: '',
       observacoes: '',
       caminhao_id: '',
@@ -106,7 +106,7 @@ const ControleFrete: React.FC = () => {
       origem: frete.origem,
       destino: frete.destino,
       numero_minuta: frete.numero_minuta || '',
-      numero_cte: frete.numero_cte || '',
+      numero_cb: frete.numero_cb || '',
       cliente: frete.cliente || '',
       observacoes: frete.observacoes || '',
       caminhao_id: frete.caminhao_id.toString(),
@@ -156,7 +156,7 @@ const ControleFrete: React.FC = () => {
         origem: formData.origem,
         destino: formData.destino,
         numero_minuta: formData.numero_minuta || undefined,
-        numero_cte: formData.numero_cte || undefined,
+        numero_cb: formData.numero_cb || undefined,
         cliente: formData.cliente || undefined,
         observacoes: formData.observacoes || undefined,
         caminhao_id: parseInt(formData.caminhao_id),
@@ -887,6 +887,17 @@ const ControleFrete: React.FC = () => {
                         />
                       </div>
                     </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Nº CB</label>
+                        <input
+                          type="text"
+                          value={formData.numero_cb}
+                          onChange={(e) => setFormData({...formData, numero_cb: e.target.value})}
+                          placeholder="Número do CB"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Documentos */}
@@ -900,15 +911,6 @@ const ControleFrete: React.FC = () => {
                           value={formData.numero_minuta}
                           onChange={(e) => setFormData({...formData, numero_minuta: e.target.value})}
                           placeholder="Número da minuta"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Nº CTE</label>
-                        <input
-                          type="text"
-                          value={formData.numero_cte}
-                          onChange={(e) => setFormData({...formData, numero_cte: e.target.value})}
-                          placeholder="Número do CTE"
                         />
                       </div>
                       <div className="form-group">
@@ -1083,7 +1085,7 @@ const ControleFrete: React.FC = () => {
                   <th>Origem</th>
                   <th>Destino</th>
                   <th>Nº Minuta</th>
-                  <th>Nº CTE</th>
+                  <th>Nº CB</th>
                   <th>Cliente</th>
                   <th>Placa</th>
                   <th>Tipo Veículo</th>
@@ -1117,7 +1119,7 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.origem}</td>
                       <td>{frete.destino}</td>
                       <td>{frete.numero_minuta || '-'}</td>
-                      <td>{frete.numero_cte || '-'}</td>
+                      <td>{frete.numero_cb || '-'}</td>
                       <td>{frete.cliente || '-'}</td>
                       <td>{frete.caminhao?.placa}</td>
                       <td>{frete.caminhao?.tipo}</td>

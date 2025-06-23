@@ -25,14 +25,13 @@ const ControleAbastecimento: React.FC = () => {
     data_abastecimento: '',
     mes: '',
     combustivel: 'Diesel',
-    quantidade_litros: 0,
+    quantidade_litros: undefined,
     posto_tanque: '',
     caminhao_id: 0,
     motorista_id: 0,
-    horimetro: 0,
-    km_rodado: 0,
+    km_rodado: undefined,
     numero_ticket: '',
-    preco_total: 0,
+    preco_total: undefined,
     tanque_cheio: false
   });
 
@@ -85,7 +84,6 @@ const ControleAbastecimento: React.FC = () => {
       posto_tanque: abastecimento.posto_tanque,
       caminhao_id: abastecimento.caminhao_id,
       motorista_id: abastecimento.motorista_id,
-      horimetro: abastecimento.horimetro,
       km_rodado: abastecimento.km_rodado,
       numero_ticket: abastecimento.numero_ticket,
       preco_total: abastecimento.preco_total,
@@ -110,14 +108,13 @@ const ControleAbastecimento: React.FC = () => {
       data_abastecimento: '',
       mes: '',
       combustivel: 'Diesel',
-      quantidade_litros: 0,
+      quantidade_litros: undefined,
       posto_tanque: '',
       caminhao_id: 0,
       motorista_id: 0,
-      horimetro: 0,
-      km_rodado: 0,
+      km_rodado: undefined,
       numero_ticket: '',
-      preco_total: 0,
+      preco_total: undefined,
       tanque_cheio: false
     });
     setEditingAbastecimento(null);
@@ -404,8 +401,8 @@ const ControleAbastecimento: React.FC = () => {
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.quantidade_litros}
-                    onChange={(e) => setFormData({...formData, quantidade_litros: parseFloat(e.target.value) || 0})}
+                    value={formData.quantidade_litros || ''}
+                    onChange={(e) => setFormData({...formData, quantidade_litros: e.target.value ? parseFloat(e.target.value) : undefined})}
                     required
                   />
                 </div>
@@ -456,8 +453,8 @@ const ControleAbastecimento: React.FC = () => {
                   <label>KM</label>
                   <input
                     type="number"
-                    value={formData.km_rodado}
-                    onChange={(e) => setFormData({...formData, km_rodado: parseInt(e.target.value) || 0})}
+                    value={formData.km_rodado || ''}
+                    onChange={(e) => setFormData({...formData, km_rodado: e.target.value ? parseInt(e.target.value) : undefined})}
                   />
                 </div>
 
@@ -475,8 +472,8 @@ const ControleAbastecimento: React.FC = () => {
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.preco_total}
-                    onChange={(e) => setFormData({...formData, preco_total: parseFloat(e.target.value) || 0})}
+                    value={formData.preco_total || ''}
+                    onChange={(e) => setFormData({...formData, preco_total: e.target.value ? parseFloat(e.target.value) : undefined})}
                   />
                 </div>
 
