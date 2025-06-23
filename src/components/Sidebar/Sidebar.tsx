@@ -10,8 +10,10 @@ import {
   Building2,
   DollarSign,
   Wrench,
-  FileText
+  FileText,
+  UserCog
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
 
 interface SidebarProps {
@@ -21,6 +23,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const location = useLocation();
+  const { isAdmin } = useAuth();
 
   const menuItems = [
     {
@@ -74,6 +77,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       label: 'Capa de Transporte',
     },
   ];
+
+  // Adicionar item de gerenciamento de usuários apenas para administradores
+  if (isAdmin) {
+    menuItems.push({
+      path: '/gerenciar-usuarios',
+      icon: UserCog,
+      label: 'Gerenciar Usuários',
+    });
+  }
 
   const handleLinkClick = () => {
     if (onClose) {
