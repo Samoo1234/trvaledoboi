@@ -39,7 +39,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </button>
         
         <div className="header-title">
-          <h1>Vale do Boi - Sistema de Gestão</h1>
+          <h1>
+            <span className="full-title">Vale do Boi - Sistema de Gestão</span>
+            <span className="short-title">Vale do Boi</span>
+          </h1>
         </div>
         
         <div className="user-menu">
