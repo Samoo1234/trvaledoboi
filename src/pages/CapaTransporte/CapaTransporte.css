@@ -189,6 +189,17 @@
   background: #e8f5e8;
 }
 
+/* Cores para layout individual */
+.transporte-item.grupo-barra {
+  background: linear-gradient(135deg, #EBF5FB 0%, #D6EAF8 100%);
+  border-left: 4px solid #5DADE2;
+}
+
+.transporte-item.grupo-outros {
+  background: linear-gradient(135deg, #EAFAF1 0%, #D5F4E6 100%);
+  border-left: 4px solid #82E0AA;
+}
+
 .transporte-item > div {
   padding: 15px 10px;
   border-right: 1px solid #eee;
@@ -309,5 +320,192 @@
   .resumo-stats {
     flex-direction: column;
     gap: 10px;
+  }
+}
+
+/* Filtro de Agrupamento */
+.filtro-agrupamento {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.filtro-agrupamento label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+}
+
+.filtro-agrupamento input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #8B0000;
+}
+
+.filtro-agrupamento span {
+  font-size: 14px;
+}
+
+/* Transportes Agrupados */
+.transportes-agrupados {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.grupo-transporte {
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.grupo-transporte:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Cores por cliente */
+.grupo-barra {
+  border-color: #5DADE2;
+  background: linear-gradient(135deg, #EBF5FB 0%, #D6EAF8 100%);
+}
+
+.grupo-barra .grupo-header {
+  background: linear-gradient(135deg, #5DADE2 0%, #3498DB 100%);
+  color: white;
+}
+
+.grupo-outros {
+  border-color: #82E0AA;
+  background: linear-gradient(135deg, #EAFAF1 0%, #D5F4E6 100%);
+}
+
+.grupo-outros .grupo-header {
+  background: linear-gradient(135deg, #82E0AA 0%, #58D68D 100%);
+  color: #1E8449;
+}
+
+.grupo-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  font-weight: 600;
+}
+
+.grupo-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.grupo-checkbox input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: white;
+  cursor: pointer;
+}
+
+.grupo-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.grupo-rota {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grupo-cliente {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.grupo-valor {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.grupo-transportes {
+  padding: 0 20px 20px 20px;
+}
+
+.grupo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.grupo-item:last-child {
+  border-bottom: none;
+}
+
+.grupo-item .item-checkbox {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.grupo-item .item-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #8B0000;
+}
+
+.item-info {
+  flex: 1;
+  font-family: 'Courier New', monospace;
+}
+
+.item-motorista {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2C3E50;
+  margin-bottom: 2px;
+}
+
+.item-caminhao {
+  font-size: 13px;
+  color: #5D6D7E;
+  font-weight: 500;
+}
+
+/* Responsividade para grupos */
+@media (max-width: 768px) {
+  .grupo-header {
+    padding: 15px;
+  }
+  
+  .grupo-rota {
+    font-size: 16px;
+  }
+  
+  .grupo-cliente {
+    font-size: 13px;
+  }
+  
+  .grupo-valor {
+    font-size: 14px;
+  }
+  
+  .grupo-transportes {
+    padding: 0 15px 15px 15px;
+  }
+  
+  .item-motorista {
+    font-size: 13px;
+  }
+  
+  .item-caminhao {
+    font-size: 12px;
   }
 } 
