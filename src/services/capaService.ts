@@ -254,7 +254,7 @@ export class CapaService {
       doc.rect(marginLeft, yPos, contentWidth, 12, 'F');
       
       // Cabeçalho do transporte
-      doc.setTextColor(255, 255, 255); // Texto branco
+      doc.setTextColor(0, 0, 0); // Texto preto para melhor contraste
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
               doc.text(`${transporteCounter}. ${transporte.origem} - ${transporte.destino}`, marginLeft + 3, yPos + 4);
@@ -366,7 +366,7 @@ export class CapaService {
       doc.rect(marginLeft, yPos, contentWidth, 12, 'F');
       
       // Cabeçalho do grupo
-      doc.setTextColor(255, 255, 255); // Texto branco
+      doc.setTextColor(0, 0, 0); // Texto preto para melhor contraste
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.text(`${grupoCounter}. ${grupo.rota}`, marginLeft + 3, yPos + 4);
