@@ -5,86 +5,39 @@ import './CapaTransporte.css';
 const CapaTransporte: React.FC = () => {
   const [dataEmbarque, setDataEmbarque] = useState('');
   const [transportes, setTransportes] = useState<TransporteParaCapa[]>([]);
-  const [transportesSelecionados, setTransportesSelecionados] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const [error, setError] = useState('');
 
   const buscarTransportes = async () => {
-    if (!dataEmbarque) {
-      setError('Por favor, selecione uma data de embarque');
-      return;
-    }
-
+    if (!dataEmbarque) return;
+    
+    setLoading(true);
+    setError('');
+    
     try {
-      setLoading(true);
-      setError(null);
-      const dados = await capaService.getTransportesByData(dataEmbarque);
-      setTransportes(dados);
-      setTransportesSelecionados(dados.map(t => t.id)); // Selecionar todos por padrão
+      const transportesEncontrados = await capaService.getTransportesByData(dataEmbarque);
+      setTransportes(transportesEncontrados);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao buscar transportes');
+      setError('Erro ao buscar transportes: ' + (err as Error).message);
       setTransportes([]);
-      setTransportesSelecionados([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTransporteToggle = (id: number) => {
-    setTransportesSelecionados(prev => 
-      prev.includes(id) 
-        ? prev.filter(t => t !== id)
-        : [...prev, id]
-    );
-  };
-
-  const handleGrupoToggle = (transportesDoGrupo: TransporteParaCapa[]) => {
-    const idsDoGrupo = transportesDoGrupo.map(t => t.id);
-    const todosSelecionados = idsDoGrupo.every(id => transportesSelecionados.includes(id));
-    
-    if (todosSelecionados) {
-      // Desmarcar todos do grupo
-      setTransportesSelecionados(prev => prev.filter(id => !idsDoGrupo.includes(id)));
-    } else {
-      // Selecionar todos do grupo
-      setTransportesSelecionados(prev => {
-        const novosIds = [...prev, ...idsDoGrupo];
-        return Array.from(new Set(novosIds));
-      });
-    }
-  };
-
-  const selecionarTodos = () => {
-    if (transportesSelecionados.length === transportes.length) {
-      setTransportesSelecionados([]);
-    } else {
-      setTransportesSelecionados(transportes.map(t => t.id));
-    }
-  };
-
   const gerarCapa = async () => {
-    const transportesFiltrados = transportes.filter(t => 
-      transportesSelecionados.includes(t.id)
-    );
-
-    if (transportesFiltrados.length === 0) {
-      setError('Selecione pelo menos um transporte para gerar a capa');
-      return;
-    }
-
+    if (transportes.length === 0) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      if (agrupamentoAutomatico) {
-        const grupos = agruparTransportes(transportesFiltrados);
+      if (deveAgrupar()) {
+        const grupos = agruparTransportes(transportes);
         await capaService.gerarCapaPDFAgrupado(grupos, dataEmbarque);
       } else {
-        await capaService.gerarCapaPDFColorido(transportesFiltrados, dataEmbarque);
+        await capaService.gerarCapaPDFColorido(transportes, dataEmbarque);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao gerar capa PDF');
+      setError('Erro ao gerar PDF: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -97,16 +50,15 @@ const CapaTransporte: React.FC = () => {
     }).format(value);
   };
 
-  // Função para agrupar transportes por itinerário
   const agruparTransportes = (transportesParaAgrupar: TransporteParaCapa[]): TransporteAgrupado[] => {
     const grupos: { [key: string]: TransporteAgrupado } = {};
-
+    
     transportesParaAgrupar.forEach(transporte => {
-      const chave = `${transporte.origem} - ${transporte.destino}`;
+      const chaveGrupo = `${transporte.origem}-${transporte.destino}-${transporte.cliente}`;
       
-      if (!grupos[chave]) {
-        grupos[chave] = {
-          rota: chave,
+      if (!grupos[chaveGrupo]) {
+        grupos[chaveGrupo] = {
+          rota: `${transporte.origem} - ${transporte.destino}`,
           origem: transporte.origem,
           destino: transporte.destino,
           cliente: transporte.cliente,
@@ -115,12 +67,11 @@ const CapaTransporte: React.FC = () => {
         };
       }
       
-      grupos[chave].transportes.push(transporte);
-      grupos[chave].valorTotal += transporte.valor_frete;
+      grupos[chaveGrupo].transportes.push(transporte);
+      grupos[chaveGrupo].valorTotal += transporte.valor_frete;
     });
-
-    // Ordenar grupos por origem
-    return Object.values(grupos).sort((a, b) => a.origem.localeCompare(b.origem));
+    
+    return Object.values(grupos);
   };
 
   // Verificar se deve agrupar automaticamente (se há rotas duplicadas)
@@ -167,7 +118,6 @@ const CapaTransporte: React.FC = () => {
               {loading ? 'Buscando...' : 'Buscar'}
             </button>
           </div>
-
         </div>
 
         {error && (
@@ -183,20 +133,11 @@ const CapaTransporte: React.FC = () => {
               <h3>📊 Transportes Encontrados: {transportes.length}</h3>
               <div className="acoes">
                 <button 
-                  onClick={selecionarTodos}
-                  className="btn-selecionar-todos"
-                >
-                  {transportesSelecionados.length === transportes.length 
-                    ? 'Desmarcar Todos' 
-                    : 'Selecionar Todos'
-                  }
-                </button>
-                <button 
                   onClick={gerarCapa}
-                  disabled={loading || transportesSelecionados.length === 0}
+                  disabled={loading}
                   className="btn-gerar-capa"
                 >
-                  {loading ? 'Gerando...' : `Gerar Capa PDF (${transportesSelecionados.length})`}
+                  {loading ? 'Gerando...' : 'Gerar Capa PDF'}
                 </button>
               </div>
             </div>
@@ -205,7 +146,6 @@ const CapaTransporte: React.FC = () => {
             {!agrupamentoAutomatico && (
               <div className="transportes-lista">
                 <div className="transportes-header">
-                  <div className="header-checkbox">Sel.</div>
                   <div className="header-rota">Origem / Destino</div>
                   <div className="header-cliente">Cliente</div>
                   <div className="header-motorista">Motorista</div>
@@ -216,15 +156,8 @@ const CapaTransporte: React.FC = () => {
                 {transportes.map((transporte) => (
                   <div 
                     key={transporte.id} 
-                    className={`transporte-item ${getClienteColorClass(transporte.cliente)} ${transportesSelecionados.includes(transporte.id) ? 'selecionado' : ''}`}
+                    className={`transporte-item ${getClienteColorClass(transporte.cliente)}`}
                   >
-                    <div className="item-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={transportesSelecionados.includes(transporte.id)}
-                        onChange={() => handleTransporteToggle(transporte.id)}
-                      />
-                    </div>
                     <div className="item-rota">
                       <strong>{transporte.origem}</strong> - <strong>{transporte.destino}</strong>
                     </div>
@@ -242,67 +175,43 @@ const CapaTransporte: React.FC = () => {
             {/* Vista Agrupada */}
             {agrupamentoAutomatico && (
               <div className="transportes-agrupados">
-                {agruparTransportes(transportes).map((grupo) => {
-                  const todosSelecionados = grupo.transportes.every(t => transportesSelecionados.includes(t.id));
-                  const algumSelecionado = grupo.transportes.some(t => transportesSelecionados.includes(t.id));
-                  
-                  return (
-                    <div key={grupo.rota} className={`grupo-transporte ${getClienteColorClass(grupo.cliente)}`}>
-                      <div className="grupo-header">
-                        <div className="grupo-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={todosSelecionados}
-                            ref={input => {
-                              if (input) input.indeterminate = algumSelecionado && !todosSelecionados;
-                            }}
-                            onChange={() => handleGrupoToggle(grupo.transportes)}
-                          />
-                        </div>
-                        <div className="grupo-info">
-                          <div className="grupo-rota">📍 {grupo.rota}</div>
-                          <div className="grupo-cliente">📋 Cliente: {grupo.cliente}</div>
-                          <div className="grupo-valor">💰 Valor Total: {formatCurrency(grupo.valorTotal)}</div>
-                        </div>
-                      </div>
-                      
-                      <div className="grupo-transportes">
-                        {grupo.transportes.map((transporte, index) => (
-                          <div key={transporte.id} className="grupo-item">
-                            <div className="item-checkbox">
-                              <input
-                                type="checkbox"
-                                checked={transportesSelecionados.includes(transporte.id)}
-                                onChange={() => handleTransporteToggle(transporte.id)}
-                              />
-                            </div>
-                            <div className="item-info">
-                              <div className="item-motorista">
-                                {index === grupo.transportes.length - 1 ? '└─' : '├─'} 🚛 {transporte.motorista}
-                              </div>
-                              <div className="item-caminhao">
-                                &nbsp;&nbsp;&nbsp;&nbsp;🚚 {transporte.caminhao_placa} - {transporte.caminhao_tipo}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                {agruparTransportes(transportes).map((grupo) => (
+                  <div key={grupo.rota} className={`grupo-transporte ${getClienteColorClass(grupo.cliente)}`}>
+                    <div className="grupo-header">
+                      <div className="grupo-info">
+                        <div className="grupo-rota">📍 {grupo.rota}</div>
+                        <div className="grupo-cliente">📋 Cliente: {grupo.cliente}</div>
+                        <div className="grupo-valor">💰 Valor Total: {formatCurrency(grupo.valorTotal)}</div>
                       </div>
                     </div>
-                  );
-                })}
+                    
+                    <div className="grupo-transportes">
+                      {grupo.transportes.map((transporte, index) => (
+                        <div key={transporte.id} className="grupo-item">
+                          <div className="item-info">
+                            <div className="item-motorista">
+                              {index === grupo.transportes.length - 1 ? '└─' : '├─'} 🚛 {transporte.motorista}
+                            </div>
+                            <div className="item-caminhao">
+                              &nbsp;&nbsp;&nbsp;&nbsp;🚚 {transporte.caminhao_placa} - {transporte.caminhao_tipo}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
             {/* Resumo */}
             <div className="resumo-section">
-              <h4>📋 Resumo dos Selecionados</h4>
+              <h4>📋 Resumo Total</h4>
               <div className="resumo-stats">
-                <span>Transportes: {transportesSelecionados.length}</span>
+                <span>Transportes: {transportes.length}</span>
                 <span>
                   Valor Total: {formatCurrency(
-                    transportes
-                      .filter(t => transportesSelecionados.includes(t.id))
-                      .reduce((sum, t) => sum + t.valor_frete, 0)
+                    transportes.reduce((sum, t) => sum + t.valor_frete, 0)
                   )}
                 </span>
               </div>
