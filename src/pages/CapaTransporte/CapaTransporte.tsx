@@ -54,11 +54,16 @@ const CapaTransporte: React.FC = () => {
     const grupos: { [key: string]: TransporteAgrupado } = {};
     
     transportesParaAgrupar.forEach(transporte => {
-      const chaveGrupo = `${transporte.origem}-${transporte.destino}-${transporte.cliente}`;
+      // Normalizar dados para evitar problemas de agrupamento
+      const origem = transporte.origem.trim().toUpperCase();
+      const destino = transporte.destino.trim().toUpperCase();
+      const cliente = transporte.cliente.trim().toUpperCase();
+      
+      const chaveGrupo = `${origem}-${destino}-${cliente}`;
       
       if (!grupos[chaveGrupo]) {
         grupos[chaveGrupo] = {
-          rota: `${transporte.origem} - ${transporte.destino}`,
+          rota: `${transporte.origem} - ${transporte.destino}`, // Manter formato original para exibição
           origem: transporte.origem,
           destino: transporte.destino,
           cliente: transporte.cliente,
@@ -74,17 +79,21 @@ const CapaTransporte: React.FC = () => {
     return Object.values(grupos);
   };
 
-  // Verificar se deve agrupar automaticamente (se há rotas duplicadas)
+  // Verificar se deve agrupar automaticamente (se há rotas duplicadas com mesmo cliente)
   const deveAgrupar = () => {
-    const rotas = new Set();
+    const rotasClientes = new Set();
     for (const transporte of transportes) {
-      const rota = `${transporte.origem} - ${transporte.destino}`;
-      if (rotas.has(rota)) {
-        return true; // Encontrou rota duplicada
+      const origem = transporte.origem.trim().toUpperCase();
+      const destino = transporte.destino.trim().toUpperCase();
+      const cliente = transporte.cliente.trim().toUpperCase();
+      const chave = `${origem}-${destino}-${cliente}`;
+      
+      if (rotasClientes.has(chave)) {
+        return true; // Encontrou rota duplicada com mesmo cliente
       }
-      rotas.add(rota);
+      rotasClientes.add(chave);
     }
-    return false; // Não há rotas duplicadas
+    return false; // Não há rotas duplicadas com mesmo cliente
   };
 
   const agrupamentoAutomatico = deveAgrupar();
@@ -175,13 +184,12 @@ const CapaTransporte: React.FC = () => {
             {/* Vista Agrupada */}
             {agrupamentoAutomatico && (
               <div className="transportes-agrupados">
-                {agruparTransportes(transportes).map((grupo) => (
-                  <div key={grupo.rota} className={`grupo-transporte ${getClienteColorClass(grupo.cliente)}`}>
+                {agruparTransportes(transportes).map((grupo, index) => (
+                  <div key={`${grupo.rota}-${grupo.cliente}-${index}`} className={`grupo-transporte ${getClienteColorClass(grupo.cliente)}`}>
                     <div className="grupo-header">
                       <div className="grupo-info">
                         <div className="grupo-rota">📍 {grupo.rota}</div>
                         <div className="grupo-cliente">📋 Cliente: {grupo.cliente}</div>
-                        <div className="grupo-valor">💰 Valor Total: {formatCurrency(grupo.valorTotal)}</div>
                       </div>
                     </div>
                     
