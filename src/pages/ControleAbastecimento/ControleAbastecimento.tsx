@@ -154,7 +154,7 @@ const ControleAbastecimento: React.FC = () => {
     }
   };
 
-  const limparFiltros = () => {
+  const limparFiltros = async () => {
     setFiltros({
       dataInicio: '',
       dataFim: '',
@@ -162,7 +162,8 @@ const ControleAbastecimento: React.FC = () => {
       motoristaId: '',
       combustivel: ''
     });
-    loadData();
+    // Recarrega todos os dados (média geral)
+    await loadData();
   };
 
   const formatarData = (data: string) => {
@@ -182,12 +183,19 @@ const ControleAbastecimento: React.FC = () => {
   const totalValor = abastecimentos.reduce((sum, item) => sum + (item.preco_total || 0), 0);
   const mediaPreco = totalLitros > 0 ? totalValor / totalLitros : 0;
 
+  // Determinar se está aplicando filtro de período
+  const temFiltroPeriodo = filtros.dataInicio && filtros.dataFim;
+  
   // Calcular médias de consumo por caminhão (descartando o primeiro tanque cheio)
+  // Usa os dados filtrados quando há filtro de período, senão usa todos os dados
+  const dadosParaCalculo = abastecimentos; // Já filtrados pela função aplicarFiltros
+  
   const mediasPorCaminhao = caminhoes.map(caminhao => {
     // Filtra abastecimentos tanque cheio e ordena por KM
-    const abastecimentosCaminhao = abastecimentos
+    const abastecimentosCaminhao = dadosParaCalculo
       .filter(a => a.caminhao_id === caminhao.id && a.tanque_cheio && a.km_rodado && a.km_rodado > 0)
       .sort((a, b) => (a.km_rodado || 0) - (b.km_rodado || 0));
+    
     if (abastecimentosCaminhao.length < 2) {
       return {
         placa: caminhao.placa,
@@ -197,12 +205,14 @@ const ControleAbastecimento: React.FC = () => {
         media: 0
       };
     }
+    
     const kmInicial = abastecimentosCaminhao[0].km_rodado || 0;
     const kmFinal = abastecimentosCaminhao[abastecimentosCaminhao.length - 1].km_rodado || 0;
     // Soma só os litros dos abastecimentos exceto o primeiro
     const totalLitros = abastecimentosCaminhao.slice(1).reduce((sum, a) => sum + a.quantidade_litros, 0);
     const totalKm = kmFinal - kmInicial;
     const media = totalLitros > 0 ? totalKm / totalLitros : 0;
+    
     return {
       placa: caminhao.placa,
       modelo: caminhao.modelo,
@@ -229,6 +239,20 @@ const ControleAbastecimento: React.FC = () => {
       {error && <div className="error-message">{error}</div>}
 
       {/* Estatísticas */}
+      {temFiltroPeriodo && (
+        <div style={{
+          backgroundColor: '#fff3e0', 
+          border: '1px solid #ffb74d', 
+          borderRadius: '4px', 
+          padding: '8px 12px', 
+          margin: '10px 0',
+          fontSize: '14px',
+          color: '#e65100'
+        }}>
+          📊 Exibindo estatísticas do período: {new Date(filtros.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a {new Date(filtros.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}
+        </div>
+      )}
+      
       <div className="stats-row">
         <div className="stat-item">
           <div className="stat-info">
@@ -253,7 +277,21 @@ const ControleAbastecimento: React.FC = () => {
       {/* Médias de Consumo por Caminhão */}
       {mediasPorCaminhao.length > 0 && (
         <div className="table-container" style={{marginBottom: 30, marginTop: 0}}>
-          <h3 style={{color: '#8B0000', margin: '16px'}}>Média de Consumo por Caminhão (km/litro)</h3>
+          <div style={{margin: '16px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+            <h3 style={{color: '#8B0000', margin: 0}}>Média de Consumo por Caminhão (km/litro)</h3>
+            {temFiltroPeriodo && (
+              <span style={{
+                backgroundColor: '#e3f2fd', 
+                color: '#1976d2', 
+                padding: '4px 8px', 
+                borderRadius: '4px', 
+                fontSize: '12px', 
+                fontWeight: 'bold'
+              }}>
+                Período: {new Date(filtros.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a {new Date(filtros.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            )}
+          </div>
           <table className="data-table">
             <thead>
               <tr>
