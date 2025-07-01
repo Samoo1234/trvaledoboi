@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { FechamentoDetalhado } from './fechamentoService';
-import { formatDisplayDate, getCurrentDate } from './dateUtils';
+import { formatDisplayDate } from './dateUtils';
+import { valeService } from './valeService';
 
 export class PDFService {
   private formatCurrency(value: number): string {
@@ -367,7 +368,11 @@ export class PDFService {
     yPos += 8;
     doc.text(`Período: ${fechamento.periodo}`, 20, yPos);
     yPos += 8;
-    doc.text(`Data do Fechamento: ${this.formatDate(fechamento.data_fechamento || getCurrentDate())}`, 20, yPos);
+    // Sempre usar a data atual real para a data do fechamento no PDF
+    const dataAtualFechamento = new Date();
+    const dataFechamentoFormatada = `${dataAtualFechamento.getDate().toString().padStart(2, '0')}/${(dataAtualFechamento.getMonth() + 1).toString().padStart(2, '0')}/${dataAtualFechamento.getFullYear()}`;
+    console.log(`[PDF DEBUG] Data do fechamento: ${dataFechamentoFormatada} (data real atual)`);
+    doc.text(`Data do Fechamento: ${dataFechamentoFormatada}`, 20, yPos);
     
     // Resumo financeiro
     yPos += 20;
@@ -376,6 +381,25 @@ export class PDFService {
     doc.text('RESUMO FINANCEIRO', 20, yPos);
     
     yPos += 15;
+    
+    // Buscar vales do período para motoristas terceiros
+    let totalValesPeriodo = 0;
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.motorista_id) {
+      try {
+        // Usar o período do fechamento (formato MM/YYYY)
+        totalValesPeriodo = await valeService.getTotalByMotoristaAndPeriodo(fechamento.motorista_id, fechamento.periodo);
+        console.log(`[PDF DEBUG] === COMPARAÇÃO DE VALORES PARA TERCEIROS ===`);
+        console.log(`[PDF DEBUG] Motorista: ${fechamento.motorista?.nome}`);
+        console.log(`[PDF DEBUG] Período: ${fechamento.periodo}`);
+        console.log(`[PDF DEBUG] Descontos/Abastecimentos (fechamento.descontos): ${fechamento.descontos}`);
+        console.log(`[PDF DEBUG] Vales do período (totalValesPeriodo): ${totalValesPeriodo}`);
+        console.log(`[PDF DEBUG] Agora são diferentes? ${fechamento.descontos !== totalValesPeriodo}`);
+      } catch (error) {
+        console.warn('[PDF DEBUG] Erro ao buscar vales do período:', error);
+        totalValesPeriodo = 0;
+      }
+    }
+    
     // Montar dados do resumo financeiro
     const resumoData = [
       ['Total de Fretes', fechamento.total_fretes.toString()],
@@ -387,10 +411,16 @@ export class PDFService {
               : `${fechamento.motorista.porcentagem_comissao}%`)
           : (fechamento.motorista?.tipo_motorista === 'Terceiro' ? '10%' : '10%')
       ],
-      ['Valor da Comissão', this.formatCurrency(fechamento.valor_comissao)],
+      ['Valor Líquido Total', this.formatCurrency(fechamento.valor_comissao)],
       [fechamento.motorista?.tipo_motorista === 'Terceiro' ? 'Descontos/Abastecimentos' : 'Vales/Adiantamentos', 
        this.formatCurrency(fechamento.descontos)]
     ];
+    
+    // Adicionar linha de vales apenas para motoristas terceiros
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
+      resumoData.push(['Desconto vale / despesas', this.formatCurrency(totalValesPeriodo)]);
+    }
+    
     if (fechamento.bonus && fechamento.bonus > 0) {
       resumoData.push(['Bonificação', this.formatCurrency(fechamento.bonus)]);
     }

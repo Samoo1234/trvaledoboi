@@ -86,7 +86,7 @@ class ValeService {
     
     const { data, error } = await supabase
       .from('vales_motoristas')
-      .select('valor, periodo, data_vale')
+      .select('valor, periodo, data_vale, descricao')
       .eq('motorista_id', motoristaId)
       .eq('periodo', periodo);
     
@@ -95,7 +95,10 @@ class ValeService {
       throw new Error(error.message);
     }
     
-    console.log(`[VALE SERVICE] Vales encontrados:`, data);
+    console.log(`[VALE SERVICE] === DETALHAMENTO DOS VALES ===`);
+    console.log(`[VALE SERVICE] Quantidade de registros encontrados: ${data?.length || 0}`);
+    console.log(`[VALE SERVICE] Vales detalhados:`, data);
+    
     const total = data?.reduce((total, vale) => total + (parseFloat(vale.valor) || 0), 0) || 0;
     console.log(`[VALE SERVICE] Total calculado: R$ ${total}`);
     

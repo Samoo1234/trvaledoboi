@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient';
 import { valeService } from './valeService';
-import { getCurrentDate } from './dateUtils';
 
 export interface FechamentoMotorista {
   id?: number;
@@ -203,6 +202,36 @@ class FechamentoService {
     const totalVales = await valeService.getTotalByMotoristaAndPeriodo(motoristaId, periodo);
     console.log(`[DEBUG] Total de vales encontrados: R$ ${totalVales}`);
 
+    // Para motoristas terceiros, buscar abastecimentos também
+    let totalAbastecimentos = 0;
+    if (motorista.tipo_motorista === 'Terceiro') {
+      try {
+        const [mes, ano] = periodo.split('/');
+        const inicioMes = `${ano}-${mes.padStart(2, '0')}-01`;
+        const ultimoDiaMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+        const fimMes = `${ano}-${mes.padStart(2, '0')}-${ultimoDiaMes.toString().padStart(2, '0')}`;
+
+        console.log(`[DEBUG ABASTECIMENTOS] Buscando abastecimentos para motorista ${motoristaId} de ${inicioMes} a ${fimMes}`);
+
+        const { data: abastecimentos, error: abastecimentosError } = await supabase
+          .from('abastecimentos')
+          .select('preco_total, data_abastecimento, posto_tanque')
+          .eq('motorista_id', motoristaId)
+          .gte('data_abastecimento', inicioMes)
+          .lte('data_abastecimento', fimMes);
+
+        if (!abastecimentosError && abastecimentos) {
+          console.log(`[DEBUG ABASTECIMENTOS] Abastecimentos encontrados:`, abastecimentos);
+          totalAbastecimentos = abastecimentos.reduce((sum, abast) => sum + (parseFloat(abast.preco_total) || 0), 0);
+          console.log(`[DEBUG ABASTECIMENTOS] Total calculado: R$ ${totalAbastecimentos}`);
+        } else {
+          console.log(`[DEBUG ABASTECIMENTOS] Nenhum abastecimento encontrado ou erro:`, abastecimentosError);
+        }
+      } catch (error) {
+        console.warn(`[DEBUG] Erro ao buscar abastecimentos:`, error);
+      }
+    }
+
     // Calcular valores
     const totalFretes = fretes?.length || 0;
     const valorBruto = fretes?.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0) || 0;
@@ -211,25 +240,69 @@ class FechamentoService {
     const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
     const valorComissao = valorBruto * porcentagemComissao;
     
-    // Calcular valor líquido (comissão - vales + bonus)
+    // Calcular descontos e valor líquido diferenciado por tipo
+    let descontos: number;
+    let valorLiquido: number;
     const bonus = 0; // Bônus inicia como 0, pode ser editado depois
-    const valorLiquido = valorComissao - totalVales + bonus;
+    
+    if (motorista.tipo_motorista === 'Terceiro') {
+      // Para terceiros: descontos = apenas abastecimentos, vales são linha separada
+      descontos = totalAbastecimentos;
+      valorLiquido = valorComissao - totalAbastecimentos - totalVales + bonus;
+      
+      // DEBUG MATEMÁTICO DETALHADO
+      console.log(`[MATH DEBUG] === VERIFICAÇÃO MATEMÁTICA ===`);
+      console.log(`[MATH DEBUG] Valor bruto: ${valorBruto}`);
+      console.log(`[MATH DEBUG] Porcentagem: ${(porcentagemComissao * 100).toFixed(0)}%`);
+      console.log(`[MATH DEBUG] Comissão calculada: ${valorBruto} * ${porcentagemComissao} = ${valorComissao}`);
+      console.log(`[MATH DEBUG] Abastecimentos: ${totalAbastecimentos}`);
+      console.log(`[MATH DEBUG] Vales: ${totalVales}`);
+      console.log(`[MATH DEBUG] Bônus: ${bonus}`);
+      console.log(`[MATH DEBUG] Fórmula: ${valorComissao} - ${totalAbastecimentos} - ${totalVales} + ${bonus}`);
+      console.log(`[MATH DEBUG] Resultado: ${valorLiquido}`);
+      console.log(`[MATH DEBUG] Conferência manual: ${valorComissao - totalAbastecimentos - totalVales + bonus}`);
+    } else {
+      // Para funcionários: descontos = vales (como antes)
+      descontos = totalVales;
+      valorLiquido = valorComissao - totalVales + bonus;
+    }
 
-    console.log(`[DEBUG] Cálculo final para ${motorista.nome}:`);
+    console.log(`[DEBUG] === RESUMO DO FECHAMENTO PARA ${motorista.nome} ===`);
+    console.log(`  Tipo: ${motorista.tipo_motorista}`);
+    console.log(`  Período: ${periodo}`);
+    console.log(`  Total de fretes: ${totalFretes}`);
     console.log(`  Valor bruto: R$ ${valorBruto}`);
     console.log(`  Comissão (${(porcentagemComissao * 100).toFixed(0)}%): R$ ${valorComissao}`);
-    console.log(`  Descontos (vales): R$ ${totalVales}`);
-    console.log(`  Bônus: R$ ${bonus}`);
-    console.log(`  Valor líquido: R$ ${valorLiquido}`);
+    console.log(`  ----------------------------------------`);
+    if (motorista.tipo_motorista === 'Terceiro') {
+      console.log(`  DESCONTOS (campo fechamento.descontos):`);
+      console.log(`    Apenas abastecimentos: R$ ${totalAbastecimentos}`);
+      console.log(`  VALES (separado, não incluído em descontos):`);
+      console.log(`    Total de vales: R$ ${totalVales}`);
+      console.log(`  CÁLCULO VALOR LÍQUIDO:`);
+      console.log(`    R$ ${valorComissao} - R$ ${totalAbastecimentos} - R$ ${totalVales} + R$ ${bonus} = R$ ${valorLiquido}`);
+    } else {
+      console.log(`  DESCONTOS (campo fechamento.descontos):`);
+      console.log(`    Vales/Adiantamentos: R$ ${totalVales}`);
+      console.log(`  CÁLCULO VALOR LÍQUIDO:`);
+      console.log(`    R$ ${valorComissao} - R$ ${totalVales} + R$ ${bonus} = R$ ${valorLiquido}`);
+    }
+    console.log(`  ----------------------------------------`);
+    console.log(`  VALOR LÍQUIDO FINAL: R$ ${valorLiquido}`);
 
+    // Sempre usar a data atual real
+    const dataAtual = new Date();
+    const dataFechamentoAtual = `${dataAtual.getFullYear()}-${(dataAtual.getMonth() + 1).toString().padStart(2, '0')}-${dataAtual.getDate().toString().padStart(2, '0')}`;
+    console.log(`[FECHAMENTO DEBUG] Data do fechamento criado: ${dataFechamentoAtual}`);
+    
     return {
       motorista_id: motoristaId,
       periodo,
-      data_fechamento: getCurrentDate(), // CORREÇÃO: Data sem problema de fuso horário
+      data_fechamento: dataFechamentoAtual, // Data atual real em formato YYYY-MM-DD
       total_fretes: totalFretes,
       valor_bruto: valorBruto,
       valor_comissao: valorComissao,
-      descontos: totalVales,
+      descontos: descontos,
       bonus: bonus,
       valor_liquido: valorLiquido,
       status: 'Pendente',
@@ -385,10 +458,14 @@ class FechamentoService {
         // Valor líquido = comissão - vales (sem bônus inicial)
         const valorLiquido = valorComissao - totalVales;
 
+        // Usar data atual para fechamentos de período customizado
+        const dataAtualCustomizado = new Date();
+        const dataFechamentoCustomizado = `${dataAtualCustomizado.getFullYear()}-${(dataAtualCustomizado.getMonth() + 1).toString().padStart(2, '0')}-${dataAtualCustomizado.getDate().toString().padStart(2, '0')}`;
+
         fechamentos.push({
           motorista_id: motorista.id,
           periodo: `${dataInicio} a ${dataFim}`, // Formato especial para período customizado
-          data_fechamento: dataFim,
+          data_fechamento: dataFechamentoCustomizado, // Data atual real
           total_fretes: totalFretes,
           valor_bruto: valorBruto,
           valor_comissao: valorComissao,
