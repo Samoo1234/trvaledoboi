@@ -20,6 +20,14 @@ const FechamentoMotoristas: React.FC = () => {
   const [mostrandoDetalhes, setMostrandoDetalhes] = useState<number | null>(null);
   const [filtroTipoMotorista, setFiltroTipoMotorista] = useState<string>('Todos');
 
+  // Novos estados para o sistema híbrido
+  const [modoFiltro, setModoFiltro] = useState<'mensal' | 'periodo'>('mensal');
+  const [filtrosPeriodo, setFiltrosPeriodo] = useState({
+    dataInicio: '',
+    dataFim: ''
+  });
+  const [dadosTemporarios, setDadosTemporarios] = useState(false); // Indica se são dados calculados em tempo real
+
   // Filtrar fechamentos por tipo de motorista
   const fechamentosFiltrados = fechamentos.filter(fechamento => {
     if (filtroTipoMotorista === 'Todos') return true;
@@ -29,20 +37,101 @@ const FechamentoMotoristas: React.FC = () => {
   const loadFechamentos = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fechamentoService.getByPeriodo(selectedPeriodo);
-      setFechamentos(data);
+      
+      if (modoFiltro === 'mensal') {
+        // Modo mensal - usar sistema existente
+        const data = await fechamentoService.getByPeriodo(selectedPeriodo);
+        setFechamentos(data);
+        setDadosTemporarios(false);
+      } else {
+        // Modo período customizado - só carrega dados quando há filtros aplicados
+        // Não executa automaticamente ao mudar datas (evita bug do calendário)
+        setFechamentos([]);
+        setDadosTemporarios(false);
+      }
     } catch (error) {
       console.error('Erro ao carregar fechamentos:', error);
       alert('Erro ao carregar fechamentos. Verifique sua conexão.');
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriodo]);
+  }, [selectedPeriodo, modoFiltro]);
+
+  // Função separada para carregar dados por período (chamada apenas no botão Aplicar)
+  const loadFechamentosPorPeriodo = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      if (filtrosPeriodo.dataInicio && filtrosPeriodo.dataFim) {
+        // Primeiro tentar buscar fechamentos já salvos no período
+        const fechamentosSalvos = await fechamentoService.getByPeriodoCustomizado(
+          filtrosPeriodo.dataInicio, 
+          filtrosPeriodo.dataFim
+        );
+        
+        if (fechamentosSalvos.length > 0) {
+          // Se existem fechamentos salvos, usar eles
+          setFechamentos(fechamentosSalvos);
+          setDadosTemporarios(false);
+        } else {
+          // Se não existem fechamentos salvos, calcular em tempo real
+          const fechamentosCalculados = await fechamentoService.calcularFechamentoPorPeriodo(
+            filtrosPeriodo.dataInicio, 
+            filtrosPeriodo.dataFim
+          );
+          setFechamentos(fechamentosCalculados);
+          setDadosTemporarios(true);
+        }
+      } else {
+        setFechamentos([]);
+        setDadosTemporarios(false);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar fechamentos por período:', error);
+      alert('Erro ao carregar fechamentos. Verifique sua conexão.');
+    } finally {
+      setLoading(false);
+    }
+  }, [filtrosPeriodo]);
 
   // Carregar fechamentos do período selecionado
   useEffect(() => {
     loadFechamentos();
   }, [loadFechamentos]);
+
+  // Funções para gerenciar filtros de período customizado
+  const handleModoFiltroChange = (novoModo: 'mensal' | 'periodo') => {
+    setModoFiltro(novoModo);
+    if (novoModo === 'mensal') {
+      // Ao voltar ao modo mensal, limpar filtros de período
+      setFiltrosPeriodo({ dataInicio: '', dataFim: '' });
+      setDadosTemporarios(false);
+    }
+  };
+
+  const handleFiltroPeriodoChange = (campo: 'dataInicio' | 'dataFim', valor: string) => {
+    setFiltrosPeriodo(prev => ({ ...prev, [campo]: valor }));
+  };
+
+  const aplicarFiltrosPeriodo = () => {
+    if (!filtrosPeriodo.dataInicio || !filtrosPeriodo.dataFim) {
+      alert('Por favor, selecione as datas de início e fim do período.');
+      return;
+    }
+    
+    if (filtrosPeriodo.dataInicio > filtrosPeriodo.dataFim) {
+      alert('A data de início deve ser anterior à data de fim.');
+      return;
+    }
+    
+    loadFechamentosPorPeriodo();
+  };
+
+  const limparFiltrosPeriodo = () => {
+    setFiltrosPeriodo({ dataInicio: '', dataFim: '' });
+    setDadosTemporarios(false);
+    setFechamentos([]); // Limpar dados quando filtros são removidos
+  };
 
   const calcularFechamento = async () => {
     if (calculandoFechamento) return;
@@ -66,13 +155,17 @@ const FechamentoMotoristas: React.FC = () => {
         const existente = fechamentos.find(f => f.motorista_id === fechamento.motorista_id);
         
         if (existente) {
-          // Atualizar fechamento existente - CORRIGIR: usar valores recalculados
+          // Atualizar fechamento existente - CORRIGIR: preservar bônus e recalcular valor líquido
+          const bonusExistente = existente.bonus || 0; // Preservar bônus atual
+          const novoValorLiquido = fechamento.valor_comissao - fechamento.descontos + bonusExistente;
+          
           const atualizado = await fechamentoService.update(existente.id!, {
             total_fretes: fechamento.total_fretes,
             valor_bruto: fechamento.valor_bruto,
             valor_comissao: fechamento.valor_comissao,
-            descontos: fechamento.descontos, // CORREÇÃO: usar descontos recalculados
-            valor_liquido: fechamento.valor_liquido // CORREÇÃO: usar valor_liquido recalculado
+            descontos: fechamento.descontos,
+            bonus: bonusExistente, // Manter bônus existente
+            valor_liquido: novoValorLiquido // Calcular corretamente: comissão - descontos + bônus
           });
           fechamentosSalvos.push(atualizado);
         } else {
@@ -285,17 +378,108 @@ const FechamentoMotoristas: React.FC = () => {
       <div className="page-header">
         <h1>Fechamento de Motoristas</h1>
         <div className="header-actions">
-          <select 
-            value={selectedPeriodo}
-            onChange={(e) => setSelectedPeriodo(e.target.value)}
-            className="periodo-select"
-          >
-            {gerarPeriodos().map(periodo => (
-              <option key={periodo.valor} value={periodo.valor}>
-                {periodo.nome}
-              </option>
-            ))}
-          </select>
+          {/* Toggle entre modos */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '15px' }}>
+            <span style={{ fontSize: '14px', color: '#666' }}>Filtrar por:</span>
+            <div style={{ 
+              display: 'flex', 
+              background: '#f8f9fa', 
+              borderRadius: '6px', 
+              border: '1px solid #dee2e6',
+              overflow: 'hidden'
+            }}>
+              <button
+                onClick={() => handleModoFiltroChange('mensal')}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  background: modoFiltro === 'mensal' ? '#007bff' : 'transparent',
+                  color: modoFiltro === 'mensal' ? 'white' : '#495057',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Mês
+              </button>
+              <button
+                onClick={() => handleModoFiltroChange('periodo')}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  background: modoFiltro === 'periodo' ? '#007bff' : 'transparent',
+                  color: modoFiltro === 'periodo' ? 'white' : '#495057',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Período
+              </button>
+            </div>
+          </div>
+
+          {/* Filtros condicionais baseados no modo */}
+          {modoFiltro === 'mensal' ? (
+            <select 
+              value={selectedPeriodo}
+              onChange={(e) => setSelectedPeriodo(e.target.value)}
+              className="periodo-select"
+            >
+              {gerarPeriodos().map(periodo => (
+                <option key={periodo.valor} value={periodo.valor}>
+                  {periodo.nome}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="date"
+                value={filtrosPeriodo.dataInicio}
+                onChange={(e) => handleFiltroPeriodoChange('dataInicio', e.target.value)}
+                style={{ padding: '4px 8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                title="Data início"
+              />
+              <span style={{ color: '#666', fontSize: '13px' }}>até</span>
+              <input
+                type="date"
+                value={filtrosPeriodo.dataFim}
+                onChange={(e) => handleFiltroPeriodoChange('dataFim', e.target.value)}
+                style={{ padding: '4px 8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                title="Data fim"
+              />
+              <button 
+                onClick={aplicarFiltrosPeriodo}
+                style={{ 
+                  padding: '4px 8px', 
+                  background: '#28a745', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+                title="Aplicar filtro por período"
+              >
+                Aplicar
+              </button>
+              <button 
+                onClick={limparFiltrosPeriodo}
+                style={{ 
+                  padding: '4px 8px', 
+                  background: '#6c757d', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+                title="Limpar filtros de período"
+              >
+                Limpar
+              </button>
+            </div>
+          )}
+
           <select 
             value={filtroTipoMotorista}
             onChange={(e) => setFiltroTipoMotorista(e.target.value)}
@@ -310,14 +494,18 @@ const FechamentoMotoristas: React.FC = () => {
               Terceiro ({fechamentos.filter(f => f.motorista?.tipo_motorista === 'Terceiro').length})
             </option>
           </select>
-          <button 
-            className="btn-primary"
-            onClick={calcularFechamento}
-            disabled={calculandoFechamento}
-          >
-            <Calculator size={20} />
-            {calculandoFechamento ? 'Calculando...' : 'Calcular Fechamento'}
-          </button>
+          
+          {modoFiltro === 'mensal' && (
+            <button 
+              className="btn-primary"
+              onClick={calcularFechamento}
+              disabled={calculandoFechamento}
+            >
+              <Calculator size={20} />
+              {calculandoFechamento ? 'Calculando...' : 'Calcular Fechamento'}
+            </button>
+          )}
+          
           {fechamentosFiltrados.length > 0 && (
             <button 
               className="btn-secondary"
@@ -333,10 +521,30 @@ const FechamentoMotoristas: React.FC = () => {
 
       <div className="resumo-periodo">
         <h2>
-          Resumo do Período - {gerarPeriodos().find(p => p.valor === selectedPeriodo)?.nome}
+          Resumo do Período - {
+            modoFiltro === 'mensal' 
+              ? gerarPeriodos().find(p => p.valor === selectedPeriodo)?.nome
+              : filtrosPeriodo.dataInicio && filtrosPeriodo.dataFim 
+                ? `${new Date(filtrosPeriodo.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtrosPeriodo.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}`
+                : 'Período não selecionado'
+          }
           {filtroTipoMotorista !== 'Todos' && (
             <span style={{ color: '#007bff', fontSize: '0.9em', fontWeight: 'normal' }}>
               {' '}(Filtro: {filtroTipoMotorista})
+            </span>
+          )}
+          {dadosTemporarios && (
+            <span style={{ 
+              backgroundColor: '#fff3cd', 
+              color: '#856404', 
+              padding: '4px 8px', 
+              borderRadius: '4px', 
+              fontSize: '0.8em', 
+              fontWeight: 'normal',
+              marginLeft: '10px',
+              border: '1px solid #ffeaa7'
+            }}>
+              📊 Dados calculados em tempo real
             </span>
           )}
         </h2>
@@ -371,6 +579,23 @@ const FechamentoMotoristas: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Aviso para dados temporários */}
+      {dadosTemporarios && (
+        <div style={{
+          backgroundColor: '#e7f3ff', 
+          border: '1px solid #b8daff', 
+          borderRadius: '4px', 
+          padding: '12px', 
+          margin: '15px 0',
+          fontSize: '14px',
+          color: '#004085'
+        }}>
+          <strong>ℹ️ Informação:</strong> Os dados exibidos foram calculados em tempo real para o período selecionado. 
+          Estes são dados temporários e não foram salvos permanentemente. Para salvar um fechamento oficial, 
+          utilize o modo "Por Mês" e clique em "Calcular Fechamento".
+        </div>
+      )}
 
       <div className="table-container">
         {fechamentosFiltrados.length === 0 ? (
@@ -421,25 +646,27 @@ const FechamentoMotoristas: React.FC = () => {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span>{formatCurrency(fechamento.descontos || 0)}</span>
-                      <button
-                        onClick={() => fechamento.id && recalcularDescontos(fechamento.id)}
-                        style={{ 
-                          padding: '2px 6px', 
-                          fontSize: '10px', 
-                          background: '#17a2b8', 
-                          color: 'white', 
-                          border: 'none', 
-                          borderRadius: '3px',
-                          cursor: 'pointer'
-                        }}
-                        title="Recalcular descontos baseado nos vales atuais"
-                      >
-                        ↻
-                      </button>
+                      {!dadosTemporarios && (
+                        <button
+                          onClick={() => fechamento.id && recalcularDescontos(fechamento.id)}
+                          style={{ 
+                            padding: '2px 6px', 
+                            fontSize: '10px', 
+                            background: '#17a2b8', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                          title="Recalcular descontos baseado nos vales atuais"
+                        >
+                          ↻
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td>
-                    {editandoBonus === fechamento.id ? (
+                    {editandoBonus === fechamento.id && !dadosTemporarios ? (
                       <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                         <input
                           type="number"
@@ -464,9 +691,13 @@ const FechamentoMotoristas: React.FC = () => {
                       </div>
                     ) : (
                       <div 
-                        style={{ cursor: 'pointer', padding: '4px' }}
-                        onClick={() => fechamento.id && iniciarEdicaoBonus(fechamento.id, fechamento.bonus || 0)}
-                        title="Clique para editar bônus"
+                        style={{ 
+                          cursor: dadosTemporarios ? 'not-allowed' : 'pointer', 
+                          padding: '4px',
+                          opacity: dadosTemporarios ? 0.6 : 1
+                        }}
+                        onClick={() => !dadosTemporarios && fechamento.id && iniciarEdicaoBonus(fechamento.id, fechamento.bonus || 0)}
+                        title={dadosTemporarios ? "Edição não disponível para dados temporários" : "Clique para editar bônus"}
                       >
                         {formatCurrency(fechamento.bonus || 0)}
                       </div>
@@ -476,14 +707,18 @@ const FechamentoMotoristas: React.FC = () => {
                   <td>
                     <select
                       value={fechamento.status}
-                      onChange={(e) => fechamento.id && atualizarStatus(fechamento.id, e.target.value)}
+                      onChange={(e) => !dadosTemporarios && fechamento.id && atualizarStatus(fechamento.id, e.target.value)}
+                      disabled={dadosTemporarios}
                       style={{ 
                         backgroundColor: getStatusColor(fechamento.status),
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
-                        padding: '4px 8px'
+                        padding: '4px 8px',
+                        opacity: dadosTemporarios ? 0.6 : 1,
+                        cursor: dadosTemporarios ? 'not-allowed' : 'pointer'
                       }}
+                      title={dadosTemporarios ? "Edição não disponível para dados temporários" : "Alterar status"}
                     >
                       <option value="Pendente">Pendente</option>
                       <option value="Pago">Pago</option>
@@ -494,26 +729,39 @@ const FechamentoMotoristas: React.FC = () => {
                     <div className="actions">
                       <button 
                         className="btn-action"
-                        onClick={() => fechamento.id && toggleDetalhes(fechamento.id)}
-                        title="Ver Detalhes"
+                        onClick={() => !dadosTemporarios && fechamento.id && toggleDetalhes(fechamento.id)}
+                        title={dadosTemporarios ? "Detalhes não disponíveis para dados temporários" : "Ver Detalhes"}
                         style={{ 
                           backgroundColor: mostrandoDetalhes === fechamento.id ? '#17a2b8' : '',
-                          color: mostrandoDetalhes === fechamento.id ? 'white' : ''
+                          color: mostrandoDetalhes === fechamento.id ? 'white' : '',
+                          opacity: dadosTemporarios ? 0.6 : 1,
+                          cursor: dadosTemporarios ? 'not-allowed' : 'pointer'
                         }}
+                        disabled={dadosTemporarios}
                       >
                         <Eye size={16} />
                       </button>
                       <button 
                         className="btn-action"
-                        onClick={() => fechamento.id && gerarRelatorioPDF(fechamento.id)}
-                        title="Gerar Relatório PDF"
+                        onClick={() => !dadosTemporarios && fechamento.id && gerarRelatorioPDF(fechamento.id)}
+                        title={dadosTemporarios ? "PDF não disponível para dados temporários" : "Gerar Relatório PDF"}
+                        style={{ 
+                          opacity: dadosTemporarios ? 0.6 : 1,
+                          cursor: dadosTemporarios ? 'not-allowed' : 'pointer'
+                        }}
+                        disabled={dadosTemporarios}
                       >
                         <FileText size={16} />
                       </button>
                       <button 
                         className="btn-action btn-danger"
-                        onClick={() => fechamento.id && deletarFechamento(fechamento.id, fechamento.motorista?.nome || 'Motorista')}
-                        title="Excluir Fechamento"
+                        onClick={() => !dadosTemporarios && fechamento.id && deletarFechamento(fechamento.id, fechamento.motorista?.nome || 'Motorista')}
+                        title={dadosTemporarios ? "Exclusão não disponível para dados temporários" : "Excluir Fechamento"}
+                        style={{ 
+                          opacity: dadosTemporarios ? 0.6 : 1,
+                          cursor: dadosTemporarios ? 'not-allowed' : 'pointer'
+                        }}
+                        disabled={dadosTemporarios}
                       >
                         <Trash2 size={16} />
                       </button>

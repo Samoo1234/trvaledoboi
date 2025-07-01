@@ -84,6 +84,22 @@ class FechamentoService {
     return data || [];
   }
 
+  // Novo método para buscar por período customizado (data início e fim)
+  async getByPeriodoCustomizado(dataInicio: string, dataFim: string): Promise<FechamentoMotorista[]> {
+    const { data, error } = await supabase
+      .from('fechamentos_motoristas')
+      .select(`
+        *,
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
+      `)
+      .gte('data_fechamento', dataInicio)
+      .lte('data_fechamento', dataFim)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
   async getById(id: number): Promise<FechamentoDetalhado | null> {
     const { data, error } = await supabase
       .from('fechamentos_motoristas')
@@ -294,6 +310,89 @@ class FechamentoService {
         }
       } catch (error) {
         // Continuar com os outros motoristas mesmo se um der erro
+        console.error(`Erro ao calcular fechamento para ${motorista.nome}:`, error);
+      }
+    }
+
+    return fechamentos;
+  }
+
+  // Método para calcular fechamento em tempo real por período customizado
+  async calcularFechamentoPorPeriodo(dataInicio: string, dataFim: string): Promise<FechamentoMotorista[]> {
+    // Buscar todos os motoristas ativos
+    const { data: motoristas, error: motoristasError } = await supabase
+      .from('motoristas')
+      .select('id, nome, tipo_motorista, status, porcentagem_comissao')
+      .or('status.eq.Ativo,status.is.null');
+
+    if (motoristasError) {
+      throw new Error(`Erro ao buscar motoristas: ${motoristasError.message}`);
+    }
+
+    const fechamentos: FechamentoMotorista[] = [];
+
+    for (const motorista of motoristas || []) {
+      try {
+        // Buscar fretes do período customizado
+        const { data: fretes, error: fretesError } = await supabase
+          .from('fretes')
+          .select('valor_frete, data_emissao, origem, destino')
+          .eq('motorista_id', motorista.id)
+          .gte('data_emissao', dataInicio)
+          .lte('data_emissao', dataFim);
+
+        if (fretesError) {
+          console.error(`Erro ao buscar fretes para ${motorista.nome}:`, fretesError);
+          continue;
+        }
+
+        if (!fretes || fretes.length === 0) continue;
+
+        // Buscar vales do período (usando service de vales por data)
+        let totalVales = 0;
+        try {
+          const { data: vales, error: valesError } = await supabase
+            .from('vales')
+            .select('valor')
+            .eq('motorista_id', motorista.id)
+            .gte('data_vale', dataInicio)
+            .lte('data_vale', dataFim);
+
+          if (valesError) {
+            console.warn(`Erro ao buscar vales para ${motorista.nome}:`, valesError);
+          } else {
+            totalVales = vales?.reduce((sum, vale) => sum + (parseFloat(vale.valor) || 0), 0) || 0;
+          }
+        } catch (error) {
+          console.warn(`Erro ao processar vales para ${motorista.nome}:`, error);
+        }
+
+        // Calcular valores
+        const totalFretes = fretes.length;
+        const valorBruto = fretes.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0);
+        
+        // Usar porcentagem personalizada ou padrão
+        const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
+        const valorComissao = valorBruto * porcentagemComissao;
+        
+        // Valor líquido = comissão - vales (sem bônus inicial)
+        const valorLiquido = valorComissao - totalVales;
+
+        fechamentos.push({
+          motorista_id: motorista.id,
+          periodo: `${dataInicio} a ${dataFim}`, // Formato especial para período customizado
+          data_fechamento: dataFim,
+          total_fretes: totalFretes,
+          valor_bruto: valorBruto,
+          valor_comissao: valorComissao,
+          descontos: totalVales,
+          bonus: 0, // Inicia zerado
+          valor_liquido: valorLiquido,
+          status: 'Calculado', // Status especial para indicar que é cálculo em tempo real
+          motorista
+        });
+
+      } catch (error) {
         console.error(`Erro ao calcular fechamento para ${motorista.nome}:`, error);
       }
     }
