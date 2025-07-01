@@ -16,8 +16,12 @@ export class PDFService {
   }
 
   private drawFretesTableLikeAcerto(doc: jsPDF, startY: number, fretes: any[], pageHeight: number): number {
-    const headers = ['Data', 'Origem', 'Destino', 'KM', 'Valor Bruto'];
-    const colWidths = [25, 50, 50, 25, 35];
+    const headers = ['Data', 'Tipo Veículo', 'Placa', 'Origem', 'Destino', 'KM', 'Valor'];
+    const colWidths = [22, 25, 20, 38, 38, 17, 28]; // Total: 188mm - melhor distribuição
+    const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+    const pageWidth = 210; // Largura do papel A4
+    const startX = (pageWidth - totalWidth) / 2; // Centralizar na página = 11mm
+    console.log(`[PDF DEBUG] Centralizando tabela: startX=${startX}, totalWidth=${totalWidth}`);
     let currentY = startY;
     
     // Cabeçalho da tabela
@@ -26,7 +30,7 @@ export class PDFService {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     
-    let currentX = 20;
+    let currentX = startX;
     headers.forEach((header, i) => {
       // Garantir que a cor de fundo está sendo aplicada
       doc.setFillColor(139, 0, 0);
@@ -60,7 +64,7 @@ export class PDFService {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         
-        currentX = 20;
+        currentX = startX;
         headers.forEach((header, i) => {
           // Garantir que a cor de fundo está sendo aplicada
           doc.setFillColor(139, 0, 0);
@@ -84,18 +88,20 @@ export class PDFService {
       // Alternar cor de fundo
       if (index % 2 === 1) {
         doc.setFillColor(245, 245, 245);
-        doc.rect(20, currentY, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+        doc.rect(startX, currentY, totalWidth, 8, 'F');
       }
       
       const rowData = [
         this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM
-        frete.origem.length > 25 ? frete.origem.substring(0, 25) + '...' : frete.origem,
-        frete.destino.length > 25 ? frete.destino.substring(0, 25) + '...' : frete.destino,
+        frete.caminhao?.tipo || 'N/A', // Tipo veículo do caminhão
+        frete.caminhao?.placa || 'N/A', // Placa do caminhão
+        frete.origem.length > 17 ? frete.origem.substring(0, 17) + '...' : frete.origem,
+        frete.destino.length > 17 ? frete.destino.substring(0, 17) + '...' : frete.destino,
         frete.total_km ? frete.total_km.toString() : '-',
         this.formatCurrency(frete.valor_frete)
       ];
       
-      currentX = 20;
+      currentX = startX;
       rowData.forEach((data, i) => {
         // Desenhar borda da célula
         doc.setDrawColor(200, 200, 200);

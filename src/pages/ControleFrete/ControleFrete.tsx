@@ -491,7 +491,10 @@ const ControleFrete: React.FC = () => {
       // Função para desenhar tabela de fretes
       const drawFretesTable = (startY: number) => {
         const headers = ['Data', 'Tipo Veículo', 'Placa', 'Origem', 'Destino', 'KM', 'Valor'];
-        const colWidths = [20, 30, 20, 40, 40, 15, 25];
+        const colWidths = [22, 25, 20, 38, 38, 17, 28]; // Total: 188mm - centralizada
+        const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+        const startX = (pageWidth - totalWidth) / 2; // Centralizar na página
+        console.log(`[ACERTO PDF DEBUG] Centralizando tabela: startX=${startX}, totalWidth=${totalWidth}`);
         let currentY = startY;
         
         // Cabeçalho da tabela
@@ -500,7 +503,7 @@ const ControleFrete: React.FC = () => {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         
-        let currentX = 20;
+        let currentX = startX;
         headers.forEach((header, i) => {
           // Garantir que a cor de fundo está sendo aplicada
           doc.setFillColor(139, 0, 0);
@@ -534,7 +537,7 @@ const ControleFrete: React.FC = () => {
             doc.setFontSize(9);
             doc.setFont('helvetica', 'bold');
             
-            currentX = 20;
+            currentX = startX;
             headers.forEach((header, i) => {
               // Garantir que a cor de fundo está sendo aplicada
               doc.setFillColor(139, 0, 0);
@@ -560,20 +563,20 @@ const ControleFrete: React.FC = () => {
           // Alternar cor de fundo
           if (index % 2 === 1) {
             doc.setFillColor(245, 245, 245);
-            doc.rect(20, currentY, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+            doc.rect(startX, currentY, totalWidth, 8, 'F');
           }
           
           const rowData = [
             formatDisplayDate(frete.data_emissao).substring(0, 5),
             (caminhao?.tipo || 'N/A').substring(0, 15),
             caminhao?.placa || 'N/A',
-            frete.origem.length > 20 ? frete.origem.substring(0, 20) + '...' : frete.origem,
-            frete.destino.length > 20 ? frete.destino.substring(0, 20) + '...' : frete.destino,
+            frete.origem.length > 17 ? frete.origem.substring(0, 17) + '...' : frete.origem,
+            frete.destino.length > 17 ? frete.destino.substring(0, 17) + '...' : frete.destino,
             frete.total_km ? frete.total_km.toString() : '-',
             formatCurrency(frete.valor_frete)
           ];
           
-          currentX = 20;
+          currentX = startX;
           rowData.forEach((data, i) => {
             // Desenhar borda da célula
             doc.setDrawColor(200, 200, 200);
@@ -1243,6 +1246,7 @@ const ControleFrete: React.FC = () => {
                     <th>Data</th>
                     <th>Descrição</th>
                     <th>Placa</th>
+                    <th>Pecuarista</th>
                     <th>Remetente/Faz</th>
                     <th>Destinatário/Faz</th>
                     <th>Base Cálculo</th>
@@ -1262,6 +1266,7 @@ const ControleFrete: React.FC = () => {
                         <td>{caminhao?.placa || 'N/A'}</td>
                         <td>{frete.pecuarista}</td>
                         <td>{frete.origem}</td>
+                        <td>{frete.destino}</td>
                         <td>{frete.total_km ? `${frete.total_km}KM` : 'N/A'}</td>
                         <td>{formatCurrency(frete.valor_frete)}</td>
                         <td>

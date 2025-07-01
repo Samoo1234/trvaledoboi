@@ -35,6 +35,10 @@ export interface FechamentoDetalhado extends FechamentoMotorista {
     valor_frete: number;
     valor_comissao: number;
     total_km?: number;
+    caminhao?: {
+      placa: string;
+      tipo: string;
+    };
   }>;
   abastecimentos?: Array<{
     id: number;
@@ -121,7 +125,10 @@ class FechamentoService {
 
     const { data: fretes, error: fretesError } = await supabase
       .from('fretes')
-      .select('id, data_emissao, origem, destino, valor_frete, total_km')
+      .select(`
+        id, data_emissao, origem, destino, valor_frete, total_km,
+        caminhao:caminhoes(placa, tipo)
+      `)
       .eq('motorista_id', data.motorista_id)
       .gte('data_emissao', inicioMes)
       .lte('data_emissao', fimMes)
