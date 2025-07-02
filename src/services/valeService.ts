@@ -61,7 +61,7 @@ class ValeService {
     return data || [];
   }
 
-  // Buscar vales por motorista e período
+    // Buscar vales por motorista e período
   async getByMotoristaAndPeriodo(motoristaId: number, periodo: string): Promise<Vale[]> {
     const { data, error } = await supabase
       .from('vales_motoristas')
@@ -71,12 +71,12 @@ class ValeService {
       `)
       .eq('motorista_id', motoristaId)
       .eq('periodo', periodo)
-      .order('data_vale', { ascending: false });
-    
+      .order('data_vale', { ascending: true });
+
     if (error) {
       throw new Error(error.message);
     }
-    
+
     return data || [];
   }
 

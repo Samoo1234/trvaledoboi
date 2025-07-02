@@ -125,7 +125,7 @@ class FechamentoService {
     const { data: fretes, error: fretesError } = await supabase
       .from('fretes')
       .select(`
-        id, data_emissao, origem, destino, valor_frete, total_km,
+        id, data_emissao, origem, destino, valor_frete, total_km, pecuarista,
         caminhao:caminhoes(placa, tipo)
       `)
       .eq('motorista_id', data.motorista_id)
@@ -188,7 +188,7 @@ class FechamentoService {
 
     const { data: fretes, error: fretesError } = await supabase
       .from('fretes')
-      .select('valor_frete, data_emissao, origem, destino')
+      .select('valor_frete, data_emissao, origem, destino, pecuarista')
       .eq('motorista_id', motoristaId)
       .gte('data_emissao', inicioMes)
       .lte('data_emissao', fimMes);
@@ -416,7 +416,7 @@ class FechamentoService {
         // Buscar fretes do período customizado
         const { data: fretes, error: fretesError } = await supabase
           .from('fretes')
-          .select('valor_frete, data_emissao, origem, destino')
+          .select('valor_frete, data_emissao, origem, destino, pecuarista')
           .eq('motorista_id', motorista.id)
           .gte('data_emissao', dataInicio)
           .lte('data_emissao', dataFim);

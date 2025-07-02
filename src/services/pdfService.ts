@@ -17,11 +17,12 @@ export class PDFService {
   }
 
   private drawFretesTableLikeAcerto(doc: jsPDF, startY: number, fretes: any[], pageHeight: number): number {
-    const headers = ['Data', 'Tipo Veículo', 'Placa', 'Origem', 'Destino', 'KM', 'Valor'];
-    const colWidths = [22, 25, 20, 38, 38, 17, 28]; // Total: 188mm - melhor distribuição
+    const headers = ['Data', 'Cliente', 'Origem', 'Destino', 'KM', 'Valor'];
+    const colWidths = [22, 35, 40, 40, 17, 34]; // Total: 188mm - 6 colunas redistribuídas
     const totalWidth = colWidths.reduce((a, b) => a + b, 0);
     const pageWidth = 210; // Largura do papel A4
     const startX = (pageWidth - totalWidth) / 2; // Centralizar na página = 11mm
+    console.log(`[PDF DEBUG] Nova tabela de fretes: 6 colunas [Data|Cliente|Origem|Destino|KM|Valor]`);
     console.log(`[PDF DEBUG] Centralizando tabela: startX=${startX}, totalWidth=${totalWidth}`);
     let currentY = startY;
     
@@ -94,10 +95,9 @@ export class PDFService {
       
       const rowData = [
         this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM
-        frete.caminhao?.tipo || 'N/A', // Tipo veículo do caminhão
-        frete.caminhao?.placa || 'N/A', // Placa do caminhão
-        frete.origem.length > 17 ? frete.origem.substring(0, 17) + '...' : frete.origem,
-        frete.destino.length > 17 ? frete.destino.substring(0, 17) + '...' : frete.destino,
+        frete.pecuarista?.length > 20 ? frete.pecuarista.substring(0, 20) + '...' : frete.pecuarista || 'N/A', // Cliente
+        frete.origem.length > 22 ? frete.origem.substring(0, 22) + '...' : frete.origem,
+        frete.destino.length > 22 ? frete.destino.substring(0, 22) + '...' : frete.destino,
         frete.total_km ? frete.total_km.toString() : '-',
         this.formatCurrency(frete.valor_frete)
       ];
@@ -117,6 +117,100 @@ export class PDFService {
       currentY += 8;
     });
     
+    return currentY;
+  }
+
+  private drawValesTable(doc: jsPDF, startY: number, vales: any[], pageHeight: number): number {
+    const headers = ['Data', 'Descrição', 'Valor'];
+    const colWidths = [30, 100, 50]; // Total: 180mm
+    const rowHeight = 8;
+
+    const drawHeader = (yPosition: number, incluirTitulo: boolean = false): number => {
+      let currentY = yPosition;
+      
+      // Se for quebra de página, incluir o título da seção
+      if (incluirTitulo) {
+        doc.setFontSize(14);
+        doc.setTextColor(139, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DETALHAMENTO VALE/DESPESAS', 20, currentY);
+        currentY += 15;
+      }
+      
+      let currentX = 20;
+
+      // Desenhar cabeçalho da tabela
+      doc.setFillColor(139, 0, 0);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+
+      for (let i = 0; i < headers.length; i++) {
+        doc.rect(currentX, currentY, colWidths[i], rowHeight, 'F');
+        doc.text(headers[i], currentX + colWidths[i] / 2, currentY + 5, { align: 'center' });
+        currentX += colWidths[i];
+      }
+
+      currentY += rowHeight;
+      return currentY;
+    };
+
+    let currentY = drawHeader(startY, false); // NÃO incluir título (já foi escrito na função principal)
+
+    // Preparar dados dos vales
+    const valesData = vales.map(vale => [
+      this.formatDate(vale.data_vale),
+      vale.descricao || '-',
+      this.formatCurrency(vale.valor)
+    ]);
+
+    console.log(`[PDF DEBUG] Iniciando tabela de vales. ${valesData.length} linhas para processar`);
+
+    // Desenhar linhas de dados
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+
+    for (let row = 0; row < valesData.length; row++) {
+      // Verificar se precisa de nova página
+      if (currentY + rowHeight > pageHeight - 30) {
+        console.log(`[PDF DEBUG] Quebra de página na linha ${row + 1} da tabela de vales`);
+        doc.addPage();
+        currentY = 20;
+        currentY = drawHeader(currentY, true); // Incluir título na nova página
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+      }
+
+      let currentX = 20;
+      
+      // Alternar cor de fundo das linhas (zebrado)
+      if (row % 2 === 1) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(currentX, currentY, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
+      }
+
+      // Desenhar cada célula da linha
+      for (let col = 0; col < valesData[row].length; col++) {
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(currentX, currentY, colWidths[col], rowHeight);
+        
+        const text = valesData[row][col] || '';
+        if (text.includes('R$')) {
+          doc.text(text, currentX + colWidths[col] - 5, currentY + 6, { align: 'right' });
+        } else {
+          doc.text(text, currentX + 2, currentY + 6);
+        }
+        
+        currentX += colWidths[col];
+      }
+      
+      currentY += rowHeight;
+    }
+
+    console.log(`[PDF DEBUG] Tabela de vales finalizada. ${valesData.length} linhas processadas`);
     return currentY;
   }
 
@@ -474,6 +568,41 @@ export class PDFService {
         doc.internal.pageSize.getHeight()
       );
     }
+
+    // Detalhamento dos vales/despesas (para todos os tipos de motorista)
+    let finalYVales = finalYAbastecimentos;
+    if (fechamento.motorista_id) {
+      try {
+        // Buscar vales detalhados do período
+        const valesDetalhados = await valeService.getByMotoristaAndPeriodo(fechamento.motorista_id, fechamento.periodo);
+        
+        if (valesDetalhados && valesDetalhados.length > 0) {
+          console.log(`[PDF DEBUG] Processando ${valesDetalhados.length} vales para o PDF`);
+          
+          const pageHeight = doc.internal.pageSize.getHeight();
+          
+          // Verificar se há espaço suficiente para o título + cabeçalho + pelo menos uma linha
+          if (finalYAbastecimentos + 50 > pageHeight - 40) {
+            console.log(`[PDF DEBUG] Não há espaço para seção de vales, indo para nova página`);
+            doc.addPage();
+            finalYAbastecimentos = 20;
+          }
+          
+          doc.setFontSize(14);
+          doc.setTextColor(139, 0, 0);
+          doc.text('DETALHAMENTO VALE/DESPESAS', 20, finalYAbastecimentos + 20);
+          
+          finalYVales = this.drawValesTable(
+            doc,
+            finalYAbastecimentos + 30,
+            valesDetalhados,
+            pageHeight
+          );
+        }
+      } catch (error) {
+        console.warn('[PDF DEBUG] Erro ao buscar vales detalhados:', error);
+      }
+    }
     
     // Rodapé
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -487,7 +616,7 @@ export class PDFService {
     
     // Observações se houver
     if (fechamento.observacoes) {
-      const observacoesY = finalYAbastecimentos + 20;
+      const observacoesY = finalYVales + 20;
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       doc.text('Observações:', 20, observacoesY);
