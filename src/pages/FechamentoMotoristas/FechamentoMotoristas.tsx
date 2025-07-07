@@ -3,6 +3,7 @@ import { Calculator, Eye, FileText, Trash2 } from 'lucide-react';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { pdfService } from '../../services/pdfService';
 import { formatDisplayDate } from '../../services/dateUtils';
+import { supabase } from '../../services/supabaseClient';
 import './FechamentoMotoristas.css';
 
 const FechamentoMotoristas: React.FC = () => {
@@ -21,12 +22,16 @@ const FechamentoMotoristas: React.FC = () => {
   const [filtroTipoMotorista, setFiltroTipoMotorista] = useState<string>('Todos');
 
   // Novos estados para o sistema híbrido
-  const [modoFiltro, setModoFiltro] = useState<'mensal' | 'periodo'>('mensal');
+  const [modoFiltro, setModoFiltro] = useState<'mensal' | 'periodo' | 'motorista'>('mensal');
   const [filtrosPeriodo, setFiltrosPeriodo] = useState({
     dataInicio: '',
     dataFim: ''
   });
   const [dadosTemporarios, setDadosTemporarios] = useState(false); // Indica se são dados calculados em tempo real
+  
+  // Novos estados para o modo motorista
+  const [motoristas, setMotoristas] = useState<Array<{id: number, nome: string, tipo_motorista: string}>>([]);
+  const [motoristasSelecionado, setMotoristaSelecionado] = useState<number | null>(null);
 
   // Filtrar fechamentos por tipo de motorista
   const fechamentosFiltrados = fechamentos.filter(fechamento => {
@@ -43,9 +48,13 @@ const FechamentoMotoristas: React.FC = () => {
         const data = await fechamentoService.getByPeriodo(selectedPeriodo);
         setFechamentos(data);
         setDadosTemporarios(false);
-      } else {
+      } else if (modoFiltro === 'periodo') {
         // Modo período customizado - só carrega dados quando há filtros aplicados
         // Não executa automaticamente ao mudar datas (evita bug do calendário)
+        setFechamentos([]);
+        setDadosTemporarios(false);
+      } else if (modoFiltro === 'motorista') {
+        // Modo motorista - só carrega dados quando há motorista selecionado
         setFechamentos([]);
         setDadosTemporarios(false);
       }
@@ -99,11 +108,39 @@ const FechamentoMotoristas: React.FC = () => {
     loadFechamentos();
   }, [loadFechamentos]);
 
+  // Carregar lista de motoristas ao montar componente
+  useEffect(() => {
+    const carregarMotoristas = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('motoristas')
+          .select('id, nome, tipo_motorista')
+          .or('status.eq.Ativo,status.is.null')
+          .order('nome');
+        
+        if (error) throw error;
+        setMotoristas(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar motoristas:', error);
+      }
+    };
+    
+    carregarMotoristas();
+  }, []);
+
   // Funções para gerenciar filtros de período customizado
-  const handleModoFiltroChange = (novoModo: 'mensal' | 'periodo') => {
+  const handleModoFiltroChange = (novoModo: 'mensal' | 'periodo' | 'motorista') => {
     setModoFiltro(novoModo);
     if (novoModo === 'mensal') {
-      // Ao voltar ao modo mensal, limpar filtros de período
+      // Ao voltar ao modo mensal, limpar filtros de período e motorista
+      setFiltrosPeriodo({ dataInicio: '', dataFim: '' });
+      setMotoristaSelecionado(null);
+      setDadosTemporarios(false);
+    } else if (novoModo === 'periodo') {
+      // Limpar motorista selecionado
+      setMotoristaSelecionado(null);
+    } else if (novoModo === 'motorista') {
+      // Limpar filtros de período
       setFiltrosPeriodo({ dataInicio: '', dataFim: '' });
       setDadosTemporarios(false);
     }
@@ -316,6 +353,35 @@ const FechamentoMotoristas: React.FC = () => {
     }
   };
 
+  const gerarRelatorioConsolidadoPorMotorista = async () => {
+    try {
+      if (!motoristasSelecionado) {
+        alert('Por favor, selecione um motorista.');
+        return;
+      }
+
+      setLoading(true);
+      const fechamentoDetalhado = await fechamentoService.getHistoricoDetalhado(motoristasSelecionado);
+      
+      if (!fechamentoDetalhado) {
+        alert('Nenhum dado encontrado para este motorista.');
+        return;
+      }
+
+      if (fechamentoDetalhado.total_fretes === 0) {
+        alert('Este motorista não possui fretes registrados.');
+        return;
+      }
+
+      await pdfService.gerarRelatorioConsolidadoPorMotorista(fechamentoDetalhado);
+    } catch (error) {
+      console.error('Erro ao gerar relatório consolidado por motorista:', error);
+      alert('Erro ao gerar relatório consolidado por motorista.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleDetalhes = (fechamentoId: number) => {
     setMostrandoDetalhes(mostrandoDetalhes === fechamentoId ? null : fechamentoId);
   };
@@ -414,6 +480,19 @@ const FechamentoMotoristas: React.FC = () => {
               >
                 Período
               </button>
+              <button
+                onClick={() => handleModoFiltroChange('motorista')}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  background: modoFiltro === 'motorista' ? '#007bff' : 'transparent',
+                  color: modoFiltro === 'motorista' ? 'white' : '#495057',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Motorista
+              </button>
             </div>
           </div>
 
@@ -430,7 +509,7 @@ const FechamentoMotoristas: React.FC = () => {
                 </option>
               ))}
             </select>
-          ) : (
+          ) : modoFiltro === 'periodo' ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="date"
@@ -478,7 +557,21 @@ const FechamentoMotoristas: React.FC = () => {
                 Limpar
               </button>
             </div>
-          )}
+          ) : modoFiltro === 'motorista' ? (
+            <select 
+              value={motoristasSelecionado || ''}
+              onChange={(e) => setMotoristaSelecionado(e.target.value ? parseInt(e.target.value) : null)}
+              className="periodo-select"
+              style={{ minWidth: '200px' }}
+            >
+              <option value="">Selecione um motorista</option>
+              {motoristas.map(motorista => (
+                <option key={motorista.id} value={motorista.id}>
+                  {motorista.nome} ({motorista.tipo_motorista})
+                </option>
+              ))}
+            </select>
+          ) : null}
 
           <select 
             value={filtroTipoMotorista}
@@ -506,7 +599,7 @@ const FechamentoMotoristas: React.FC = () => {
             </button>
           )}
           
-          {fechamentosFiltrados.length > 0 && (
+          {fechamentosFiltrados.length > 0 && modoFiltro !== 'motorista' && (
             <button 
               className="btn-secondary"
               onClick={gerarRelatorioConsolidado}
@@ -514,6 +607,17 @@ const FechamentoMotoristas: React.FC = () => {
             >
               <FileText size={20} />
               Relatório Consolidado
+            </button>
+          )}
+
+          {modoFiltro === 'motorista' && motoristasSelecionado && (
+            <button 
+              className="btn-secondary"
+              onClick={gerarRelatorioConsolidadoPorMotorista}
+              title="Gerar Relatório Consolidado do Motorista em PDF"
+            >
+              <FileText size={20} />
+              Relatório Consolidado Motorista
             </button>
           )}
         </div>
@@ -524,9 +628,13 @@ const FechamentoMotoristas: React.FC = () => {
           Resumo do Período - {
             modoFiltro === 'mensal' 
               ? gerarPeriodos().find(p => p.valor === selectedPeriodo)?.nome
-              : filtrosPeriodo.dataInicio && filtrosPeriodo.dataFim 
+              : modoFiltro === 'periodo' && filtrosPeriodo.dataInicio && filtrosPeriodo.dataFim 
                 ? `${new Date(filtrosPeriodo.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtrosPeriodo.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}`
-                : 'Período não selecionado'
+                : modoFiltro === 'motorista' && motoristasSelecionado
+                  ? `Histórico - ${motoristas.find(m => m.id === motoristasSelecionado)?.nome || 'Motorista'}`
+                  : modoFiltro === 'periodo' 
+                    ? 'Período não selecionado'
+                    : 'Motorista não selecionado'
           }
           {filtroTipoMotorista !== 'Todos' && (
             <span style={{ color: '#007bff', fontSize: '0.9em', fontWeight: 'normal' }}>

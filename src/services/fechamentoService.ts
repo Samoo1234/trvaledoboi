@@ -34,6 +34,7 @@ export interface FechamentoDetalhado extends FechamentoMotorista {
     valor_frete: number;
     valor_comissao: number;
     total_km?: number;
+    pecuarista?: string;
     caminhao?: {
       placa: string;
       tipo: string;
@@ -482,6 +483,130 @@ class FechamentoService {
     }
 
     return fechamentos;
+  }
+
+  // Novo método para buscar histórico completo de um motorista específico
+  async getHistoricoCompleto(motoristaId: number): Promise<FechamentoMotorista[]> {
+    const { data, error } = await supabase
+      .from('fechamentos_motoristas')
+      .select(`
+        *,
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
+      `)
+      .eq('motorista_id', motoristaId)
+      .order('data_fechamento', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Novo método para buscar histórico detalhado de um motorista (para relatório consolidado)
+  async getHistoricoDetalhado(motoristaId: number): Promise<FechamentoDetalhado | null> {
+    // Buscar motorista
+    const { data: motorista, error: motoristaError } = await supabase
+      .from('motoristas')
+      .select('id, nome, tipo_motorista, porcentagem_comissao')
+      .eq('id', motoristaId)
+      .single();
+
+    if (motoristaError) throw motoristaError;
+
+    // Buscar todos os fretes históricos do motorista
+    const { data: fretes, error: fretesError } = await supabase
+      .from('fretes')
+      .select(`
+        id, data_emissao, origem, destino, valor_frete, total_km, pecuarista,
+        caminhao:caminhoes(placa, tipo)
+      `)
+      .eq('motorista_id', motoristaId)
+      .order('data_emissao', { ascending: false });
+
+    if (fretesError) throw fretesError;
+
+    // Calcular comissão por frete usando porcentagem personalizada
+    const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
+    const fretesComComissao = fretes?.map(frete => {
+      const caminhaoInfo = Array.isArray(frete.caminhao) ? frete.caminhao[0] : frete.caminhao;
+      return {
+        id: frete.id,
+        data_emissao: frete.data_emissao,
+        origem: frete.origem,
+        destino: frete.destino,
+        valor_frete: frete.valor_frete,
+        valor_comissao: frete.valor_frete * porcentagemComissao,
+        total_km: frete.total_km,
+        pecuarista: frete.pecuarista, // Campo cliente estava faltando!
+        caminhao: caminhaoInfo ? {
+          placa: caminhaoInfo.placa,
+          tipo: caminhaoInfo.tipo
+        } : undefined
+      };
+    }) || [];
+
+    // Buscar abastecimentos se for motorista terceiro
+    let abastecimentos: any[] = [];
+    if (motorista?.tipo_motorista === 'Terceiro') {
+      const { data: abastecimentosData, error: abastecimentosError } = await supabase
+        .from('abastecimentos')
+        .select('id, data_abastecimento, posto_tanque, combustivel, quantidade_litros, preco_total')
+        .eq('motorista_id', motoristaId)
+        .order('data_abastecimento', { ascending: false });
+
+      if (abastecimentosError) {
+        console.warn('Erro ao buscar abastecimentos:', abastecimentosError);
+      } else {
+        abastecimentos = abastecimentosData || [];
+      }
+    }
+
+    // Calcular valores consolidados
+    const totalFretes = fretes?.length || 0;
+    const valorBruto = fretes?.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0) || 0;
+    const valorComissao = valorBruto * porcentagemComissao;
+
+    // Buscar total de vales históricos
+    let totalVales = 0;
+    try {
+      const { data: vales, error: valesError } = await supabase
+        .from('vales')
+        .select('valor')
+        .eq('motorista_id', motoristaId);
+
+      if (valesError) {
+        console.warn('Erro ao buscar vales históricos:', valesError);
+      } else {
+        totalVales = vales?.reduce((sum, vale) => sum + (parseFloat(vale.valor) || 0), 0) || 0;
+      }
+    } catch (error) {
+      console.warn('Erro ao processar vales históricos:', error);
+    }
+
+    // Buscar total de bônus históricos
+    const fechamentosHistoricos = await this.getHistoricoCompleto(motoristaId);
+    const totalBonus = fechamentosHistoricos.reduce((sum, f) => sum + (f.bonus || 0), 0);
+
+    const valorLiquido = valorComissao - totalVales + totalBonus;
+
+    // Data atual
+    const dataAtual = new Date();
+    const dataFechamento = `${dataAtual.getFullYear()}-${(dataAtual.getMonth() + 1).toString().padStart(2, '0')}-${dataAtual.getDate().toString().padStart(2, '0')}`;
+
+    return {
+      id: 0, // ID fictício para histórico consolidado
+      motorista_id: motoristaId,
+      periodo: 'Histórico Completo',
+      data_fechamento: dataFechamento,
+      total_fretes: totalFretes,
+      valor_bruto: valorBruto,
+      valor_comissao: valorComissao,
+      descontos: totalVales,
+      bonus: totalBonus,
+      valor_liquido: valorLiquido,
+      status: 'Consolidado',
+      motorista,
+      fretes: fretesComComissao,
+      abastecimentos: abastecimentos.length > 0 ? abastecimentos : undefined
+    };
   }
 }
 

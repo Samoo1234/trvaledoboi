@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { FechamentoDetalhado } from './fechamentoService';
 import { formatDisplayDate } from './dateUtils';
 import { valeService } from './valeService';
+import { supabase } from './supabaseClient';
 
 export class PDFService {
   private formatCurrency(value: number): string {
@@ -719,6 +720,221 @@ export class PDFService {
     
     // Nome do arquivo
     const nomeArquivo = `relatorio_consolidado_${periodo.replace('/', '_')}.pdf`;
+    
+    // Download do PDF
+    doc.save(nomeArquivo);
+  }
+
+  // Novo método para gerar relatório consolidado por motorista específico
+  async gerarRelatorioConsolidadoPorMotorista(fechamento: FechamentoDetalhado): Promise<void> {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Configurar fonte
+    doc.setFont('helvetica');
+    
+    // Adicionar logo
+    await this.addLogo(doc, 20, 10, 30, 30);
+    
+    // Cabeçalho da empresa
+    doc.setFontSize(20);
+    doc.setTextColor(139, 0, 0); // Cor vermelha
+    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
+    
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Relatório Consolidado - Motorista', pageWidth / 2, 38, { align: 'center' });
+    
+    // Linha separadora
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(139, 0, 0);
+    doc.line(20, 43, pageWidth - 20, 43);
+    
+    // Informações do motorista
+    let yPos = 58;
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('DADOS DO MOTORISTA', 20, yPos);
+    
+    yPos += 10;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Nome: ${fechamento.motorista?.nome || 'N/A'}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Tipo: ${fechamento.motorista?.tipo_motorista || 'N/A'}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Período: ${fechamento.periodo}`, 20, yPos);
+    yPos += 8;
+    // Sempre usar a data atual real para a data do fechamento no PDF
+    const dataAtualFechamento = new Date();
+    const dataFechamentoFormatada = `${dataAtualFechamento.getDate().toString().padStart(2, '0')}/${(dataAtualFechamento.getMonth() + 1).toString().padStart(2, '0')}/${dataAtualFechamento.getFullYear()}`;
+    console.log(`[PDF DEBUG] Data do fechamento consolidado: ${dataFechamentoFormatada} (data real atual)`);
+    doc.text(`Data do Fechamento: ${dataFechamentoFormatada}`, 20, yPos);
+    
+    // Resumo financeiro
+    yPos += 20;
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('RESUMO FINANCEIRO', 20, yPos);
+    
+    yPos += 15;
+    
+    // Buscar total de vales históricos para motoristas terceiros
+    let totalValesHistorico = 0;
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.motorista_id) {
+      try {
+        // Para histórico consolidado, usar os descontos já calculados
+        totalValesHistorico = fechamento.descontos;
+        console.log(`[PDF DEBUG] === RESUMO CONSOLIDADO PARA TERCEIROS ===`);
+        console.log(`[PDF DEBUG] Motorista: ${fechamento.motorista?.nome}`);
+        console.log(`[PDF DEBUG] Período: ${fechamento.periodo}`);
+        console.log(`[PDF DEBUG] Total de vales históricos: ${totalValesHistorico}`);
+      } catch (error) {
+        console.warn('[PDF DEBUG] Erro ao processar vales históricos:', error);
+        totalValesHistorico = fechamento.descontos;
+      }
+    }
+    
+    // Montar dados do resumo financeiro
+    const resumoData = [
+      ['Total de Fretes', fechamento.total_fretes.toString()],
+      ['Valor Bruto Total', this.formatCurrency(fechamento.valor_bruto)],
+      [fechamento.motorista?.tipo_motorista === 'Terceiro' ? 'Percentual de Comissão Transportadora' : 'Percentual de Comissão',
+        fechamento.motorista?.porcentagem_comissao
+          ? (fechamento.motorista?.tipo_motorista === 'Terceiro' 
+              ? `${100 - fechamento.motorista.porcentagem_comissao}%` 
+              : `${fechamento.motorista.porcentagem_comissao}%`)
+          : (fechamento.motorista?.tipo_motorista === 'Terceiro' ? '10%' : '10%')
+      ],
+      ['Valor Líquido Total', this.formatCurrency(fechamento.valor_comissao)],
+      [fechamento.motorista?.tipo_motorista === 'Terceiro' ? 'Descontos/Abastecimentos' : 'Vales/Adiantamentos', 
+       this.formatCurrency(fechamento.descontos)]
+    ];
+    
+    // Adicionar linha de vales apenas para motoristas terceiros
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
+      resumoData.push(['Desconto vale / despesas', this.formatCurrency(totalValesHistorico)]);
+    }
+    
+    if (fechamento.bonus && fechamento.bonus > 0) {
+      resumoData.push(['Bonificação', this.formatCurrency(fechamento.bonus)]);
+    }
+    resumoData.push([
+      'Valor Líquido a Receber',
+      this.formatCurrency(fechamento.valor_liquido)
+    ]);
+    
+    const finalYResumo = this.drawTable(
+      doc,
+      yPos,
+      ['Descrição', 'Valor'],
+      resumoData,
+      [100, 80]
+    );
+    
+    // Detalhamento dos fretes
+    let finalYFretes = finalYResumo;
+    if (fechamento.fretes && fechamento.fretes.length > 0) {
+      console.log(`[PDF DEBUG] Processando ${fechamento.fretes.length} fretes históricos para o PDF`);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(139, 0, 0);
+      doc.text('DETALHAMENTO DOS FRETES', 20, finalYResumo + 20);
+      
+      // Implementar tabela igual ao relatório de acerto
+      finalYFretes = this.drawFretesTableLikeAcerto(
+        doc,
+        finalYResumo + 30,
+        fechamento.fretes,
+        doc.internal.pageSize.getHeight()
+      );
+    } else {
+      console.log(`[PDF DEBUG] Nenhum frete histórico encontrado para exibir`);
+    }
+
+    // Detalhamento dos abastecimentos (apenas para terceiros)
+    let finalYAbastecimentos = finalYFretes;
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.abastecimentos && fechamento.abastecimentos.length > 0) {
+      console.log(`[PDF DEBUG] Processando ${fechamento.abastecimentos.length} abastecimentos históricos para o PDF`);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(139, 0, 0);
+      doc.text('DETALHAMENTO DE ABASTECIMENTO', 20, finalYFretes + 20);
+      
+      finalYAbastecimentos = this.drawAbastecimentosTable(
+        doc,
+        finalYFretes + 30,
+        fechamento.abastecimentos,
+        doc.internal.pageSize.getHeight()
+      );
+    }
+
+    // Detalhamento dos vales/despesas históricos (para todos os tipos de motorista)
+    let finalYVales = finalYAbastecimentos;
+    if (fechamento.motorista_id) {
+      try {
+        // Buscar todos os vales históricos do motorista
+        const { data: valesDetalhados, error: valesError } = await supabase
+          .from('vales')
+          .select('id, data_vale, valor, descricao, tipo_vale')
+          .eq('motorista_id', fechamento.motorista_id)
+          .order('data_vale', { ascending: false });
+        
+        if (valesError) {
+          console.warn('[PDF DEBUG] Erro ao buscar vales históricos detalhados:', valesError);
+        } else if (valesDetalhados && valesDetalhados.length > 0) {
+          console.log(`[PDF DEBUG] Processando ${valesDetalhados.length} vales históricos para o PDF`);
+          
+          const pageHeight = doc.internal.pageSize.getHeight();
+          
+          // Verificar se há espaço suficiente para o título + cabeçalho + pelo menos uma linha
+          if (finalYAbastecimentos + 50 > pageHeight - 40) {
+            console.log(`[PDF DEBUG] Não há espaço para seção de vales históricos, indo para nova página`);
+            doc.addPage();
+            finalYAbastecimentos = 20;
+          }
+          
+          doc.setFontSize(14);
+          doc.setTextColor(139, 0, 0);
+          doc.text('DETALHAMENTO VALE/DESPESAS', 20, finalYAbastecimentos + 20);
+          
+          finalYVales = this.drawValesTable(
+            doc,
+            finalYAbastecimentos + 30,
+            valesDetalhados,
+            pageHeight
+          );
+        }
+      } catch (error) {
+        console.warn('[PDF DEBUG] Erro ao buscar vales históricos detalhados:', error);
+      }
+    }
+    
+    // Rodapé
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Relatório gerado automaticamente pelo Sistema Logística', pageWidth / 2, pageHeight - 20, { align: 'center' });
+    // Usar formatação manual para evitar problemas de fuso horário
+    const agora = new Date();
+    const dataHora = `${agora.getDate().toString().padStart(2, '0')}/${(agora.getMonth() + 1).toString().padStart(2, '0')}/${agora.getFullYear()} ${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
+    doc.text(`Gerado em: ${dataHora}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+    
+    // Observações se houver
+    if (fechamento.observacoes) {
+      const observacoesY = finalYVales + 20;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Observações:', 20, observacoesY);
+      doc.text(fechamento.observacoes, 20, observacoesY + 10);
+    }
+    
+    // Nome do arquivo
+    const nomeArquivo = `relatorio_consolidado_${fechamento.motorista?.nome.replace(/\s+/g, '_')}_historico_completo.pdf`;
     
     // Download do PDF
     doc.save(nomeArquivo);
