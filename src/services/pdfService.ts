@@ -461,7 +461,15 @@ export class PDFService {
     yPos += 8;
     doc.text(`Tipo: ${fechamento.motorista?.tipo_motorista || 'N/A'}`, 20, yPos);
     yPos += 8;
-    doc.text(`Período: ${fechamento.periodo}`, 20, yPos);
+    // Formatar período para exibição no relatório de fechamento
+    let periodoExibicaoFechamento = fechamento.periodo;
+    if (fechamento.periodo && fechamento.periodo.includes(' a ')) {
+      const [inicio, fim] = fechamento.periodo.split(' a ');
+      const dataInicioFormatada = new Date(inicio + 'T00:00:00').toLocaleDateString('pt-BR');
+      const dataFimFormatada = new Date(fim + 'T00:00:00').toLocaleDateString('pt-BR');
+      periodoExibicaoFechamento = `${dataInicioFormatada} a ${dataFimFormatada}`;
+    }
+    doc.text(`Período: ${periodoExibicaoFechamento}`, 20, yPos);
     yPos += 8;
     // Sempre usar a data atual real para a data do fechamento no PDF
     const dataAtualFechamento = new Date();
@@ -519,9 +527,29 @@ export class PDFService {
     if (fechamento.bonus && fechamento.bonus > 0) {
       resumoData.push(['Bonificação', this.formatCurrency(fechamento.bonus)]);
     }
+    
+    // Calcular valor líquido a receber corretamente
+    let valorLiquidoReceber = fechamento.valor_liquido;
+    
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
+      // Para terceiros: comissão - abastecimentos - vales + bonus
+      valorLiquidoReceber = fechamento.valor_comissao - fechamento.descontos - totalValesPeriodo + (fechamento.bonus || 0);
+      console.log(`[PDF DEBUG] === CÁLCULO VALOR LÍQUIDO A RECEBER (TERCEIRO) ===`);
+      console.log(`[PDF DEBUG] Comissão: ${fechamento.valor_comissao}`);
+      console.log(`[PDF DEBUG] Abastecimentos: ${fechamento.descontos}`);
+      console.log(`[PDF DEBUG] Vales: ${totalValesPeriodo}`);
+      console.log(`[PDF DEBUG] Bônus: ${fechamento.bonus || 0}`);
+      console.log(`[PDF DEBUG] Fórmula: ${fechamento.valor_comissao} - ${fechamento.descontos} - ${totalValesPeriodo} + ${fechamento.bonus || 0}`);
+      console.log(`[PDF DEBUG] Resultado: ${valorLiquidoReceber}`);
+    } else {
+      // Para funcionários: usar valor já calculado (comissão - vales + bonus)
+      console.log(`[PDF DEBUG] === VALOR LÍQUIDO A RECEBER (FUNCIONÁRIO) ===`);
+      console.log(`[PDF DEBUG] Usando valor já calculado: ${valorLiquidoReceber}`);
+    }
+    
     resumoData.push([
       'Valor Líquido a Receber',
-      this.formatCurrency(fechamento.valor_liquido)
+      this.formatCurrency(valorLiquidoReceber)
     ]);
     // Remover linha de Status conforme solicitado
     
@@ -690,15 +718,26 @@ export class PDFService {
     doc.setTextColor(139, 0, 0);
     doc.text('DETALHAMENTO POR MOTORISTA', 20, finalYResumoGeral + 20);
     
-    const motoristasData = fechamentos.map(fechamento => [
-      fechamento.motorista?.nome || 'N/A',
-      fechamento.motorista?.tipo_motorista || 'N/A',
-      fechamento.total_fretes.toString(),
-      this.formatCurrency(fechamento.valor_bruto),
-      this.formatCurrency(fechamento.valor_comissao),
-      this.formatCurrency(fechamento.valor_liquido),
-      fechamento.status
-    ]);
+    const motoristasData = fechamentos.map(fechamento => {
+      // Calcular valor líquido corretamente para cada motorista na tabela
+      let valorLiquidoFinal = fechamento.valor_liquido;
+      
+      if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
+        // Para terceiros: valor_liquido já está calculado corretamente (comissão - abastecimentos - vales + bonus)
+        // Não precisa recalcular aqui pois já foi feito no fechamentoService
+        valorLiquidoFinal = fechamento.valor_liquido;
+      }
+      
+      return [
+        fechamento.motorista?.nome || 'N/A',
+        fechamento.motorista?.tipo_motorista || 'N/A',
+        fechamento.total_fretes.toString(),
+        this.formatCurrency(fechamento.valor_bruto),
+        this.formatCurrency(fechamento.valor_comissao),
+        this.formatCurrency(valorLiquidoFinal),
+        fechamento.status
+      ];
+    });
     
     this.drawTable(
       doc,
@@ -747,7 +786,24 @@ export class PDFService {
     
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text('Relatório Consolidado - Motorista', pageWidth / 2, 38, { align: 'center' });
+    
+    // Determinar título baseado no período
+    let titulo = 'Relatório Consolidado - Motorista';
+    if (fechamento.periodo && fechamento.periodo !== 'Histórico Completo') {
+      // Se é um período específico (formato "YYYY-MM-DD a YYYY-MM-DD")
+      if (fechamento.periodo.includes(' a ')) {
+        const [inicio, fim] = fechamento.periodo.split(' a ');
+        const dataInicioFormatada = new Date(inicio + 'T00:00:00').toLocaleDateString('pt-BR');
+        const dataFimFormatada = new Date(fim + 'T00:00:00').toLocaleDateString('pt-BR');
+        titulo = `Relatório Consolidado - Motorista (${dataInicioFormatada} a ${dataFimFormatada})`;
+      } else {
+        titulo = `Relatório Consolidado - Motorista (${fechamento.periodo})`;
+      }
+    } else {
+      titulo = 'Relatório Consolidado - Motorista (Histórico Completo)';
+    }
+    
+    doc.text(titulo, pageWidth / 2, 38, { align: 'center' });
     
     // Linha separadora
     doc.setLineWidth(0.5);
@@ -767,7 +823,15 @@ export class PDFService {
     yPos += 8;
     doc.text(`Tipo: ${fechamento.motorista?.tipo_motorista || 'N/A'}`, 20, yPos);
     yPos += 8;
-    doc.text(`Período: ${fechamento.periodo}`, 20, yPos);
+    // Formatar período para exibição no relatório consolidado
+    let periodoExibicaoConsolidado = fechamento.periodo;
+    if (fechamento.periodo && fechamento.periodo.includes(' a ')) {
+      const [inicio, fim] = fechamento.periodo.split(' a ');
+      const dataInicioFormatada = new Date(inicio + 'T00:00:00').toLocaleDateString('pt-BR');
+      const dataFimFormatada = new Date(fim + 'T00:00:00').toLocaleDateString('pt-BR');
+      periodoExibicaoConsolidado = `${dataInicioFormatada} a ${dataFimFormatada}`;
+    }
+    doc.text(`Período: ${periodoExibicaoConsolidado}`, 20, yPos);
     yPos += 8;
     // Sempre usar a data atual real para a data do fechamento no PDF
     const dataAtualFechamento = new Date();
@@ -783,19 +847,72 @@ export class PDFService {
     
     yPos += 15;
     
-    // Buscar total de vales históricos para motoristas terceiros
+    // Buscar total de vales usando valeService para motoristas terceiros
     let totalValesHistorico = 0;
     if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.motorista_id) {
       try {
-        // Para histórico consolidado, usar os descontos já calculados
-        totalValesHistorico = fechamento.descontos;
-        console.log(`[PDF DEBUG] === RESUMO CONSOLIDADO PARA TERCEIROS ===`);
+        console.log(`[PDF DEBUG] === BUSCANDO VALES PARA TERCEIROS ===`);
         console.log(`[PDF DEBUG] Motorista: ${fechamento.motorista?.nome}`);
         console.log(`[PDF DEBUG] Período: ${fechamento.periodo}`);
-        console.log(`[PDF DEBUG] Total de vales históricos: ${totalValesHistorico}`);
+        
+        if (fechamento.periodo === 'Histórico Completo') {
+          // Para histórico completo, buscar todos os vales (não implementado no valeService)
+          // Por enquanto, usar 0 ou buscar direto no supabase
+          totalValesHistorico = 0;
+          console.log(`[PDF DEBUG] Histórico completo - usando vales do service: 0`);
+        } else if (fechamento.periodo.includes(' a ')) {
+          // Período específico (YYYY-MM-DD a YYYY-MM-DD) - buscar direto no supabase
+          const [dataInicio, dataFim] = fechamento.periodo.split(' a ');
+          console.log(`[PDF DEBUG] === DETALHES DA BUSCA DE VALES ===`);
+          console.log(`[PDF DEBUG] Motorista ID: ${fechamento.motorista_id}`);
+          console.log(`[PDF DEBUG] Data início: "${dataInicio}"`);
+          console.log(`[PDF DEBUG] Data fim: "${dataFim}"`);
+          console.log(`[PDF DEBUG] Período original: "${fechamento.periodo}"`);
+          
+          // Primeiro, vamos verificar se existem vales para este motorista (sem filtro de data)
+          const { data: todosVales, error: todosValesError } = await supabase
+            .from('vales_motoristas')
+            .select('*')
+            .eq('motorista_id', fechamento.motorista_id);
+          
+          console.log(`[PDF DEBUG] === TODOS OS VALES DO MOTORISTA ===`);
+          if (todosValesError) {
+            console.log(`[PDF DEBUG] Erro ao buscar todos os vales:`, todosValesError);
+          } else {
+            console.log(`[PDF DEBUG] Total de vales encontrados (sem filtro): ${todosVales?.length || 0}`);
+            todosVales?.forEach((vale, index) => {
+              console.log(`[PDF DEBUG] Vale ${index + 1}: ID=${vale.id}, Data=${vale.data_vale}, Valor=${vale.valor}, Descrição=${vale.descricao}`);
+            });
+          }
+          
+          // Agora buscar com filtro de data
+          const { data: vales, error: valesError } = await supabase
+            .from('vales_motoristas')
+            .select('valor, data_vale, descricao')
+            .eq('motorista_id', fechamento.motorista_id)
+            .gte('data_vale', dataInicio)
+            .lte('data_vale', dataFim);
+          
+          console.log(`[PDF DEBUG] === VALES COM FILTRO DE DATA ===`);
+          if (valesError) {
+            console.warn('[PDF DEBUG] Erro ao buscar vales por período específico:', valesError);
+            totalValesHistorico = 0;
+          } else {
+            console.log(`[PDF DEBUG] Vales encontrados com filtro de data: ${vales?.length || 0}`);
+            vales?.forEach((vale, index) => {
+              console.log(`[PDF DEBUG] Vale filtrado ${index + 1}: Data=${vale.data_vale}, Valor=${vale.valor}, Descrição=${vale.descricao}`);
+            });
+            totalValesHistorico = vales?.reduce((sum, vale) => sum + (parseFloat(vale.valor) || 0), 0) || 0;
+            console.log(`[PDF DEBUG] Total calculado dos vales filtrados: R$ ${totalValesHistorico}`);
+          }
+        } else {
+          // Período formato MM/YYYY - usar valeService
+          totalValesHistorico = await valeService.getTotalByMotoristaAndPeriodo(fechamento.motorista_id, fechamento.periodo);
+          console.log(`[PDF DEBUG] Vales período ${fechamento.periodo}: R$ ${totalValesHistorico}`);
+        }
       } catch (error) {
-        console.warn('[PDF DEBUG] Erro ao processar vales históricos:', error);
-        totalValesHistorico = fechamento.descontos;
+        console.warn('[PDF DEBUG] Erro ao buscar vales:', error);
+        totalValesHistorico = 0;
       }
     }
     
@@ -823,9 +940,28 @@ export class PDFService {
     if (fechamento.bonus && fechamento.bonus > 0) {
       resumoData.push(['Bonificação', this.formatCurrency(fechamento.bonus)]);
     }
+    
+    // Calcular valor líquido a receber corretamente para relatório consolidado
+    let valorLiquidoReceber = fechamento.valor_liquido;
+    
+    if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
+      // Para terceiros: comissão - abastecimentos - vales + bonus
+      valorLiquidoReceber = fechamento.valor_comissao - fechamento.descontos - totalValesHistorico + (fechamento.bonus || 0);
+      console.log(`[PDF DEBUG] === CÁLCULO VALOR LÍQUIDO A RECEBER - CONSOLIDADO (TERCEIRO) ===`);
+      console.log(`[PDF DEBUG] Comissão: ${fechamento.valor_comissao}`);
+      console.log(`[PDF DEBUG] Abastecimentos: ${fechamento.descontos}`);
+      console.log(`[PDF DEBUG] Vales históricos: ${totalValesHistorico}`);
+      console.log(`[PDF DEBUG] Bônus: ${fechamento.bonus || 0}`);
+      console.log(`[PDF DEBUG] Resultado: ${valorLiquidoReceber}`);
+    } else {
+      // Para funcionários: usar valor já calculado (comissão - vales + bonus)
+      console.log(`[PDF DEBUG] === VALOR LÍQUIDO A RECEBER - CONSOLIDADO (FUNCIONÁRIO) ===`);
+      console.log(`[PDF DEBUG] Usando valor já calculado: ${valorLiquidoReceber}`);
+    }
+    
     resumoData.push([
       'Valor Líquido a Receber',
-      this.formatCurrency(fechamento.valor_liquido)
+      this.formatCurrency(valorLiquidoReceber)
     ]);
     
     const finalYResumo = this.drawTable(
@@ -877,12 +1013,20 @@ export class PDFService {
     let finalYVales = finalYAbastecimentos;
     if (fechamento.motorista_id) {
       try {
-        // Buscar todos os vales históricos do motorista
-        const { data: valesDetalhados, error: valesError } = await supabase
-          .from('vales')
-          .select('id, data_vale, valor, descricao, tipo_vale')
-          .eq('motorista_id', fechamento.motorista_id)
-          .order('data_vale', { ascending: false });
+        // Buscar vales detalhados respeitando o filtro de data do período
+        let valesQuery = supabase
+          .from('vales_motoristas')
+          .select('id, data_vale, valor, descricao')
+          .eq('motorista_id', fechamento.motorista_id);
+        
+        // Aplicar filtros de data se for período específico
+        if (fechamento.periodo && fechamento.periodo.includes(' a ')) {
+          const [dataInicio, dataFim] = fechamento.periodo.split(' a ');
+          valesQuery = valesQuery.gte('data_vale', dataInicio).lte('data_vale', dataFim);
+          console.log(`[PDF DEBUG] Buscando vales detalhados de ${dataInicio} a ${dataFim}`);
+        }
+        
+        const { data: valesDetalhados, error: valesError } = await valesQuery.order('data_vale', { ascending: false });
         
         if (valesError) {
           console.warn('[PDF DEBUG] Erro ao buscar vales históricos detalhados:', valesError);

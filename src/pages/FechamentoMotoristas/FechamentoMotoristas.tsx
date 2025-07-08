@@ -32,6 +32,12 @@ const FechamentoMotoristas: React.FC = () => {
   // Novos estados para o modo motorista
   const [motoristas, setMotoristas] = useState<Array<{id: number, nome: string, tipo_motorista: string}>>([]);
   const [motoristasSelecionado, setMotoristaSelecionado] = useState<number | null>(null);
+  
+  // Estados para filtros de data do modo motorista
+  const [filtrosMotorista, setFiltrosMotorista] = useState({
+    dataInicio: '',
+    dataFim: ''
+  });
 
   // Filtrar fechamentos por tipo de motorista
   const fechamentosFiltrados = fechamentos.filter(fechamento => {
@@ -142,6 +148,7 @@ const FechamentoMotoristas: React.FC = () => {
     } else if (novoModo === 'motorista') {
       // Limpar filtros de período
       setFiltrosPeriodo({ dataInicio: '', dataFim: '' });
+      setFiltrosMotorista({ dataInicio: '', dataFim: '' });
       setDadosTemporarios(false);
     }
   };
@@ -168,6 +175,17 @@ const FechamentoMotoristas: React.FC = () => {
     setFiltrosPeriodo({ dataInicio: '', dataFim: '' });
     setDadosTemporarios(false);
     setFechamentos([]); // Limpar dados quando filtros são removidos
+  };
+
+  // Funções para gerenciar filtros de data do motorista
+  const handleFiltroMotoristaChange = (campo: 'dataInicio' | 'dataFim', valor: string) => {
+    setFiltrosMotorista(prev => ({ ...prev, [campo]: valor }));
+  };
+
+  const limparFiltrosMotorista = () => {
+    setFiltrosMotorista({ dataInicio: '', dataFim: '' });
+    setDadosTemporarios(false);
+    setFechamentos([]);
   };
 
   const calcularFechamento = async () => {
@@ -361,15 +379,24 @@ const FechamentoMotoristas: React.FC = () => {
       }
 
       setLoading(true);
-      const fechamentoDetalhado = await fechamentoService.getHistoricoDetalhado(motoristasSelecionado);
+      
+      // Se há filtros de data, usá-los; senão, buscar histórico completo
+      const dataInicio = filtrosMotorista.dataInicio || undefined;
+      const dataFim = filtrosMotorista.dataFim || undefined;
+      
+      const fechamentoDetalhado = await fechamentoService.getHistoricoDetalhado(
+        motoristasSelecionado, 
+        dataInicio, 
+        dataFim
+      );
       
       if (!fechamentoDetalhado) {
-        alert('Nenhum dado encontrado para este motorista.');
+        alert('Nenhum dado encontrado para este motorista no período selecionado.');
         return;
       }
 
       if (fechamentoDetalhado.total_fretes === 0) {
-        alert('Este motorista não possui fretes registrados.');
+        alert('Este motorista não possui fretes registrados no período selecionado.');
         return;
       }
 
@@ -558,19 +585,55 @@ const FechamentoMotoristas: React.FC = () => {
               </button>
             </div>
           ) : modoFiltro === 'motorista' ? (
-            <select 
-              value={motoristasSelecionado || ''}
-              onChange={(e) => setMotoristaSelecionado(e.target.value ? parseInt(e.target.value) : null)}
-              className="periodo-select"
-              style={{ minWidth: '200px' }}
-            >
-              <option value="">Selecione um motorista</option>
-              {motoristas.map(motorista => (
-                <option key={motorista.id} value={motorista.id}>
-                  {motorista.nome} ({motorista.tipo_motorista})
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <select 
+                value={motoristasSelecionado || ''}
+                onChange={(e) => setMotoristaSelecionado(e.target.value ? parseInt(e.target.value) : null)}
+                className="periodo-select"
+                style={{ minWidth: '200px' }}
+              >
+                <option value="">Selecione um motorista</option>
+                {motoristas.map(motorista => (
+                  <option key={motorista.id} value={motorista.id}>
+                    {motorista.nome} ({motorista.tipo_motorista})
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={filtrosMotorista.dataInicio}
+                onChange={(e) => handleFiltroMotoristaChange('dataInicio', e.target.value)}
+                style={{ padding: '4px 8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                title="Data início (opcional)"
+                placeholder="Data início"
+              />
+              <span style={{ color: '#666', fontSize: '13px' }}>até</span>
+              <input
+                type="date"
+                value={filtrosMotorista.dataFim}
+                onChange={(e) => handleFiltroMotoristaChange('dataFim', e.target.value)}
+                style={{ padding: '4px 8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '13px' }}
+                title="Data fim (opcional)"
+                placeholder="Data fim"
+              />
+              {(filtrosMotorista.dataInicio || filtrosMotorista.dataFim) && (
+                <button 
+                  onClick={limparFiltrosMotorista}
+                  style={{ 
+                    padding: '4px 8px', 
+                    background: '#6c757d', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                  title="Limpar filtros de data"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
           ) : null}
 
           <select 
@@ -631,7 +694,9 @@ const FechamentoMotoristas: React.FC = () => {
               : modoFiltro === 'periodo' && filtrosPeriodo.dataInicio && filtrosPeriodo.dataFim 
                 ? `${new Date(filtrosPeriodo.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtrosPeriodo.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}`
                 : modoFiltro === 'motorista' && motoristasSelecionado
-                  ? `Histórico - ${motoristas.find(m => m.id === motoristasSelecionado)?.nome || 'Motorista'}`
+                  ? `${filtrosMotorista.dataInicio && filtrosMotorista.dataFim 
+                      ? `Período ${new Date(filtrosMotorista.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtrosMotorista.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')} - ` 
+                      : 'Histórico - '}${motoristas.find(m => m.id === motoristasSelecionado)?.nome || 'Motorista'}`
                   : modoFiltro === 'periodo' 
                     ? 'Período não selecionado'
                     : 'Motorista não selecionado'

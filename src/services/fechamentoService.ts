@@ -433,7 +433,7 @@ class FechamentoService {
         let totalVales = 0;
         try {
           const { data: vales, error: valesError } = await supabase
-            .from('vales')
+            .from('vales_motoristas')
             .select('valor')
             .eq('motorista_id', motorista.id)
             .gte('data_vale', dataInicio)
@@ -501,7 +501,7 @@ class FechamentoService {
   }
 
   // Novo método para buscar histórico detalhado de um motorista (para relatório consolidado)
-  async getHistoricoDetalhado(motoristaId: number): Promise<FechamentoDetalhado | null> {
+  async getHistoricoDetalhado(motoristaId: number, dataInicio?: string, dataFim?: string): Promise<FechamentoDetalhado | null> {
     // Buscar motorista
     const { data: motorista, error: motoristaError } = await supabase
       .from('motoristas')
@@ -511,15 +511,24 @@ class FechamentoService {
 
     if (motoristaError) throw motoristaError;
 
-    // Buscar todos os fretes históricos do motorista
-    const { data: fretes, error: fretesError } = await supabase
+    // Buscar fretes do motorista (com filtro de data opcional)
+    let fretesQuery = supabase
       .from('fretes')
       .select(`
         id, data_emissao, origem, destino, valor_frete, total_km, pecuarista,
         caminhao:caminhoes(placa, tipo)
       `)
-      .eq('motorista_id', motoristaId)
-      .order('data_emissao', { ascending: false });
+      .eq('motorista_id', motoristaId);
+    
+    // Aplicar filtros de data se fornecidos
+    if (dataInicio) {
+      fretesQuery = fretesQuery.gte('data_emissao', dataInicio);
+    }
+    if (dataFim) {
+      fretesQuery = fretesQuery.lte('data_emissao', dataFim);
+    }
+    
+    const { data: fretes, error: fretesError } = await fretesQuery.order('data_emissao', { ascending: false });
 
     if (fretesError) throw fretesError;
 
@@ -543,14 +552,23 @@ class FechamentoService {
       };
     }) || [];
 
-    // Buscar abastecimentos se for motorista terceiro
+    // Buscar abastecimentos se for motorista terceiro (com filtro de data opcional)
     let abastecimentos: any[] = [];
     if (motorista?.tipo_motorista === 'Terceiro') {
-      const { data: abastecimentosData, error: abastecimentosError } = await supabase
+      let abastecimentosQuery = supabase
         .from('abastecimentos')
         .select('id, data_abastecimento, posto_tanque, combustivel, quantidade_litros, preco_total')
-        .eq('motorista_id', motoristaId)
-        .order('data_abastecimento', { ascending: false });
+        .eq('motorista_id', motoristaId);
+      
+      // Aplicar filtros de data se fornecidos
+      if (dataInicio) {
+        abastecimentosQuery = abastecimentosQuery.gte('data_abastecimento', dataInicio);
+      }
+      if (dataFim) {
+        abastecimentosQuery = abastecimentosQuery.lte('data_abastecimento', dataFim);
+      }
+      
+      const { data: abastecimentosData, error: abastecimentosError } = await abastecimentosQuery.order('data_abastecimento', { ascending: false });
 
       if (abastecimentosError) {
         console.warn('Erro ao buscar abastecimentos:', abastecimentosError);
@@ -564,21 +582,38 @@ class FechamentoService {
     const valorBruto = fretes?.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0) || 0;
     const valorComissao = valorBruto * porcentagemComissao;
 
-    // Buscar total de vales históricos
+    // Buscar total de vales (com filtro de data opcional)
     let totalVales = 0;
     try {
-      const { data: vales, error: valesError } = await supabase
-        .from('vales')
+      let valesQuery = supabase
+        .from('vales_motoristas')
         .select('valor')
         .eq('motorista_id', motoristaId);
+      
+      // Aplicar filtros de data se fornecidos
+      if (dataInicio) {
+        valesQuery = valesQuery.gte('data_vale', dataInicio);
+      }
+      if (dataFim) {
+        valesQuery = valesQuery.lte('data_vale', dataFim);
+      }
+      
+      const { data: vales, error: valesError } = await valesQuery;
 
       if (valesError) {
-        console.warn('Erro ao buscar vales históricos:', valesError);
+        console.warn('Erro ao buscar vales:', valesError);
       } else {
         totalVales = vales?.reduce((sum, vale) => sum + (parseFloat(vale.valor) || 0), 0) || 0;
       }
     } catch (error) {
-      console.warn('Erro ao processar vales históricos:', error);
+      console.warn('Erro ao processar vales:', error);
+    }
+
+    // Calcular total de abastecimentos para terceiros (para campo descontos)
+    let totalAbastecimentos = 0;
+    if (motorista?.tipo_motorista === 'Terceiro' && abastecimentos.length > 0) {
+      totalAbastecimentos = abastecimentos.reduce((sum, abast) => sum + (parseFloat(abast.preco_total) || 0), 0);
+      console.log(`[DEBUG] Total de abastecimentos calculado: R$ ${totalAbastecimentos}`);
     }
 
     // Buscar total de bônus históricos
@@ -591,18 +626,45 @@ class FechamentoService {
     const dataAtual = new Date();
     const dataFechamento = `${dataAtual.getFullYear()}-${(dataAtual.getMonth() + 1).toString().padStart(2, '0')}-${dataAtual.getDate().toString().padStart(2, '0')}`;
 
+    // Determinar período e status baseado nos filtros
+    const periodo = (dataInicio && dataFim) 
+      ? `${dataInicio} a ${dataFim}` 
+      : 'Histórico Completo';
+    
+    const status = (dataInicio && dataFim) 
+      ? 'Período Específico' 
+      : 'Consolidado';
+
+    // Definir descontos corretos baseado no tipo de motorista
+    let descontos: number;
+    if (motorista?.tipo_motorista === 'Terceiro') {
+      // Para terceiros: descontos = abastecimentos
+      descontos = totalAbastecimentos;
+    } else {
+      // Para funcionários: descontos = vales
+      descontos = totalVales;
+    }
+
+    console.log(`[DEBUG] === VALORES FINAIS ===`);
+    console.log(`[DEBUG] Motorista: ${motorista?.nome} (${motorista?.tipo_motorista})`);
+    console.log(`[DEBUG] Período: ${periodo}`);
+    console.log(`[DEBUG] Total Vales: R$ ${totalVales}`);
+    console.log(`[DEBUG] Total Abastecimentos: R$ ${totalAbastecimentos}`);
+    console.log(`[DEBUG] Descontos (campo): R$ ${descontos}`);
+    console.log(`[DEBUG] Porcentagem Comissão: ${porcentagemComissao * 100}%`);
+
     return {
       id: 0, // ID fictício para histórico consolidado
       motorista_id: motoristaId,
-      periodo: 'Histórico Completo',
+      periodo,
       data_fechamento: dataFechamento,
       total_fretes: totalFretes,
       valor_bruto: valorBruto,
       valor_comissao: valorComissao,
-      descontos: totalVales,
+      descontos,
       bonus: totalBonus,
       valor_liquido: valorLiquido,
-      status: 'Consolidado',
+      status,
       motorista,
       fretes: fretesComComissao,
       abastecimentos: abastecimentos.length > 0 ? abastecimentos : undefined
