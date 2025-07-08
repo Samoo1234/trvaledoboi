@@ -193,6 +193,46 @@ class ValeService {
     return data;
   }
 
+  // Buscar vales com filtros avançados
+  async getWithFilters(filtros: {
+    motorista_id?: number;
+    data_inicio?: string;
+    data_fim?: string;
+    periodo?: string;
+  }): Promise<Vale[]> {
+    let query = supabase
+      .from('vales_motoristas')
+      .select(`
+        *,
+        motorista:motoristas(id, nome, tipo_motorista)
+      `);
+
+    // Aplicar filtros
+    if (filtros.motorista_id) {
+      query = query.eq('motorista_id', filtros.motorista_id);
+    }
+
+    if (filtros.data_inicio) {
+      query = query.gte('data_vale', filtros.data_inicio);
+    }
+
+    if (filtros.data_fim) {
+      query = query.lte('data_vale', filtros.data_fim);
+    }
+
+    if (filtros.periodo) {
+      query = query.eq('periodo', filtros.periodo);
+    }
+
+    const { data, error } = await query.order('data_vale', { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data || [];
+  }
+
   // Gerar relatório de vales por período
   async getRelatorioByPeriodo(periodo: string): Promise<{
     totalVales: number;

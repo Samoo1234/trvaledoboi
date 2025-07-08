@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, DollarSign, Filter, Search, X } from 'lucide-react';
 import { valeService, Vale, ValeCreateData } from '../services/valeService';
 import { motoristaService, Motorista } from '../services/motoristaService';
 import { formatDisplayDate } from '../services/dateUtils';
+import './GestaoVales.css';
 
 const GestaoVales: React.FC = () => {
   const [vales, setVales] = useState<Vale[]>([]);
@@ -22,15 +23,40 @@ const GestaoVales: React.FC = () => {
     descricao: ''
   });
 
+  // Estados para filtros
+  const [mostrandoFiltros, setMostrandoFiltros] = useState(false);
+  const [usandoFiltros, setUsandoFiltros] = useState(false);
+  const [filtros, setFiltros] = useState({
+    motorista_id: '',
+    data_inicio: '',
+    data_fim: ''
+  });
+
   const loadVales = useCallback(async () => {
     try {
-      const data = await valeService.getByPeriodo(selectedPeriodo);
+      let data: Vale[];
+      
+      if (usandoFiltros) {
+        // Usar filtros avançados
+        const filtrosQuery = {
+          motorista_id: filtros.motorista_id ? parseInt(filtros.motorista_id) : undefined,
+          data_inicio: filtros.data_inicio || undefined,
+          data_fim: filtros.data_fim || undefined,
+          periodo: !filtros.data_inicio && !filtros.data_fim ? selectedPeriodo : undefined
+        };
+        
+        data = await valeService.getWithFilters(filtrosQuery);
+      } else {
+        // Usar filtro de período padrão
+        data = await valeService.getByPeriodo(selectedPeriodo);
+      }
+      
       setVales(data);
     } catch (error) {
       console.error('Erro ao carregar vales:', error);
       alert('Erro ao carregar vales.');
     }
-  }, [selectedPeriodo]);
+  }, [selectedPeriodo, usandoFiltros, filtros]);
 
   const loadMotoristas = useCallback(async () => {
     try {
@@ -130,6 +156,37 @@ const GestaoVales: React.FC = () => {
     return periodos;
   };
 
+  // Funções para filtros
+  const handleFiltroChange = (campo: string, valor: string) => {
+    setFiltros(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  const limparFiltros = () => {
+    setFiltros({
+      motorista_id: '',
+      data_inicio: '',
+      data_fim: ''
+    });
+    setUsandoFiltros(false);
+    setMostrandoFiltros(false);
+  };
+
+  const executarBusca = () => {
+    setUsandoFiltros(true);
+    setLoading(true);
+    // O useEffect será acionado pela mudança do usandoFiltros
+  };
+
+  // Adicionar useEffect para controlar loading
+  useEffect(() => {
+    if (usandoFiltros) {
+      loadVales().finally(() => setLoading(false));
+    }
+  }, [usandoFiltros, loadVales]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -158,7 +215,7 @@ const GestaoVales: React.FC = () => {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container gestao-vales-container">
       <div className="page-header">
         <h1>
           <DollarSign size={28} />
@@ -185,6 +242,68 @@ const GestaoVales: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Controles de Filtro */}
+      <div className="filter-controls">
+        <button
+          className="filter-toggle"
+          onClick={() => setMostrandoFiltros(!mostrandoFiltros)}
+        >
+          <Filter size={20} />
+          {mostrandoFiltros ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+        </button>
+        <div className="search-actions">
+          <button className="search-btn" onClick={executarBusca} disabled={loading}>
+            <Search size={20} />
+            {loading ? 'Buscando...' : 'Buscar'}
+          </button>
+          <button className="clear-btn" onClick={limparFiltros}>
+            <X size={20} />
+            Limpar
+          </button>
+        </div>
+      </div>
+
+      {/* Filtros Expandidos */}
+      {mostrandoFiltros && (
+        <div className="filters-expanded">
+          <div className="filters-grid">
+            <div className="filter-group">
+              <label>Motorista:</label>
+              <select
+                value={filtros.motorista_id}
+                onChange={(e) => handleFiltroChange('motorista_id', e.target.value)}
+              >
+                <option value="">Todos os motoristas</option>
+                {motoristas.map(motorista => (
+                  <option key={motorista.id} value={motorista.id?.toString()}>
+                    {motorista.nome} ({motorista.tipo_motorista})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-group">
+              <label>Data Início:</label>
+              <input
+                type="date"
+                value={filtros.data_inicio}
+                onChange={(e) => handleFiltroChange('data_inicio', e.target.value)}
+              />
+            </div>
+            <div className="filter-group">
+              <label>Data Fim:</label>
+              <input
+                type="date"
+                value={filtros.data_fim}
+                onChange={(e) => handleFiltroChange('data_fim', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filter-help">
+            <p>💡 <strong>Dica:</strong> Use os filtros acima para busca avançada, ou utilize o seletor de período para consulta rápida por mês.</p>
+          </div>
+        </div>
+      )}
 
       {/* Resumo */}
       <div className="resumo-cards">
