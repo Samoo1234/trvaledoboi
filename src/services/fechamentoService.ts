@@ -3,6 +3,7 @@ import { valeService } from './valeService';
 
 export interface FechamentoMotorista {
   id?: number;
+  fechamento_id?: number; // ID do fechamento original (usado na tabela de histórico)
   motorista_id: number;
   periodo: string; // MM/YYYY
   data_fechamento?: string;
@@ -16,6 +17,8 @@ export interface FechamentoMotorista {
   observacoes?: string;
   created_at?: string;
   updated_at?: string;
+  arquivado_em?: string; // Timestamp de arquivamento (usado na tabela de histórico)
+  arquivado_por?: string; // Usuário que arquivou (usado na tabela de histórico)
   // Dados relacionados
   motorista?: {
     id: number;
@@ -669,6 +672,125 @@ class FechamentoService {
       fretes: fretesComComissao,
       abastecimentos: abastecimentos.length > 0 ? abastecimentos : undefined
     };
+  }
+
+  // Buscar fechamentos arquivados com filtros (agora da tabela de histórico)
+  async getArquivados(filtros: {
+    dataInicio?: string;
+    dataFim?: string;
+    motorista?: string;
+    tipoMotorista?: string;
+    periodo?: string;
+    buscarTexto?: string;
+  }): Promise<FechamentoMotorista[]> {
+    let query = supabase
+      .from('fechamentos_motoristas_historico')
+      .select(`
+        *,
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
+      `);
+
+    // Aplicar filtros
+    if (filtros.dataInicio) {
+      query = query.gte('data_fechamento', filtros.dataInicio);
+    }
+    if (filtros.dataFim) {
+      query = query.lte('data_fechamento', filtros.dataFim);
+    }
+    if (filtros.motorista) {
+      query = query.eq('motorista_id', parseInt(filtros.motorista));
+    }
+    if (filtros.periodo) {
+      query = query.eq('periodo', filtros.periodo);
+    }
+    if (filtros.buscarTexto) {
+      query = query.or(`observacoes.ilike.%${filtros.buscarTexto}%`);
+    }
+
+    const { data, error } = await query.order('data_fechamento', { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data || [];
+  }
+
+  // Arquivar um fechamento (mover para tabela de histórico)
+  async arquivar(id: number): Promise<void> {
+    // Buscar o fechamento original
+    const { data: fechamento, error: fetchError } = await supabase
+      .from('fechamentos_motoristas')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
+    }
+
+    // Inserir na tabela de histórico
+    const { error: insertError } = await supabase
+      .from('fechamentos_motoristas_historico')
+      .insert([{
+        ...fechamento,
+        fechamento_id: fechamento.id,
+        arquivado_em: new Date().toISOString(),
+        id: undefined // Remover o ID para que seja gerado automaticamente
+      }]);
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    // Remover da tabela original
+    const { error: deleteError } = await supabase
+      .from('fechamentos_motoristas')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+  }
+
+  // Reabrir um fechamento arquivado (mover de volta para tabela ativa)
+  async reabrir(fechamentoId: number): Promise<void> {
+    // Buscar o fechamento no histórico
+    const { data: fechamentoHistorico, error: fetchError } = await supabase
+      .from('fechamentos_motoristas_historico')
+      .select('*')
+      .eq('fechamento_id', fechamentoId)
+      .single();
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
+    }
+
+    // Inserir de volta na tabela ativa
+    const { error: insertError } = await supabase
+      .from('fechamentos_motoristas')
+      .insert([{
+        ...fechamentoHistorico,
+        id: fechamentoHistorico.fechamento_id,
+        arquivado_em: undefined,
+        arquivado_por: undefined,
+        fechamento_id: undefined
+      }]);
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    // Remover do histórico
+    const { error: deleteError } = await supabase
+      .from('fechamentos_motoristas_historico')
+      .delete()
+      .eq('fechamento_id', fechamentoId);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
   }
 }
 

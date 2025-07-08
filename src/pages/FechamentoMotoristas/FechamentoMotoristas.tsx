@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calculator, Eye, FileText, Trash2 } from 'lucide-react';
+import { Calculator, Eye, FileText, Trash2, Archive } from 'lucide-react';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { pdfService } from '../../services/pdfService';
 import { formatDisplayDate } from '../../services/dateUtils';
@@ -336,6 +336,21 @@ const FechamentoMotoristas: React.FC = () => {
     } catch (error) {
       console.error('Erro ao excluir fechamento:', error);
       alert('Erro ao excluir fechamento. Tente novamente.');
+    }
+  };
+
+  const arquivarFechamento = async (id: number, nomeMotorista: string) => {
+    if (!window.confirm(`Tem certeza que deseja arquivar o fechamento do motorista "${nomeMotorista}"? Ele será movido para o histórico.`)) {
+      return;
+    }
+
+    try {
+      await fechamentoService.arquivar(id);
+      setFechamentos(fechamentos.filter(f => f.id !== id));
+      alert('Fechamento arquivado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao arquivar fechamento:', error);
+      alert('Erro ao arquivar fechamento. Tente novamente.');
     }
   };
 
@@ -925,6 +940,18 @@ const FechamentoMotoristas: React.FC = () => {
                         disabled={dadosTemporarios}
                       >
                         <FileText size={16} />
+                      </button>
+                      <button 
+                        className="btn-action btn-archive"
+                        onClick={() => !dadosTemporarios && fechamento.id && arquivarFechamento(fechamento.id, fechamento.motorista?.nome || 'Motorista')}
+                        title={dadosTemporarios ? "Arquivamento não disponível para dados temporários" : "Arquivar Fechamento"}
+                        style={{ 
+                          opacity: dadosTemporarios ? 0.6 : 1,
+                          cursor: dadosTemporarios ? 'not-allowed' : 'pointer'
+                        }}
+                        disabled={dadosTemporarios}
+                      >
+                        <Archive size={16} />
                       </button>
                       <button 
                         className="btn-action btn-danger"

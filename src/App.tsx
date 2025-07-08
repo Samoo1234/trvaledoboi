@@ -15,6 +15,7 @@ import CapaTransporte from './pages/CapaTransporte/CapaTransporte';
 import CadastroFornecedores from './components/CadastroFornecedores';
 import GestaoVales from './components/GestaoVales';
 import GerenciarUsuarios from './components/GerenciarUsuarios/GerenciarUsuarios';
+import Historico from './pages/Historico/Historico';
 import './App.css';
 
 function App() {
@@ -103,6 +104,14 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CadastroFornecedores />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/historico" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Historico />
                 </Layout>
               </ProtectedRoute>
             } />

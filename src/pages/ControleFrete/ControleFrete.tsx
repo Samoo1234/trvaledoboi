@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Truck, Filter, Calendar, FileText, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Truck, Filter, Calendar, FileText, Download, Archive } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 import { freteService, Frete } from '../../services/freteService';
 import { caminhaoService, Caminhao } from '../../services/caminhaoService';
@@ -200,6 +200,19 @@ const ControleFrete: React.FC = () => {
       } catch (error) {
         console.error('Erro ao excluir frete:', error);
         alert('Erro ao excluir frete.');
+      }
+    }
+  };
+
+  const handleArquivar = async (id: number) => {
+    if (window.confirm('Tem certeza que deseja arquivar este frete? Ele será movido para o histórico.')) {
+      try {
+        await freteService.arquivar(id);
+        setFretes(fretes.filter(f => f.id !== id));
+        alert('Frete arquivado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao arquivar frete:', error);
+        alert('Erro ao arquivar frete. Tente novamente.');
       }
     }
   };
@@ -1141,6 +1154,13 @@ const ControleFrete: React.FC = () => {
                             onClick={() => handleEdit(frete)}
                           >
                             <Edit size={16} />
+                          </button>
+                          <button 
+                            className="btn-archive" 
+                            title="Arquivar"
+                            onClick={() => frete.id && handleArquivar(frete.id)}
+                          >
+                            <Archive size={16} />
                           </button>
                           <button 
                             className="btn-delete" 

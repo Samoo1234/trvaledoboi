@@ -11,7 +11,8 @@ import {
   DollarSign,
   Wrench,
   FileText,
-  UserCog
+  UserCog,
+  Archive
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
@@ -75,6 +76,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       path: '/capa-transporte',
       icon: FileText,
       label: 'Capa de Transporte',
+    },
+    {
+      path: '/historico',
+      icon: Archive,
+      label: 'Histórico',
     },
   ];
 

@@ -214,6 +214,24 @@
   transform: translateY(-1px);
 }
 
+.controle-frete .btn-archive {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.controle-frete .btn-archive:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
 .controle-frete .btn-delete {
   background: #dc3545;
   color: white;
@@ -309,6 +327,7 @@
   }
   
   .controle-frete .btn-edit,
+  .controle-frete .btn-archive,
   .controle-frete .btn-delete {
     padding: 0.4rem;
   }

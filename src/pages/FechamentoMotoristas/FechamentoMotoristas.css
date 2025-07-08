@@ -102,6 +102,14 @@
   background: #c82333;
 }
 
+.btn-action.btn-archive {
+  background: #6c757d;
+}
+
+.btn-action.btn-archive:hover {
+  background: #5a6268;
+}
+
 .btn-secondary {
   background: var(--primary-white);
   color: var(--primary-red);

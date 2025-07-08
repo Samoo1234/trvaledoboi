@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 
 export interface Frete {
   id?: number;
+  frete_id?: number; // ID do frete original (usado na tabela de histórico)
   data_emissao: string;
   pecuarista: string;
   origem: string;
@@ -21,6 +22,8 @@ export interface Frete {
   data_pagamento?: string | null;
   created_at?: string;
   updated_at?: string;
+  arquivado_em?: string; // Timestamp de arquivamento (usado na tabela de histórico)
+  arquivado_por?: string; // Usuário que arquivou (usado na tabela de histórico)
   // Dados relacionados (joins)
   caminhao?: {
     placa: string;
@@ -32,7 +35,7 @@ export interface Frete {
 }
 
 export const freteService = {
-  // Buscar todos os fretes com dados relacionados
+  // Buscar todos os fretes com dados relacionados (apenas ativos)
   async getAll(): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
@@ -199,5 +202,128 @@ export const freteService = {
     });
     
     return totais;
+  },
+
+  // Buscar fretes arquivados com filtros (agora da tabela de histórico)
+  async getArquivados(filtros: {
+    dataInicio?: string;
+    dataFim?: string;
+    motorista?: string;
+    cliente?: string;
+    tipoPagamento?: string;
+    buscarTexto?: string;
+  }): Promise<Frete[]> {
+    let query = supabase
+      .from('fretes_historico')
+      .select(`
+        *,
+        caminhao:caminhoes(placa, tipo),
+        motorista:motoristas(nome)
+      `);
+
+    // Aplicar filtros
+    if (filtros.dataInicio) {
+      query = query.gte('data_emissao', filtros.dataInicio);
+    }
+    if (filtros.dataFim) {
+      query = query.lte('data_emissao', filtros.dataFim);
+    }
+    if (filtros.motorista) {
+      query = query.eq('motorista_id', parseInt(filtros.motorista));
+    }
+    if (filtros.cliente) {
+      query = query.eq('cliente', filtros.cliente);
+    }
+    if (filtros.tipoPagamento) {
+      query = query.eq('tipo_pagamento', filtros.tipoPagamento);
+    }
+    if (filtros.buscarTexto) {
+      query = query.or(`numero_minuta.ilike.%${filtros.buscarTexto}%,numero_cb.ilike.%${filtros.buscarTexto}%,origem.ilike.%${filtros.buscarTexto}%,destino.ilike.%${filtros.buscarTexto}%`);
+    }
+
+    const { data, error } = await query.order('data_emissao', { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data || [];
+  },
+
+  // Arquivar um frete (mover para tabela de histórico)
+  async arquivar(id: number): Promise<void> {
+    // Buscar o frete original
+    const { data: frete, error: fetchError } = await supabase
+      .from('fretes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
+    }
+
+    // Inserir na tabela de histórico
+    const { error: insertError } = await supabase
+      .from('fretes_historico')
+      .insert([{
+        ...frete,
+        frete_id: frete.id,
+        arquivado_em: new Date().toISOString(),
+        id: undefined // Remover o ID para que seja gerado automaticamente
+      }]);
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    // Remover da tabela original
+    const { error: deleteError } = await supabase
+      .from('fretes')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+  },
+
+  // Reabrir um frete arquivado (mover de volta para tabela ativa)
+  async reabrir(freteId: number): Promise<void> {
+    // Buscar o frete no histórico
+    const { data: freteHistorico, error: fetchError } = await supabase
+      .from('fretes_historico')
+      .select('*')
+      .eq('frete_id', freteId)
+      .single();
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
+    }
+
+    // Inserir de volta na tabela ativa
+    const { error: insertError } = await supabase
+      .from('fretes')
+      .insert([{
+        ...freteHistorico,
+        id: freteHistorico.frete_id,
+        arquivado_em: undefined,
+        arquivado_por: undefined,
+        frete_id: undefined
+      }]);
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    // Remover do histórico
+    const { error: deleteError } = await supabase
+      .from('fretes_historico')
+      .delete()
+      .eq('frete_id', freteId);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
   }
 }; 
