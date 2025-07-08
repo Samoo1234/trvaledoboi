@@ -1026,7 +1026,7 @@ export class PDFService {
           console.log(`[PDF DEBUG] Buscando vales detalhados de ${dataInicio} a ${dataFim}`);
         }
         
-        const { data: valesDetalhados, error: valesError } = await valesQuery.order('data_vale', { ascending: false });
+        const { data: valesDetalhados, error: valesError } = await valesQuery.order('data_vale', { ascending: true });
         
         if (valesError) {
           console.warn('[PDF DEBUG] Erro ao buscar vales históricos detalhados:', valesError);

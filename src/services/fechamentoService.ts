@@ -528,7 +528,7 @@ class FechamentoService {
       fretesQuery = fretesQuery.lte('data_emissao', dataFim);
     }
     
-    const { data: fretes, error: fretesError } = await fretesQuery.order('data_emissao', { ascending: false });
+    const { data: fretes, error: fretesError } = await fretesQuery.order('data_emissao', { ascending: true });
 
     if (fretesError) throw fretesError;
 
@@ -568,7 +568,7 @@ class FechamentoService {
         abastecimentosQuery = abastecimentosQuery.lte('data_abastecimento', dataFim);
       }
       
-      const { data: abastecimentosData, error: abastecimentosError } = await abastecimentosQuery.order('data_abastecimento', { ascending: false });
+      const { data: abastecimentosData, error: abastecimentosError } = await abastecimentosQuery.order('data_abastecimento', { ascending: true });
 
       if (abastecimentosError) {
         console.warn('Erro ao buscar abastecimentos:', abastecimentosError);
