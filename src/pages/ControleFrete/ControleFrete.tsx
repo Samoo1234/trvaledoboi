@@ -53,7 +53,42 @@ const ControleFrete: React.FC = () => {
   // Carregar dados iniciais
   useEffect(() => {
     loadData();
+    // Configurar indicadores de scroll
+    setupScrollIndicators();
   }, []);
+
+  // 🎯 CONFIGURAÇÃO DOS INDICADORES DE SCROLL
+  const setupScrollIndicators = () => {
+    const tableContainer = document.querySelector('.table-container');
+    if (!tableContainer) return;
+
+    const updateScrollIndicators = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = tableContainer;
+      
+      // Remove classes existentes
+      tableContainer.classList.remove('scrolled-left', 'scrolled-right');
+      
+      // Adiciona classes baseadas na posição do scroll
+      if (scrollLeft > 10) {
+        tableContainer.classList.add('scrolled-left');
+      }
+      
+      if (scrollLeft < scrollWidth - clientWidth - 10) {
+        tableContainer.classList.add('scrolled-right');
+      }
+    };
+
+    // Atualizar indicadores no scroll
+    tableContainer.addEventListener('scroll', updateScrollIndicators);
+    
+    // Atualizar indicadores inicialmente
+    setTimeout(updateScrollIndicators, 100);
+    
+    // Cleanup
+    return () => {
+      tableContainer.removeEventListener('scroll', updateScrollIndicators);
+    };
+  };
 
   const loadData = async () => {
     try {
@@ -1092,6 +1127,9 @@ const ControleFrete: React.FC = () => {
           )}
 
           <div className="table-container">
+            <div className="scroll-indicator">
+              ← Arraste para ver mais colunas →
+            </div>
             <table className="data-table frete-table">
               <thead>
                 <tr>
