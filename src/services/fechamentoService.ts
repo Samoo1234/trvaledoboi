@@ -729,14 +729,16 @@ class FechamentoService {
       throw new Error(fetchError.message);
     }
 
+    // Criar objeto para histórico sem o campo id original
+    const { id: originalId, ...fechamentoParaHistorico } = fechamento;
+    
     // Inserir na tabela de histórico
     const { error: insertError } = await supabase
       .from('fechamentos_motoristas_historico')
       .insert([{
-        ...fechamento,
-        fechamento_id: fechamento.id,
-        arquivado_em: new Date().toISOString(),
-        id: undefined // Remover o ID para que seja gerado automaticamente
+        ...fechamentoParaHistorico,
+        fechamento_id: originalId,
+        arquivado_em: new Date().toISOString()
       }]);
 
     if (insertError) {
@@ -767,15 +769,21 @@ class FechamentoService {
       throw new Error(fetchError.message);
     }
 
-    // Inserir de volta na tabela ativa
+    // Remover campos específicos do histórico que não existem na tabela ativa
+    const { 
+      id: historicoId, 
+      fechamento_id, 
+      arquivado_em, 
+      arquivado_por, 
+      ...fechamentoParaAtiva 
+    } = fechamentoHistorico;
+
+    // Inserir de volta na tabela ativa com o ID original
     const { error: insertError } = await supabase
       .from('fechamentos_motoristas')
       .insert([{
-        ...fechamentoHistorico,
-        id: fechamentoHistorico.fechamento_id,
-        arquivado_em: undefined,
-        arquivado_por: undefined,
-        fechamento_id: undefined
+        ...fechamentoParaAtiva,
+        id: fechamento_id // Usar o ID original do fechamento
       }]);
 
     if (insertError) {

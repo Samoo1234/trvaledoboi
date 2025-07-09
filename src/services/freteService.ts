@@ -263,14 +263,16 @@ export const freteService = {
       throw new Error(fetchError.message);
     }
 
+    // Criar objeto para histórico sem o campo id original
+    const { id: originalId, ...freteParaHistorico } = frete;
+    
     // Inserir na tabela de histórico
     const { error: insertError } = await supabase
       .from('fretes_historico')
       .insert([{
-        ...frete,
-        frete_id: frete.id,
-        arquivado_em: new Date().toISOString(),
-        id: undefined // Remover o ID para que seja gerado automaticamente
+        ...freteParaHistorico,
+        frete_id: originalId,
+        arquivado_em: new Date().toISOString()
       }]);
 
     if (insertError) {
@@ -301,15 +303,21 @@ export const freteService = {
       throw new Error(fetchError.message);
     }
 
-    // Inserir de volta na tabela ativa
+    // Remover campos específicos do histórico que não existem na tabela ativa
+    const { 
+      id: historicoId, 
+      frete_id, 
+      arquivado_em, 
+      arquivado_por, 
+      ...freteParaAtiva 
+    } = freteHistorico;
+
+    // Inserir de volta na tabela ativa com o ID original
     const { error: insertError } = await supabase
       .from('fretes')
       .insert([{
-        ...freteHistorico,
-        id: freteHistorico.frete_id,
-        arquivado_em: undefined,
-        arquivado_por: undefined,
-        frete_id: undefined
+        ...freteParaAtiva,
+        id: frete_id // Usar o ID original do frete
       }]);
 
     if (insertError) {

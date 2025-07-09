@@ -35,11 +35,35 @@ const Historico: React.FC = () => {
   // Estados compartilhados
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
   const [mostrandoFiltros, setMostrandoFiltros] = useState(false);
+  const [filtrosAtivos, setFiltrosAtivos] = useState(false);
 
   // Carregar dados iniciais
   useEffect(() => {
     loadMotoristas();
+    // Carregar todos os registros automaticamente ao abrir a tela
+    carregarTodosRegistros();
   }, []);
+
+  // Carregar todos os registros sem filtros
+  const carregarTodosRegistros = async () => {
+    try {
+      setLoading(true);
+      // Buscar fretes arquivados sem filtros
+      const fretes = await freteService.getArquivados({});
+      setFretesArquivados(fretes);
+      
+      // Buscar fechamentos arquivados sem filtros  
+      const fechamentos = await fechamentoService.getArquivados({});
+      setFechamentosArquivados(fechamentos);
+      
+      setFiltrosAtivos(false);
+    } catch (error) {
+      console.error('Erro ao carregar registros:', error);
+      alert('Erro ao carregar registros arquivados.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadMotoristas = async () => {
     try {
@@ -55,6 +79,10 @@ const Historico: React.FC = () => {
       setLoading(true);
       const data = await freteService.getArquivados(filtrosFrete);
       setFretesArquivados(data);
+      
+      // Verificar se existem filtros ativos
+      const temFiltros = Object.values(filtrosFrete).some(valor => valor.trim() !== '');
+      setFiltrosAtivos(temFiltros);
     } catch (error) {
       console.error('Erro ao buscar fretes arquivados:', error);
       alert('Erro ao buscar fretes arquivados.');
@@ -68,6 +96,10 @@ const Historico: React.FC = () => {
       setLoading(true);
       const data = await fechamentoService.getArquivados(filtrosFechamento);
       setFechamentosArquivados(data);
+      
+      // Verificar se existem filtros ativos
+      const temFiltros = Object.values(filtrosFechamento).some(valor => valor.trim() !== '');
+      setFiltrosAtivos(temFiltros);
     } catch (error) {
       console.error('Erro ao buscar fechamentos arquivados:', error);
       alert('Erro ao buscar fechamentos arquivados.');
@@ -94,7 +126,6 @@ const Historico: React.FC = () => {
         tipoPagamento: '',
         buscarTexto: ''
       });
-      setFretesArquivados([]);
     } else {
       setFiltrosFechamento({
         dataInicio: '',
@@ -104,22 +135,27 @@ const Historico: React.FC = () => {
         periodo: '',
         buscarTexto: ''
       });
-      setFechamentosArquivados([]);
     }
+    // Carregar todos os registros automaticamente após limpar
+    carregarTodosRegistros();
   };
 
   const reabrirFrete = async (freteId: number) => {
     if (window.confirm('Tem certeza que deseja reabrir este frete para correção?')) {
       try {
+        setLoading(true);
         await freteService.reabrir(freteId);
-        alert('Frete reaberto com sucesso! Agora está disponível para edição.');
+        alert('✅ Frete reaberto com sucesso! Agora está disponível para edição na tela de Controle de Fretes.');
         // Atualizar lista
         if (activeTab === 'fretes') {
           buscarFretesArquivados();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao reabrir frete:', error);
-        alert('Erro ao reabrir frete.');
+        const mensagem = error?.message || 'Erro desconhecido';
+        alert(`❌ Erro ao reabrir frete: ${mensagem}\n\nTente novamente ou contate o suporte.`);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -127,15 +163,19 @@ const Historico: React.FC = () => {
   const reabrirFechamento = async (fechamentoId: number) => {
     if (window.confirm('Tem certeza que deseja reabrir este fechamento para correção?')) {
       try {
+        setLoading(true);
         await fechamentoService.reabrir(fechamentoId);
-        alert('Fechamento reaberto com sucesso! Agora está disponível para edição.');
+        alert('✅ Fechamento reaberto com sucesso! Agora está disponível para edição na tela de Fechamentos.');
         // Atualizar lista
         if (activeTab === 'fechamentos') {
           buscarFechamentosArquivados();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao reabrir fechamento:', error);
-        alert('Erro ao reabrir fechamento.');
+        const mensagem = error?.message || 'Erro desconhecido';
+        alert(`❌ Erro ao reabrir fechamento: ${mensagem}\n\nTente novamente ou contate o suporte.`);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -208,18 +248,44 @@ const Historico: React.FC = () => {
         >
           <Filter size={20} />
           {mostrandoFiltros ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+          {filtrosAtivos && <span className="filtros-ativos-badge">!</span>}
         </button>
         <div className="search-actions">
           <button className="search-btn" onClick={executarBusca} disabled={loading}>
             <Search size={20} />
             {loading ? 'Buscando...' : 'Buscar'}
           </button>
-          <button className="clear-btn" onClick={limparFiltros}>
+          <button className="clear-btn" onClick={limparFiltros} disabled={loading}>
             <X size={20} />
-            Limpar
+            {filtrosAtivos ? 'Limpar e Ver Todos' : 'Ver Todos'}
+          </button>
+          <button 
+            className="reload-btn" 
+            onClick={carregarTodosRegistros} 
+            disabled={loading}
+            title="Carregar todos os registros"
+          >
+            <RotateCcw size={20} />
+            Todos
           </button>
         </div>
       </div>
+
+      {/* Aviso quando há filtros ativos mas sem resultados */}
+      {filtrosAtivos && (
+        <div className="filtros-info">
+          <div className="filtros-warning">
+            📋 <strong>Filtros ativos aplicados.</strong> 
+            {activeTab === 'fretes' && fretesArquivados.length === 0 && (
+              <span> Nenhum frete encontrado no período/critério selecionado.</span>
+            )}
+            {activeTab === 'fechamentos' && fechamentosArquivados.length === 0 && (
+              <span> Nenhum fechamento encontrado no período/critério selecionado.</span>
+            )}
+            <button onClick={limparFiltros} className="link-btn">Clique aqui para ver todos os registros</button>
+          </div>
+        </div>
+      )}
 
       {/* Filtros Expandidos */}
       {mostrandoFiltros && (
