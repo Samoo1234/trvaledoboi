@@ -561,11 +561,11 @@ const ManutencaoCaminhoes: React.FC = () => {
               </div>
 
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={resetForm}>
+                <button type="button" className="btn-cancel" onClick={resetForm}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  {editingId ? 'Atualizar' : 'Cadastrar'}
+                <button type="submit" className="btn-save">
+                  {editingId ? 'Atualizar Manutenção' : 'Cadastrar Manutenção'}
                 </button>
               </div>
             </form>

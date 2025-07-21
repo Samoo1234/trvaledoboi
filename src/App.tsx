@@ -16,6 +16,7 @@ import CadastroFornecedores from './components/CadastroFornecedores';
 import GestaoVales from './components/GestaoVales';
 import GerenciarUsuarios from './components/GerenciarUsuarios/GerenciarUsuarios';
 import Historico from './pages/Historico/Historico';
+import CadastroReboques from './pages/CadastroReboques';
 import './App.css';
 
 function App() {
@@ -40,6 +41,14 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CadastroCaminhoes />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            {/* Nova rota para Cadastro de Reboques */}
+            <Route path="/cadastro-reboques" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CadastroReboques />
                 </Layout>
               </ProtectedRoute>
             } />

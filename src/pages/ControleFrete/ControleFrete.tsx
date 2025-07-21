@@ -4,6 +4,8 @@ import CurrencyInput from 'react-currency-input-field';
 import { freteService, Frete } from '../../services/freteService';
 import { caminhaoService, Caminhao } from '../../services/caminhaoService';
 import { motoristaService, Motorista } from '../../services/motoristaService';
+import { freteCaminhaoService } from '../../services/freteCaminhaoService';
+import { freteMotoristaService } from '../../services/freteMotoristaService';
 import { formatDisplayDate } from '../../services/dateUtils';
 import './ControleFrete.css';
 
@@ -20,8 +22,6 @@ const ControleFrete: React.FC = () => {
   const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
   const [filtroDataFim, setFiltroDataFim] = useState<string>('');
   const [filtroCliente, setFiltroCliente] = useState<string>('');
-  const [filtroMotorista, setFiltroMotorista] = useState<string>('');
-  const [filtroCaminhao, setFiltroCaminhao] = useState<string>('');
   
   // Estados para relatório de acerto
   const [activeTab, setActiveTab] = useState<'fretes' | 'acerto'>('fretes');
@@ -39,8 +39,6 @@ const ControleFrete: React.FC = () => {
     numero_cb: '',
     cliente: '',
     observacoes: '',
-    caminhao_id: '',
-    motorista_id: '',
     faixa: '',
     total_km: '',
     valor_frete: '',
@@ -50,14 +48,16 @@ const ControleFrete: React.FC = () => {
     data_pagamento: ''
   });
 
+  // Arrays para múltiplos caminhões e motoristas
+  const [caminhoesSelecionados, setCaminhoesSelecionados] = useState<string[]>([]);
+  const [motoristasSelecionados, setMotoristasSelecionados] = useState<string[]>([]);
+
   // Carregar dados iniciais
   useEffect(() => {
     loadData();
-    // Configurar indicadores de scroll
     setupScrollIndicators();
   }, []);
 
-  // 🎯 CONFIGURAÇÃO DOS INDICADORES DE SCROLL
   const setupScrollIndicators = () => {
     const tableContainer = document.querySelector('.table-container');
     if (!tableContainer) return;
@@ -65,10 +65,8 @@ const ControleFrete: React.FC = () => {
     const updateScrollIndicators = () => {
       const { scrollLeft, scrollWidth, clientWidth } = tableContainer;
       
-      // Remove classes existentes
       tableContainer.classList.remove('scrolled-left', 'scrolled-right');
       
-      // Adiciona classes baseadas na posição do scroll
       if (scrollLeft > 10) {
         tableContainer.classList.add('scrolled-left');
       }
@@ -78,13 +76,9 @@ const ControleFrete: React.FC = () => {
       }
     };
 
-    // Atualizar indicadores no scroll
     tableContainer.addEventListener('scroll', updateScrollIndicators);
-    
-    // Atualizar indicadores inicialmente
     setTimeout(updateScrollIndicators, 100);
     
-    // Cleanup
     return () => {
       tableContainer.removeEventListener('scroll', updateScrollIndicators);
     };
@@ -120,8 +114,6 @@ const ControleFrete: React.FC = () => {
       numero_cb: '',
       cliente: '',
       observacoes: '',
-      caminhao_id: '',
-      motorista_id: '',
       faixa: '',
       total_km: '',
       valor_frete: '',
@@ -130,11 +122,13 @@ const ControleFrete: React.FC = () => {
       tipo_pagamento: '',
       data_pagamento: ''
     });
+    setCaminhoesSelecionados([]);
+    setMotoristasSelecionados([]);
     setEditingId(null);
     setShowForm(false);
   };
 
-  const handleEdit = (frete: Frete) => {
+  const handleEdit = async (frete: Frete) => {
     setFormData({
       data_emissao: frete.data_emissao,
       pecuarista: frete.pecuarista,
@@ -144,8 +138,6 @@ const ControleFrete: React.FC = () => {
       numero_cb: frete.numero_cb || '',
       cliente: frete.cliente || '',
       observacoes: frete.observacoes || '',
-      caminhao_id: frete.caminhao_id.toString(),
-      motorista_id: frete.motorista_id.toString(),
       faixa: frete.faixa || '',
       total_km: frete.total_km?.toString() || '',
       valor_frete: frete.valor_frete.toString(),
@@ -154,7 +146,14 @@ const ControleFrete: React.FC = () => {
       tipo_pagamento: frete.tipo_pagamento || '',
       data_pagamento: frete.data_pagamento || ''
     });
-    setEditingId(frete.id || null);
+    
+    // Carregar vínculos de caminhões e motoristas
+    const caminhoesVinc = await freteCaminhaoService.getByFreteId(frete.id!);
+    setCaminhoesSelecionados(caminhoesVinc.map(v => v.caminhao_id.toString()));
+    const motoristasVinc = await freteMotoristaService.getByFreteId(frete.id!);
+    setMotoristasSelecionados(motoristasVinc.map(v => v.motorista_id.toString()));
+    
+    setEditingId(typeof frete.id === 'number' ? frete.id : null);
     setShowForm(true);
   };
 
@@ -163,8 +162,8 @@ const ControleFrete: React.FC = () => {
     
     try {
       // Validações básicas
-      if (!formData.caminhao_id || !formData.motorista_id) {
-        alert('Selecione o caminhão e motorista');
+      if (caminhoesSelecionados.length === 0 || motoristasSelecionados.length === 0) {
+        alert('Selecione pelo menos um caminhão e um motorista');
         return;
       }
 
@@ -173,7 +172,6 @@ const ControleFrete: React.FC = () => {
         return;
       }
 
-      // Validações condicionais para pagamento
       if (formData.situacao === 'Pago') {
         if (!formData.tipo_pagamento) {
           alert('Selecione o tipo de pagamento quando a situação for "Pago"');
@@ -194,31 +192,40 @@ const ControleFrete: React.FC = () => {
         numero_cb: formData.numero_cb || undefined,
         cliente: formData.cliente || undefined,
         observacoes: formData.observacoes || undefined,
-        caminhao_id: parseInt(formData.caminhao_id),
-        motorista_id: parseInt(formData.motorista_id),
         faixa: formData.faixa || undefined,
         total_km: formData.total_km ? parseInt(formData.total_km) : undefined,
         valor_frete: parseFloat(formData.valor_frete),
         saldo_receber: formData.saldo_receber ? parseFloat(formData.saldo_receber) : parseFloat(formData.valor_frete),
         situacao: formData.situacao,
-        // CORREÇÃO: Explicitamente definir como null quando não for "Pago"
         tipo_pagamento: formData.situacao === 'Pago' ? formData.tipo_pagamento : null,
         data_pagamento: formData.situacao === 'Pago' ? formData.data_pagamento : null
       };
 
+      let freteId = editingId;
+      
       if (editingId) {
-        // Atualizar frete existente
         await freteService.update(editingId, freteData);
-        alert('Frete atualizado com sucesso!');
+        // Remover vínculos antigos
+        await freteCaminhaoService.deleteByFreteId(editingId);
+        await freteMotoristaService.deleteByFreteId(editingId);
+        freteId = editingId;
       } else {
-        // Criar novo frete
-        await freteService.create(freteData);
-        alert('Frete cadastrado com sucesso!');
+        const novoFrete = await freteService.create(freteData);
+        freteId = typeof novoFrete.id === 'number' ? novoFrete.id : null;
+      }
+
+      // Salvar vínculos de caminhões
+      for (const caminhaoId of caminhoesSelecionados) {
+        await freteCaminhaoService.create({ frete_id: freteId!, caminhao_id: parseInt(caminhaoId) });
       }
       
-      // Recarregar dados para manter ordem correta
-      await loadData();
+      // Salvar vínculos de motoristas
+      for (const motoristaId of motoristasSelecionados) {
+        await freteMotoristaService.create({ frete_id: freteId!, motorista_id: parseInt(motoristaId) });
+      }
       
+      alert(editingId ? 'Frete atualizado com sucesso!' : 'Frete cadastrado com sucesso!');
+      await loadData();
       resetForm();
     } catch (error) {
       console.error('Erro ao salvar frete:', error);
@@ -260,7 +267,6 @@ const ControleFrete: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    // CORREÇÃO: Usar formatDisplayDate para evitar problema de UTC
     return formatDisplayDate(dateString);
   };
 
@@ -275,7 +281,6 @@ const ControleFrete: React.FC = () => {
     }
   };
 
-  // Funções para obter listas únicas para os filtros
   const getClientesUnicos = (): string[] => {
     const clientes = fretes
       .map(f => f.cliente)
@@ -284,45 +289,12 @@ const ControleFrete: React.FC = () => {
     return clientes.sort();
   };
 
-  const getMotoristasUnicos = (): {id: number, nome: string}[] => {
-    const motoristasMap = new Map<number, {id: number, nome: string}>();
-    
-    fretes.forEach(frete => {
-      if (frete.motorista && frete.motorista_id) {
-        motoristasMap.set(frete.motorista_id, {
-          id: frete.motorista_id,
-          nome: frete.motorista.nome
-        });
-      }
-    });
-    
-    return Array.from(motoristasMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
-  };
-
-  const getCaminhoesUnicos = (): {id: number, placa: string, tipo: string}[] => {
-    const caminhoesMap = new Map<number, {id: number, placa: string, tipo: string}>();
-    
-    fretes.forEach(frete => {
-      if (frete.caminhao && frete.caminhao_id) {
-        caminhoesMap.set(frete.caminhao_id, {
-          id: frete.caminhao_id,
-          placa: frete.caminhao.placa,
-          tipo: frete.caminhao.tipo
-        });
-      }
-    });
-    
-    return Array.from(caminhoesMap.values()).sort((a, b) => a.placa.localeCompare(b.placa));
-  };
-
-  // Aplicar todos os filtros
+  // Aplicar filtros (simplificados)
   const fretesFiltrados = fretes.filter(frete => {
-    // Filtro por situação
     if (filtroSituacao && frete.situacao !== filtroSituacao) {
       return false;
     }
 
-    // Filtro por período de data
     if (filtroDataInicio || filtroDataFim) {
       const dataFrete = new Date(frete.data_emissao);
       
@@ -337,43 +309,20 @@ const ControleFrete: React.FC = () => {
       }
     }
 
-    // Filtro por cliente
     if (filtroCliente && frete.cliente !== filtroCliente) {
-      return false;
-    }
-
-    // Filtro por motorista
-    if (filtroMotorista && frete.motorista_id.toString() !== filtroMotorista) {
-      return false;
-    }
-
-    // Filtro por caminhão
-    if (filtroCaminhao && frete.caminhao_id.toString() !== filtroCaminhao) {
       return false;
     }
 
     return true;
   });
 
-  // Handler para mudança no valor do frete (sem cálculo de desconto)
   const handleValorFreteChange = (value: string | undefined) => {
     const valor = value || '';
     
     setFormData(prev => ({
       ...prev,
       valor_frete: valor,
-      saldo_receber: valor // Sempre igual ao valor do frete
-    }));
-  };
-
-  // Handler para mudança no motorista (sem cálculo de desconto)
-  const handleMotoristaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const motoristaId = e.target.value;
-    
-    setFormData(prev => ({
-      ...prev,
-      motorista_id: motoristaId
-      // saldo_receber permanece igual ao valor_frete
+      saldo_receber: valor
     }));
   };
 
@@ -606,7 +555,7 @@ const ControleFrete: React.FC = () => {
             doc.setFontSize(8);
           }
           
-          const caminhao = caminhoes.find(c => c.id === frete.caminhao_id);
+          const caminhao = frete.caminhao;
           
           // Alternar cor de fundo
           if (index % 2 === 1) {
@@ -803,38 +752,6 @@ const ControleFrete: React.FC = () => {
               </div>
               
               <div className="filtro-group">
-                <label>Motorista</label>
-                <select
-                  value={filtroMotorista}
-                  onChange={(e) => setFiltroMotorista(e.target.value)}
-                  className="filtro-select"
-                >
-                  <option value="">Todos os Motoristas</option>
-                  {getMotoristasUnicos().map((motorista) => (
-                    <option key={motorista.id} value={motorista.id.toString()}>
-                      {motorista.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="filtro-group">
-                <label>Caminhão</label>
-                <select
-                  value={filtroCaminhao}
-                  onChange={(e) => setFiltroCaminhao(e.target.value)}
-                  className="filtro-select"
-                >
-                  <option value="">Todos os Caminhões</option>
-                  {getCaminhoesUnicos().map((caminhao) => (
-                    <option key={caminhao.id} value={caminhao.id.toString()}>
-                      {caminhao.placa} - {caminhao.tipo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="filtro-group">
                 <button 
                   type="button" 
                   className="btn-clear-filters"
@@ -843,8 +760,6 @@ const ControleFrete: React.FC = () => {
                     setFiltroDataInicio('');
                     setFiltroDataFim('');
                     setFiltroCliente('');
-                    setFiltroMotorista('');
-                    setFiltroCaminhao('');
                   }}
                 >
                   Limpar Filtros
@@ -854,7 +769,7 @@ const ControleFrete: React.FC = () => {
           </div>
 
           {/* Resumo dos filtros */}
-          {(filtroSituacao || filtroDataInicio || filtroDataFim || filtroCliente || filtroMotorista || filtroCaminhao) && (
+          {(filtroSituacao || filtroDataInicio || filtroDataFim || filtroCliente) && (
             <div className="filtros-resumo">
               <p>
                 <strong>{fretesFiltrados.length}</strong> frete{fretesFiltrados.length !== 1 ? 's' : ''} 
@@ -863,8 +778,6 @@ const ControleFrete: React.FC = () => {
                 {filtroDataInicio && ` • De: ${formatDisplayDate(filtroDataInicio)}`}
                 {filtroDataFim && ` • Até: ${formatDisplayDate(filtroDataFim)}`}
                 {filtroCliente && ` • Cliente: ${filtroCliente}`}
-                {filtroMotorista && ` • Motorista: ${getMotoristasUnicos().find(m => m.id.toString() === filtroMotorista)?.nome}`}
-                {filtroCaminhao && ` • Caminhão: ${getCaminhoesUnicos().find(c => c.id.toString() === filtroCaminhao)?.placa}`}
               </p>
             </div>
           )}
@@ -940,6 +853,15 @@ const ControleFrete: React.FC = () => {
                     </div>
                     <div className="form-row">
                       <div className="form-group">
+                        <label>Nº Minuta</label>
+                        <input
+                          type="text"
+                          value={formData.numero_minuta}
+                          onChange={(e) => setFormData({...formData, numero_minuta: e.target.value})}
+                          placeholder="Número da Minuta"
+                        />
+                      </div>
+                      <div className="form-group">
                         <label>Nº CB</label>
                         <input
                           type="text"
@@ -951,64 +873,68 @@ const ControleFrete: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Documentos */}
+                  {/* Veículos e Motoristas */}
                   <div className="form-section">
-                    <h3>📄 Documentos</h3>
+                    <h3><Truck size={18} /> Veículos e Motoristas</h3>
                     <div className="form-row">
-                      <div className="form-group">
-                        <label>Nº Minuta</label>
-                        <input
-                          type="text"
-                          value={formData.numero_minuta}
-                          onChange={(e) => setFormData({...formData, numero_minuta: e.target.value})}
-                          placeholder="Número da minuta"
-                        />
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label>Caminhões *</label>
+                        {caminhoesSelecionados.map((id, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <select
+                              value={id}
+                              onChange={e => {
+                                const novos = [...caminhoesSelecionados];
+                                novos[idx] = e.target.value;
+                                setCaminhoesSelecionados(novos);
+                              }}
+                              required
+                            >
+                              <option value="">Selecione o caminhão</option>
+                              {caminhoes.map(caminhao => (
+                                <option key={caminhao.id} value={caminhao.id}>
+                                  {caminhao.placa} - {caminhao.tipo} ({caminhao.modelo})
+                                </option>
+                              ))}
+                            </select>
+                            <button type="button" onClick={() => setCaminhoesSelecionados(caminhoesSelecionados.filter((_, i) => i !== idx))} className="btn-remove-small">
+                              Remover
+                            </button>
+                          </div>
+                        ))}
+                        <button type="button" className="btn-add-small" onClick={() => setCaminhoesSelecionados([...caminhoesSelecionados, ''])}>
+                          + Adicionar caminhão
+                        </button>
                       </div>
-                      <div className="form-group">
-                        <label>Faixa</label>
-                        <input
-                          type="text"
-                          value={formData.faixa}
-                          onChange={(e) => setFormData({...formData, faixa: e.target.value})}
-                          placeholder="Classificação/faixa"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Veículo e Motorista */}
-                  <div className="form-section">
-                    <h3><Truck size={18} /> Veículo e Motorista</h3>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Caminhão *</label>
-                        <select
-                          value={formData.caminhao_id}
-                          onChange={(e) => setFormData({...formData, caminhao_id: e.target.value})}
-                          required
-                        >
-                          <option value="">Selecione o caminhão</option>
-                          {caminhoes.map(caminhao => (
-                            <option key={caminhao.id} value={caminhao.id}>
-                              {caminhao.placa} - {caminhao.tipo} ({caminhao.modelo})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Motorista *</label>
-                        <select
-                          value={formData.motorista_id}
-                          onChange={handleMotoristaChange}
-                          required
-                        >
-                          <option value="">Selecione o motorista</option>
-                          {motoristas.map(motorista => (
-                            <option key={motorista.id} value={motorista.id}>
-                              {motorista.nome} - {motorista.tipo_motorista}
-                            </option>
-                          ))}
-                        </select>
+                      
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label>Motoristas *</label>
+                        {motoristasSelecionados.map((id, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <select
+                              value={id}
+                              onChange={e => {
+                                const novos = [...motoristasSelecionados];
+                                novos[idx] = e.target.value;
+                                setMotoristasSelecionados(novos);
+                              }}
+                              required
+                            >
+                              <option value="">Selecione o motorista</option>
+                              {motoristas.map(motorista => (
+                                <option key={motorista.id} value={motorista.id}>
+                                  {motorista.nome} - {motorista.tipo_motorista}
+                                </option>
+                              ))}
+                            </select>
+                            <button type="button" onClick={() => setMotoristasSelecionados(motoristasSelecionados.filter((_, i) => i !== idx))} className="btn-remove-small">
+                              Remover
+                            </button>
+                          </div>
+                        ))}
+                        <button type="button" className="btn-add-small" onClick={() => setMotoristasSelecionados([...motoristasSelecionados, ''])}>
+                          + Adicionar motorista
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1030,37 +956,10 @@ const ControleFrete: React.FC = () => {
                         />
                       </div>
                       <div className="form-group">
-                        <label>Saldo a Receber (R$)</label>
-                        <input
-                          type="text"
-                          value={formData.saldo_receber ? 
-                            parseFloat(formData.saldo_receber).toLocaleString('pt-BR', { 
-                              style: 'currency', 
-                              currency: 'BRL' 
-                            }) : 'R$ 0,00'
-                        }
-                        readOnly
-                        style={{ backgroundColor: '#f5f5f5' }}
-                      />
-                      </div>
-                      <div className="form-group">
                         <label>Situação *</label>
                         <select
                           value={formData.situacao}
-                          onChange={(e) => {
-                            const novaSituacao = e.target.value;
-                            // Se mudou para algo diferente de "Pago", limpar campos de pagamento
-                            if (novaSituacao !== 'Pago') {
-                              setFormData({
-                                ...formData, 
-                                situacao: novaSituacao,
-                                tipo_pagamento: '',
-                                data_pagamento: ''
-                              });
-                            } else {
-                              setFormData({...formData, situacao: novaSituacao});
-                            }
-                          }}
+                          onChange={(e) => setFormData({...formData, situacao: e.target.value})}
                           required
                         >
                           <option value="Pendente">Pendente</option>
@@ -1116,9 +1015,11 @@ const ControleFrete: React.FC = () => {
                   </div>
 
                   <div className="form-actions">
-                    <button type="button" onClick={resetForm}>Cancelar</button>
-                    <button type="submit" className="btn-primary">
-                      {editingId ? 'Atualizar' : 'Salvar'}
+                    <button type="button" className="btn-cancel" onClick={resetForm}>
+                      Cancelar
+                    </button>
+                    <button type="submit" className="btn-save">
+                      {editingId ? 'Atualizar Frete' : 'Salvar Frete'}
                     </button>
                   </div>
                 </form>
@@ -1316,7 +1217,7 @@ const ControleFrete: React.FC = () => {
                 </thead>
                 <tbody>
                   {fretesAcerto.map((frete) => {
-                    const caminhao = caminhoes.find(c => c.id === frete.caminhao_id);
+                    const caminhao = frete.caminhao;
                     return (
                       <tr key={frete.id}>
                         <td>{formatDate(frete.data_emissao)}</td>

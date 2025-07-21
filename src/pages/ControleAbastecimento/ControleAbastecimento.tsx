@@ -32,7 +32,7 @@ const ControleAbastecimento: React.FC = () => {
     km_rodado: undefined,
     numero_ticket: '',
     preco_total: undefined,
-    tanque_cheio: false
+    tanque_cheio: true
   });
 
   useEffect(() => {
@@ -115,7 +115,7 @@ const ControleAbastecimento: React.FC = () => {
       km_rodado: undefined,
       numero_ticket: '',
       preco_total: undefined,
-      tanque_cheio: false
+      tanque_cheio: true
     });
     setEditingAbastecimento(null);
     setShowForm(false);
@@ -526,11 +526,11 @@ const ControleAbastecimento: React.FC = () => {
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn-primary">
-                  {editingAbastecimento ? 'Atualizar' : 'Salvar'}
-                </button>
-                <button type="button" className="btn-secondary" onClick={resetForm}>
+                <button type="button" className="btn-cancel" onClick={resetForm}>
                   Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  {editingAbastecimento ? 'Atualizar Abastecimento' : 'Salvar Abastecimento'}
                 </button>
               </div>
             </form>

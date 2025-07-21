@@ -50,7 +50,7 @@ const CadastroCaminhoes: React.FC = () => {
     setShowForm(false);
   };
 
-  const handleEdit = (caminhao: Caminhao) => {
+  const handleEdit = async (caminhao: Caminhao) => {
     setFormData({
       placa: caminhao.placa,
       modelo: caminhao.modelo,
@@ -60,13 +60,14 @@ const CadastroCaminhoes: React.FC = () => {
       combustivel: caminhao.combustivel,
       status: caminhao.status
     });
-    setEditingId(caminhao.id || null);
+    setEditingId(typeof caminhao.id === 'number' ? caminhao.id : null);
     setShowForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let caminhaoId = editingId;
       if (editingId) {
         // Atualizar caminhão existente
         const updatedCaminhao = await caminhaoService.update(editingId, {
@@ -78,7 +79,7 @@ const CadastroCaminhoes: React.FC = () => {
           combustivel: formData.combustivel,
           status: formData.status
         });
-        
+        caminhaoId = typeof updatedCaminhao.id === 'number' ? updatedCaminhao.id : null;
         setCaminhoes(caminhoes.map(c => c.id === editingId ? updatedCaminhao : c));
         alert('Caminhão atualizado com sucesso!');
       } else {
@@ -92,11 +93,10 @@ const CadastroCaminhoes: React.FC = () => {
           combustivel: formData.combustivel,
           status: formData.status
         });
-        
+        caminhaoId = typeof newCaminhao.id === 'number' ? newCaminhao.id : null;
         setCaminhoes([newCaminhao, ...caminhoes]);
         alert('Caminhão cadastrado com sucesso!');
       }
-      
       resetForm();
     } catch (error) {
       console.error('Erro ao salvar caminhão:', error);
@@ -235,9 +235,11 @@ const CadastroCaminhoes: React.FC = () => {
                 </div>
               </div>
               <div className="form-actions">
-                <button type="button" onClick={resetForm}>Cancelar</button>
-                <button type="submit" className="btn-primary">
-                  {editingId ? 'Atualizar' : 'Salvar'}
+                <button type="button" className="btn-cancel" onClick={resetForm}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  {editingId ? 'Atualizar Caminhão' : 'Salvar Caminhão'}
                 </button>
               </div>
             </form>

@@ -11,8 +11,6 @@ export interface Frete {
   numero_cb?: string;
   cliente?: string;
   observacoes?: string;
-  caminhao_id: number;
-  motorista_id: number;
   faixa?: string;
   total_km?: number;
   valor_frete: number;

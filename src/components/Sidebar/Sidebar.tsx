@@ -37,6 +37,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       icon: Truck,
       label: 'Cadastro de Caminhões',
     },
+    // Novo item para Cadastro de Reboques
+    {
+      path: '/cadastro-reboques',
+      icon: Truck,
+      label: 'Cadastro de Reboques',
+    },
     {
       path: '/cadastro-motoristas',
       icon: Users,

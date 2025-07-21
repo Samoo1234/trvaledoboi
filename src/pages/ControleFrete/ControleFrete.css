@@ -229,6 +229,7 @@
 .data-table td:nth-child(17) {
   min-width: 100px;
   width: 100px;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .data-table th:nth-child(18), /* Ações */
@@ -242,7 +243,7 @@
 }
 
 .data-table th:nth-child(18) {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: var(--primary-red);
   box-shadow: -2px 0 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -794,3 +795,5 @@
     font-size: 0.9rem;
   }
 } 
+
+/* Estilos específicos do ControleFrete removidos - usando global.css */ 

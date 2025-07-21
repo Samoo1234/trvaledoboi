@@ -481,9 +481,11 @@ const CadastroMotoristas: React.FC = () => {
               </div>
 
               <div className="form-actions">
-                <button type="button" onClick={resetForm}>Cancelar</button>
-                <button type="submit" className="btn-primary">
-                  {editingId ? 'Atualizar' : 'Salvar'}
+                <button type="button" className="btn-cancel" onClick={resetForm}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  {editingId ? 'Atualizar Motorista' : 'Salvar Motorista'}
                 </button>
               </div>
             </form>
