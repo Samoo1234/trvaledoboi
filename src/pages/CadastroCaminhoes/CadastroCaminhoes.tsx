@@ -67,7 +67,6 @@ const CadastroCaminhoes: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let caminhaoId = editingId;
       if (editingId) {
         // Atualizar caminhão existente
         const updatedCaminhao = await caminhaoService.update(editingId, {
@@ -79,7 +78,6 @@ const CadastroCaminhoes: React.FC = () => {
           combustivel: formData.combustivel,
           status: formData.status
         });
-        caminhaoId = typeof updatedCaminhao.id === 'number' ? updatedCaminhao.id : null;
         setCaminhoes(caminhoes.map(c => c.id === editingId ? updatedCaminhao : c));
         alert('Caminhão atualizado com sucesso!');
       } else {
@@ -93,7 +91,6 @@ const CadastroCaminhoes: React.FC = () => {
           combustivel: formData.combustivel,
           status: formData.status
         });
-        caminhaoId = typeof newCaminhao.id === 'number' ? newCaminhao.id : null;
         setCaminhoes([newCaminhao, ...caminhoes]);
         alert('Caminhão cadastrado com sucesso!');
       }

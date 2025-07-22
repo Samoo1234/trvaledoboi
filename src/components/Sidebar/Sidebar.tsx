@@ -33,6 +33,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       label: 'Dashboard',
     },
     {
+      path: '/controle-frete',
+      icon: Package,
+      label: 'Controle de Frete',
+    },
+    {
       path: '/cadastro-caminhoes',
       icon: Truck,
       label: 'Cadastro de Caminhões',
@@ -47,11 +52,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       path: '/cadastro-motoristas',
       icon: Users,
       label: 'Cadastro de Motoristas',
-    },
-    {
-      path: '/controle-frete',
-      icon: Package,
-      label: 'Controle de Frete',
     },
     {
       path: '/controle-abastecimento',

@@ -10,6 +10,318 @@
   gap: 1rem;
 }
 
+/* ✨ MODAL ELEGANTE - NOVO FRETE ✨ */
+.form-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.form-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 🎯 CABEÇALHO DO MODAL */
+.form-modal h2 {
+  margin: 0;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, var(--primary-blue) 0%, #1e40af 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 3px solid var(--primary-red);
+}
+
+/* 📋 FORMULÁRIO INTERNO */
+.form-modal form {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* 🎨 SEÇÕES DO FORMULÁRIO */
+.form-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.form-section:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.form-section h3 {
+  margin: 0 0 1.25rem 0;
+  color: var(--primary-blue);
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* 🏗️ GRID DE CAMPOS */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* 🚗 SEÇÃO VEÍCULOS E MOTORISTAS - MELHORADA */
+.vehicles-motorists-section {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0ea5e9;
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.vehicles-motorists-section h3 {
+  color: #0369a1;
+  border-bottom-color: #0ea5e9;
+}
+
+.dynamic-fields-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.dynamic-field-group {
+  flex: 1 1 320px;
+  min-width: 280px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .dynamic-fields-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .dynamic-field-group {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.dynamic-field-group h4 {
+  margin: 0 0 1rem 0;
+  color: #0369a1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dynamic-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.dynamic-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.dynamic-item select {
+  flex: 1;
+  margin: 0;
+  border: 1px solid #d1d5db;
+}
+
+.dynamic-item .btn-remove-small {
+  flex-shrink: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dynamic-item .btn-remove-small:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.add-button-container {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-add-small {
+  min-width: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  background: var(--primary-green, #10b981);
+  color: #fff;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background 0.2s;
+}
+
+.btn-add-small:hover {
+  background: #059669;
+}
+
+/* 💰 SEÇÃO DE VALORES */
+.values-section {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+}
+
+.values-section h3 {
+  color: #d97706;
+  border-bottom-color: #f59e0b;
+}
+
+/* 📝 SEÇÃO DE OBSERVAÇÕES */
+.observations-section {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  border: 2px solid #8b5cf6;
+}
+
+.observations-section h3 {
+  color: #7c3aed;
+  border-bottom-color: #8b5cf6;
+}
+
+/* 📱 RESPONSIVIDADE MÓVEL */
+@media (max-width: 768px) {
+  .form-modal {
+    padding: 0.5rem;
+  }
+  
+  .form-modal-content {
+    max-height: 95vh;
+    border-radius: 8px;
+  }
+  
+  .form-modal h2 {
+    padding: 1rem;
+    font-size: 1.1rem;
+  }
+  
+  .form-modal form {
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+  
+  .form-section {
+    padding: 1rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .dynamic-fields-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .dynamic-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .dynamic-item select {
+    width: 100%;
+  }
+}
+
 /* ✨ SCROLL HORIZONTAL MELHORADO ✨ */
 .table-container {
   width: 100%;
@@ -797,3 +1109,67 @@
 } 
 
 /* Estilos específicos do ControleFrete removidos - usando global.css */ 
+.caminhao-card {
+  position: relative;
+  background: #fff;
+  border: 1.5px solid #bae6fd;
+  border-radius: 10px;
+  padding: 1.25rem 1rem 1rem 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.caminhao-card .btn-remove-small {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  box-shadow: none;
+  transition: background 0.2s;
+}
+.caminhao-card .btn-remove-small:hover {
+  background: #b91c1c;
+}
+
+.caminhao-card select,
+.caminhao-card .config-row {
+  margin-bottom: 0.5rem;
+} 
+
+.motorista-card {
+  position: relative;
+  background: #fff;
+  border: 1.5px solid #bae6fd;
+  border-radius: 10px;
+  padding: 1.25rem 1rem 1rem 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.motorista-card .btn-remove-small {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  box-shadow: none;
+  transition: background 0.2s;
+}
+.motorista-card .btn-remove-small:hover {
+  background: #b91c1c;
+} 

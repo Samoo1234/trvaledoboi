@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Truck, Filter, Calendar, FileText, Download, Archive } from 'lucide-react';
+import { Plus, Edit, Trash2, Truck, Filter, Calendar, FileText, Download, Archive, User } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 import { freteService, Frete } from '../../services/freteService';
 import { caminhaoService, Caminhao } from '../../services/caminhaoService';
@@ -7,7 +7,14 @@ import { motoristaService, Motorista } from '../../services/motoristaService';
 import { freteCaminhaoService } from '../../services/freteCaminhaoService';
 import { freteMotoristaService } from '../../services/freteMotoristaService';
 import { formatDisplayDate } from '../../services/dateUtils';
+import { reboqueService, Reboque } from '../../services/reboqueService';
 import './ControleFrete.css';
+
+type CaminhaoSelecionado = {
+  caminhao_id: string;
+  configuracao: 'Truck' | 'Julieta';
+  reboque_id?: string;
+};
 
 const ControleFrete: React.FC = () => {
   const [fretes, setFretes] = useState<Frete[]>([]);
@@ -49,13 +56,17 @@ const ControleFrete: React.FC = () => {
   });
 
   // Arrays para múltiplos caminhões e motoristas
-  const [caminhoesSelecionados, setCaminhoesSelecionados] = useState<string[]>([]);
+  const [caminhoesSelecionados, setCaminhoesSelecionados] = useState<CaminhaoSelecionado[]>([]);
   const [motoristasSelecionados, setMotoristasSelecionados] = useState<string[]>([]);
+
+  // Estado para reboques
+  const [reboques, setReboques] = useState<Reboque[]>([]);
 
   // Carregar dados iniciais
   useEffect(() => {
     loadData();
     setupScrollIndicators();
+    loadReboques();
   }, []);
 
   const setupScrollIndicators = () => {
@@ -104,6 +115,15 @@ const ControleFrete: React.FC = () => {
     }
   };
 
+  const loadReboques = async () => {
+    try {
+      const data = await reboqueService.getAll();
+      setReboques(data);
+    } catch {
+      setReboques([]);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       data_emissao: '',
@@ -149,7 +169,11 @@ const ControleFrete: React.FC = () => {
     
     // Carregar vínculos de caminhões e motoristas
     const caminhoesVinc = await freteCaminhaoService.getByFreteId(frete.id!);
-    setCaminhoesSelecionados(caminhoesVinc.map(v => v.caminhao_id.toString()));
+    setCaminhoesSelecionados(caminhoesVinc.map(v => ({
+      caminhao_id: v.caminhao_id.toString(),
+      configuracao: v.configuracao,
+      reboque_id: v.reboque_id ? v.reboque_id.toString() : undefined
+    })));
     const motoristasVinc = await freteMotoristaService.getByFreteId(frete.id!);
     setMotoristasSelecionados(motoristasVinc.map(v => v.motorista_id.toString()));
     
@@ -215,8 +239,15 @@ const ControleFrete: React.FC = () => {
       }
 
       // Salvar vínculos de caminhões
-      for (const caminhaoId of caminhoesSelecionados) {
-        await freteCaminhaoService.create({ frete_id: freteId!, caminhao_id: parseInt(caminhaoId) });
+      for (const caminhaoVinc of caminhoesSelecionados) {
+        await freteCaminhaoService.create({
+          frete_id: freteId!,
+          caminhao_id: parseInt(caminhaoVinc.caminhao_id),
+          configuracao: caminhaoVinc.configuracao,
+          reboque_id: caminhaoVinc.configuracao === 'Julieta' && caminhaoVinc.reboque_id
+            ? parseInt(caminhaoVinc.reboque_id)
+            : null
+        });
       }
       
       // Salvar vínculos de motoristas
@@ -784,8 +815,11 @@ const ControleFrete: React.FC = () => {
 
           {showForm && (
             <div className="form-modal">
-              <div className="form-container large">
-                <h2>{editingId ? 'Editar Frete' : 'Cadastrar Novo Frete'}</h2>
+              <div className="form-modal-content">
+                <h2>
+                  <FileText size={20} />
+                  {editingId ? 'Editar Frete' : 'Novo Frete'}
+                </h2>
                 <form onSubmit={handleSubmit}>
                   {/* Dados Básicos */}
                   <div className="form-section">
@@ -874,21 +908,33 @@ const ControleFrete: React.FC = () => {
                   </div>
 
                   {/* Veículos e Motoristas */}
-                  <div className="form-section">
+                  <div className="form-section vehicles-motorists-section">
                     <h3><Truck size={18} /> Veículos e Motoristas</h3>
-                    <div className="form-row">
-                      <div className="form-group" style={{ flex: 1 }}>
-                        <label>Caminhões *</label>
-                        {caminhoesSelecionados.map((id, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <div className="dynamic-fields-container">
+                      <div className="dynamic-field-group">
+                        <h4>🚛 Caminhões *</h4>
+                        {caminhoesSelecionados.map((item, idx) => (
+                          <div key={idx} className="caminhao-card">
+                            {/* Botão remover só ícone no topo direito */}
+                            <button
+                              type="button"
+                              onClick={() => setCaminhoesSelecionados(caminhoesSelecionados.filter((_, i) => i !== idx))}
+                              className="btn-remove-small"
+                              title="Remover caminhão"
+                              style={{ padding: 4, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                            {/* Select do caminhão */}
                             <select
-                              value={id}
+                              value={item.caminhao_id}
                               onChange={e => {
                                 const novos = [...caminhoesSelecionados];
-                                novos[idx] = e.target.value;
+                                novos[idx] = { ...novos[idx], caminhao_id: e.target.value };
                                 setCaminhoesSelecionados(novos);
                               }}
                               required
+                              style={{ marginBottom: 8 }}
                             >
                               <option value="">Selecione o caminhão</option>
                               {caminhoes.map(caminhao => (
@@ -897,20 +943,94 @@ const ControleFrete: React.FC = () => {
                                 </option>
                               ))}
                             </select>
-                            <button type="button" onClick={() => setCaminhoesSelecionados(caminhoesSelecionados.filter((_, i) => i !== idx))} className="btn-remove-small">
-                              Remover
-                            </button>
+                            {/* Radios Truck/Julieta */}
+                            <div className="config-row" style={{ display: 'flex', gap: 24, marginBottom: 8 }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <input
+                                  type="radio"
+                                  name={`configuracao-${idx}`}
+                                  value="Truck"
+                                  checked={item.configuracao === 'Truck'}
+                                  onChange={() => {
+                                    const novos = [...caminhoesSelecionados];
+                                    novos[idx].configuracao = 'Truck';
+                                    delete novos[idx].reboque_id;
+                                    setCaminhoesSelecionados(novos);
+                                  }}
+                                />
+                                Truck
+                              </label>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <input
+                                  type="radio"
+                                  name={`configuracao-${idx}`}
+                                  value="Julieta"
+                                  checked={item.configuracao === 'Julieta'}
+                                  onChange={() => {
+                                    const novos = [...caminhoesSelecionados];
+                                    novos[idx].configuracao = 'Julieta';
+                                    setCaminhoesSelecionados(novos);
+                                  }}
+                                />
+                                Julieta
+                              </label>
+                            </div>
+                            {/* Select de reboque se for Julieta */}
+                            {item.configuracao === 'Julieta' && (
+                              <div style={{ marginBottom: 4 }}>
+                                <label style={{ fontWeight: 500, fontSize: '0.95rem', marginBottom: 2, display: 'block' }}>Reboque</label>
+                                <select
+                                  value={item.reboque_id || ''}
+                                  onChange={e => {
+                                    const novos = [...caminhoesSelecionados];
+                                    novos[idx].reboque_id = e.target.value;
+                                    setCaminhoesSelecionados(novos);
+                                  }}
+                                  required
+                                >
+                                  <option value="">Selecione o reboque</option>
+                                  {reboques.map(reb => (
+                                    <option key={reb.id} value={reb.id}>
+                                      {reb.placa} - {reb.conjunto}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                           </div>
                         ))}
-                        <button type="button" className="btn-add-small" onClick={() => setCaminhoesSelecionados([...caminhoesSelecionados, ''])}>
-                          + Adicionar caminhão
-                        </button>
+                        <div className="add-button-container">
+                          <button
+                            type="button"
+                            className="btn-add-small"
+                            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                            onClick={() =>
+                              setCaminhoesSelecionados([
+                                ...caminhoesSelecionados,
+                                { caminhao_id: '', configuracao: 'Truck' }
+                              ])
+                            }
+                          >
+                            <Truck size={16} /> + Adicionar caminhão
+                          </button>
+                        </div>
                       </div>
                       
-                      <div className="form-group" style={{ flex: 1 }}>
-                        <label>Motoristas *</label>
+                      <div className="dynamic-field-group">
+                        <h4>👨‍💼 Motoristas *</h4>
                         {motoristasSelecionados.map((id, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <div key={idx} className="motorista-card">
+                            {/* Botão remover só ícone no topo direito */}
+                            <button
+                              type="button"
+                              onClick={() => setMotoristasSelecionados(motoristasSelecionados.filter((_, i) => i !== idx))}
+                              className="btn-remove-small"
+                              title="Remover motorista"
+                              style={{ padding: 4, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                            {/* Select do motorista */}
                             <select
                               value={id}
                               onChange={e => {
@@ -919,6 +1039,7 @@ const ControleFrete: React.FC = () => {
                                 setMotoristasSelecionados(novos);
                               }}
                               required
+                              style={{ marginBottom: 8 }}
                             >
                               <option value="">Selecione o motorista</option>
                               {motoristas.map(motorista => (
@@ -927,20 +1048,24 @@ const ControleFrete: React.FC = () => {
                                 </option>
                               ))}
                             </select>
-                            <button type="button" onClick={() => setMotoristasSelecionados(motoristasSelecionados.filter((_, i) => i !== idx))} className="btn-remove-small">
-                              Remover
-                            </button>
                           </div>
                         ))}
-                        <button type="button" className="btn-add-small" onClick={() => setMotoristasSelecionados([...motoristasSelecionados, ''])}>
-                          + Adicionar motorista
-                        </button>
+                        <div className="add-button-container">
+                          <button
+                            type="button"
+                            className="btn-add-small"
+                            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                            onClick={() => setMotoristasSelecionados([...motoristasSelecionados, ''])}
+                          >
+                            <User size={16} /> + Adicionar motorista
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Valores */}
-                  <div className="form-section">
+                  <div className="form-section values-section">
                     <h3>💰 Valores</h3>
                     <div className="form-row">
                       <div className="form-group">
@@ -999,7 +1124,7 @@ const ControleFrete: React.FC = () => {
                   </div>
 
                   {/* Observações */}
-                  <div className="form-section">
+                  <div className="form-section observations-section">
                     <h3>📝 Observações</h3>
                     <div className="form-row">
                       <div className="form-group full-width">
@@ -1051,6 +1176,7 @@ const ControleFrete: React.FC = () => {
                   <th>Saldo a Receber</th>
                   <th>Tipo Pagamento</th>
                   <th>Data Pagamento</th>
+                  <th>Configuração</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -1085,6 +1211,19 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.saldo_receber ? formatCurrency(frete.saldo_receber) : '-'}</td>
                       <td>{frete.situacao === 'Pago' ? (frete.tipo_pagamento || '-') : '-'}</td>
                       <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
+                      <td>
+                        {caminhoesSelecionados.length === 0 ? '-' : (
+                          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                            {caminhoesSelecionados.map((item, i) => (
+                              <li key={i}>
+                                {item.configuracao === 'Truck'
+                                  ? 'Truck'
+                                  : `Julieta${item.reboque_id ? ` (Reboque: ${reboques.find(r => r.id?.toString() === item.reboque_id)?.placa || ''})` : ''}`}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
                       <td>
                         <div className="actions">
                           <button 

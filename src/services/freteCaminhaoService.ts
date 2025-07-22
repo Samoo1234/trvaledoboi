@@ -4,6 +4,8 @@ export interface FreteCaminhao {
   id?: number;
   frete_id: number;
   caminhao_id: number;
+  configuracao: 'Truck' | 'Julieta';
+  reboque_id?: number | null;
 }
 
 export const freteCaminhaoService = {
