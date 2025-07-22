@@ -62,6 +62,10 @@ const ControleFrete: React.FC = () => {
   // Estado para reboques
   const [reboques, setReboques] = useState<Reboque[]>([]);
 
+  // [1] Adicionar estados auxiliares para vínculos
+  const [vinculosCaminhoes, setVinculosCaminhoes] = useState<{ [freteId: number]: import('../../services/freteCaminhaoService').FreteCaminhao[] }>({});
+  const [vinculosMotoristas, setVinculosMotoristas] = useState<{ [freteId: number]: import('../../services/freteMotoristaService').FreteMotorista[] }>({});
+
   // Carregar dados iniciais
   useEffect(() => {
     loadData();
@@ -95,6 +99,7 @@ const ControleFrete: React.FC = () => {
     };
   };
 
+  // [2] Alterar loadData para buscar vínculos após carregar fretes
   const loadData = async () => {
     try {
       setLoading(true);
@@ -103,10 +108,21 @@ const ControleFrete: React.FC = () => {
         caminhaoService.getAll(),
         motoristaService.getAll()
       ]);
-      
       setFretes(fretesData);
       setCaminhoes(caminhoesData.filter(c => c.status === 'Ativo'));
       setMotoristas(motoristasData.filter(m => m.status === 'Ativo'));
+      // Buscar vínculos de caminhões e motoristas para todos os fretes
+      const ids = fretesData.map(f => f.id).filter((id): id is number => typeof id === 'number');
+      // Buscar todos os vínculos de caminhão
+      const allCaminhoes = await Promise.all(ids.map(id => freteCaminhaoService.getByFreteId(id)));
+      const vincCaminhoes: { [freteId: number]: import('../../services/freteCaminhaoService').FreteCaminhao[] } = {};
+      ids.forEach((id, idx) => { vincCaminhoes[id!] = allCaminhoes[idx]; });
+      setVinculosCaminhoes(vincCaminhoes);
+      // Buscar todos os vínculos de motoristas
+      const allMotoristas = await Promise.all(ids.map(id => freteMotoristaService.getByFreteId(id)));
+      const vincMotoristas: { [freteId: number]: import('../../services/freteMotoristaService').FreteMotorista[] } = {};
+      ids.forEach((id, idx) => { vincMotoristas[id!] = allMotoristas[idx]; });
+      setVinculosMotoristas(vincMotoristas);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       alert('Erro ao carregar dados. Verifique sua conexão.');
@@ -1202,9 +1218,42 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.numero_minuta || '-'}</td>
                       <td>{frete.numero_cb || '-'}</td>
                       <td>{frete.cliente || '-'}</td>
-                      <td>{frete.caminhao?.placa}</td>
-                      <td>{frete.caminhao?.tipo}</td>
-                      <td>{frete.motorista?.nome}</td>
+                      <td>
+                        {vinculosCaminhoes[frete.id!] && vinculosCaminhoes[frete.id!].length > 0 ? (
+                          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                            {vinculosCaminhoes[frete.id!].map((v, i) => {
+                              const cam = caminhoes.find(c => c.id === v.caminhao_id);
+                              return (
+                                <li key={i}>{cam ? cam.placa : v.caminhao_id}</li>
+                              );
+                            })}
+                          </ul>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        {vinculosCaminhoes[frete.id!] && vinculosCaminhoes[frete.id!].length > 0 ? (
+                          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                            {vinculosCaminhoes[frete.id!].map((v, i) => {
+                              const cam = caminhoes.find(c => c.id === v.caminhao_id);
+                              return (
+                                <li key={i}>{cam ? cam.tipo : v.configuracao}</li>
+                              );
+                            })}
+                          </ul>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        {vinculosMotoristas[frete.id!] && vinculosMotoristas[frete.id!].length > 0 ? (
+                          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                            {vinculosMotoristas[frete.id!].map((v, i) => {
+                              const mot = motoristas.find(m => m.id === v.motorista_id);
+                              return (
+                                <li key={i}>{mot ? mot.nome : v.motorista_id}</li>
+                              );
+                            })}
+                          </ul>
+                        ) : '-'}
+                      </td>
                       <td>{frete.faixa || '-'}</td>
                       <td>{frete.total_km || '-'}</td>
                       <td>{formatCurrency(frete.valor_frete)}</td>
@@ -1212,17 +1261,17 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.situacao === 'Pago' ? (frete.tipo_pagamento || '-') : '-'}</td>
                       <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
                       <td>
-                        {caminhoesSelecionados.length === 0 ? '-' : (
+                        {vinculosCaminhoes[frete.id!] && vinculosCaminhoes[frete.id!].length > 0 ? (
                           <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                            {caminhoesSelecionados.map((item, i) => (
+                            {vinculosCaminhoes[frete.id!].map((item, i) => (
                               <li key={i}>
                                 {item.configuracao === 'Truck'
                                   ? 'Truck'
-                                  : `Julieta${item.reboque_id ? ` (Reboque: ${reboques.find(r => r.id?.toString() === item.reboque_id)?.placa || ''})` : ''}`}
+                                  : `Julieta${item.reboque_id ? ` (Reboque: ${reboques.find(r => r.id === item.reboque_id)?.placa || ''})` : ''}`}
                               </li>
                             ))}
                           </ul>
-                        )}
+                        ) : '-'}
                       </td>
                       <td>
                         <div className="actions">
