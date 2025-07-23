@@ -13,6 +13,7 @@ import './ControleFrete.css';
 type CaminhaoSelecionado = {
   caminhao_id: string;
   reboque_id?: string;
+  valor_frete?: string;
 };
 
 const ControleFrete: React.FC = () => {
@@ -186,7 +187,8 @@ const ControleFrete: React.FC = () => {
     const caminhoesVinc = await freteCaminhaoService.getByFreteId(frete.id!);
     setCaminhoesSelecionados(caminhoesVinc.map(v => ({
       caminhao_id: v.caminhao_id.toString(),
-      reboque_id: v.reboque_id ? v.reboque_id.toString() : undefined
+      reboque_id: v.reboque_id ? v.reboque_id.toString() : undefined,
+      valor_frete: v.valor_frete ? v.valor_frete.toString() : undefined
     })));
     const motoristasVinc = await freteMotoristaService.getByFreteId(frete.id!);
     setMotoristasSelecionados(motoristasVinc.map(v => v.motorista_id.toString()));
@@ -255,15 +257,18 @@ const ControleFrete: React.FC = () => {
       // Salvar vínculos de caminhões
       for (const caminhaoVinc of caminhoesSelecionados) {
         const caminhao = caminhoes.find(c => c.id === parseInt(caminhaoVinc.caminhao_id));
-        const configuracao = caminhao?.tipo === 'Julieta' ? 'Julieta' : 'Truck';
+        let configuracao: 'Truck' | 'Julieta' | 'Carreta Baixa' | '2 Pisos' = 'Truck';
+        if (caminhao?.tipo === 'Julieta') configuracao = 'Julieta';
+        else if (caminhao?.tipo === 'Carreta Baixa') configuracao = 'Carreta Baixa';
+        else if (caminhao?.tipo === '2 Pisos') configuracao = '2 Pisos';
+        else if (caminhao?.tipo === 'Truck' && caminhaoVinc.reboque_id) configuracao = 'Julieta';
         
         await freteCaminhaoService.create({
           frete_id: freteId!,
           caminhao_id: parseInt(caminhaoVinc.caminhao_id),
           configuracao: configuracao,
-          reboque_id: configuracao === 'Julieta' && caminhaoVinc.reboque_id
-            ? parseInt(caminhaoVinc.reboque_id)
-            : null
+          reboque_id: caminhaoVinc.reboque_id ? parseInt(caminhaoVinc.reboque_id) : null,
+          valor_frete: caminhaoVinc.valor_frete ? parseFloat(caminhaoVinc.valor_frete) : null
         });
       }
       
@@ -964,10 +969,70 @@ const ControleFrete: React.FC = () => {
                                 </option>
                               ))}
                             </select>
-                            {/* Select de reboque se o caminhão for do tipo Julieta */}
+                            {/* Configuração específica para cada tipo de caminhão */}
                             {(() => {
                               const caminhao = caminhoes.find(c => c.id === parseInt(item.caminhao_id));
-                              if (caminhao?.tipo === 'Julieta') {
+                              
+                              if (caminhao?.tipo === 'Truck') {
+                                // Para Truck: opção de usar como Truck ou Julieta
+                                return (
+                                  <div style={{ marginBottom: 4 }}>
+                                    <label style={{ fontWeight: 500, fontSize: '0.95rem', marginBottom: 8, display: 'block' }}>Configuração:</label>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}>
+                                        <input
+                                          type="radio"
+                                          name={`config-${idx}`}
+                                          checked={!item.reboque_id}
+                                          onChange={() => {
+                                            const novos = [...caminhoesSelecionados];
+                                            novos[idx].reboque_id = undefined;
+                                            setCaminhoesSelecionados(novos);
+                                          }}
+                                        />
+                                        Usar como Truck (padrão)
+                                      </label>
+                                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}>
+                                        <input
+                                          type="radio"
+                                          name={`config-${idx}`}
+                                          checked={!!item.reboque_id}
+                                          onChange={() => {
+                                            const novos = [...caminhoesSelecionados];
+                                            novos[idx].reboque_id = '';
+                                            setCaminhoesSelecionados(novos);
+                                          }}
+                                        />
+                                        Usar como Julieta (com reboque)
+                                      </label>
+                                    </div>
+                                    
+                                    {/* Campo de reboque se escolher Julieta */}
+                                    {item.reboque_id !== undefined && (
+                                      <div style={{ marginTop: 8 }}>
+                                        <label style={{ fontWeight: 500, fontSize: '0.9rem', marginBottom: 4, display: 'block' }}>Reboque:</label>
+                                        <select
+                                          value={item.reboque_id || ''}
+                                          onChange={e => {
+                                            const novos = [...caminhoesSelecionados];
+                                            novos[idx].reboque_id = e.target.value;
+                                            setCaminhoesSelecionados(novos);
+                                          }}
+                                          required
+                                        >
+                                          <option value="">Selecione o reboque</option>
+                                          {reboques.map(reb => (
+                                            <option key={reb.id} value={reb.id}>
+                                              {reb.placa} - {reb.conjunto}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              } else if (caminhao?.tipo === 'Julieta' || caminhao?.tipo === 'Carreta Baixa' || caminhao?.tipo === '2 Pisos') {
+                                // Para outros tipos: sempre precisam de reboque
                                 return (
                                   <div style={{ marginBottom: 4 }}>
                                     <label style={{ fontWeight: 500, fontSize: '0.95rem', marginBottom: 2, display: 'block' }}>Reboque</label>
@@ -992,6 +1057,34 @@ const ControleFrete: React.FC = () => {
                               }
                               return null;
                             })()}
+                            
+                            {/* Campo de valor individual para cada caminhão */}
+                            <div style={{ marginTop: 8 }}>
+                              <label style={{ fontWeight: 500, fontSize: '0.9rem', marginBottom: 4, display: 'block' }}>Valor do Frete (R$):</label>
+                              <CurrencyInput
+                                intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
+                                decimalsLimit={2}
+                                value={item.valor_frete || ''}
+                                onValueChange={(value) => {
+                                  const novos = [...caminhoesSelecionados];
+                                  novos[idx].valor_frete = value || '';
+                                  setCaminhoesSelecionados(novos);
+                                  // Recalcular valor total
+                                  const total = novos.reduce((sum, cam) => {
+                                    const valor = parseFloat(cam.valor_frete || '0');
+                                    return sum + valor;
+                                  }, 0);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    valor_frete: total.toString()
+                                  }));
+                                }}
+                                placeholder="0,00"
+                                allowNegativeValue={false}
+                                className="form-control"
+                                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                              />
+                            </div>
                           </div>
                         ))}
                         <div className="add-button-container">
@@ -1064,7 +1157,7 @@ const ControleFrete: React.FC = () => {
                     <h3>💰 Valores</h3>
                     <div className="form-row">
                       <div className="form-group">
-                        <label>Valor do Frete (R$) *</label>
+                        <label>Valor Total do Frete (R$) *</label>
                         <CurrencyInput
                           intlConfig={{ locale: 'pt-BR', currency: 'BRL' }}
                           decimalsLimit={2}
@@ -1073,7 +1166,11 @@ const ControleFrete: React.FC = () => {
                           placeholder="0,00"
                           allowNegativeValue={false}
                           className="form-control"
+                          readOnly
                         />
+                        <small style={{ color: '#666', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
+                          Total calculado automaticamente dos valores individuais dos caminhões
+                        </small>
                       </div>
                       <div className="form-group">
                         <label>Situação *</label>
