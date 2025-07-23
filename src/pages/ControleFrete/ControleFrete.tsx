@@ -298,6 +298,8 @@ const ControleFrete: React.FC = () => {
   const handleArquivar = async (id: number) => {
     if (window.confirm('Tem certeza que deseja arquivar este frete? Ele será movido para o histórico.')) {
       try {
+        await freteCaminhaoService.deleteByFreteId(id);
+        await freteMotoristaService.deleteByFreteId(id);
         await freteService.arquivar(id);
         setFretes(fretes.filter(f => f.id !== id));
         alert('Frete arquivado com sucesso!');

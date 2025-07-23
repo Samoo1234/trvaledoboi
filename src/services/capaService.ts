@@ -26,7 +26,8 @@ export interface TransporteAgrupado {
 export class CapaService {
   // Buscar transportes por data de embarque
   async getTransportesByData(dataEmbarque: string): Promise<TransporteParaCapa[]> {
-    const { data, error } = await supabase
+    // Buscar fretes da data
+    const { data: fretes, error: fretesError } = await supabase
       .from('fretes')
       .select(`
         id,
@@ -34,28 +35,162 @@ export class CapaService {
         origem,
         destino,
         cliente,
-        valor_frete,
-        motorista:motoristas(nome),
-        caminhao:caminhoes(placa, tipo)
+        valor_frete
       `)
       .eq('data_emissao', dataEmbarque)
       .order('origem', { ascending: true });
 
-    if (error) {
-      throw new Error(`Erro ao buscar transportes: ${error.message}`);
+    if (fretesError) {
+      throw new Error(`Erro ao buscar transportes: ${fretesError.message}`);
     }
 
-    return (data || []).map(item => ({
-      id: item.id,
-      data_emissao: item.data_emissao,
-      origem: item.origem,
-      destino: item.destino,
-      cliente: item.cliente,
-      motorista: (item.motorista as any)?.nome || 'N/A',
-      caminhao_placa: (item.caminhao as any)?.placa || 'N/A',
-      caminhao_tipo: (item.caminhao as any)?.tipo || 'N/A',
-      valor_frete: item.valor_frete
-    }));
+    if (!fretes || fretes.length === 0) {
+      return [];
+    }
+
+    const freteIds = fretes.map(f => f.id);
+
+    // Buscar vínculos de motoristas
+    const { data: vinculosMotoristas, error: motoristasError } = await supabase
+      .from('frete_motorista')
+      .select(`
+        frete_id,
+        motorista:motoristas(id, nome)
+      `)
+      .in('frete_id', freteIds);
+
+    if (motoristasError) {
+      console.error('Erro ao buscar vínculos de motoristas:', motoristasError);
+    }
+
+    // Buscar vínculos de caminhões
+    const { data: vinculosCaminhoes, error: caminhoesError } = await supabase
+      .from('frete_caminhao')
+      .select(`
+        frete_id,
+        caminhao:caminhoes(id, placa, tipo)
+      `)
+      .in('frete_id', freteIds);
+
+    if (caminhoesError) {
+      console.error('Erro ao buscar vínculos de caminhões:', caminhoesError);
+    }
+
+    // Organizar dados por frete_id
+    const motoristasPorFrete: { [freteId: number]: string[] } = {};
+    const caminhoesPorFrete: { [freteId: number]: { placa: string, tipo: string }[] } = {};
+
+    // Processar motoristas
+    if (vinculosMotoristas) {
+      vinculosMotoristas.forEach(vinc => {
+        const freteId = vinc.frete_id;
+        const motorista = vinc.motorista as any;
+        if (motorista && motorista.nome) {
+          if (!motoristasPorFrete[freteId]) {
+            motoristasPorFrete[freteId] = [];
+          }
+          motoristasPorFrete[freteId].push(motorista.nome);
+        }
+      });
+    }
+
+    // Processar caminhões
+    if (vinculosCaminhoes) {
+      vinculosCaminhoes.forEach(vinc => {
+        const freteId = vinc.frete_id;
+        const caminhao = vinc.caminhao as any;
+        if (caminhao && caminhao.placa) {
+          if (!caminhoesPorFrete[freteId]) {
+            caminhoesPorFrete[freteId] = [];
+          }
+          caminhoesPorFrete[freteId].push({
+            placa: caminhao.placa,
+            tipo: caminhao.tipo || 'N/A'
+          });
+        }
+      });
+    }
+
+
+
+    // Criar um transporte para cada combinação de frete + motorista + caminhão
+    const result: TransporteParaCapa[] = [];
+
+    fretes.forEach(frete => {
+      const motoristas = motoristasPorFrete[frete.id] || [];
+      const caminhoes = caminhoesPorFrete[frete.id] || [];
+
+      // Se não há motoristas ou caminhões, criar um registro com N/A
+      if (motoristas.length === 0 && caminhoes.length === 0) {
+        result.push({
+          id: frete.id,
+          data_emissao: frete.data_emissao,
+          origem: frete.origem,
+          destino: frete.destino,
+          cliente: frete.cliente,
+          motorista: 'N/A',
+          caminhao_placa: 'N/A',
+          caminhao_tipo: 'N/A',
+          valor_frete: frete.valor_frete
+        });
+        return;
+      }
+
+      // Se há motoristas mas não caminhões, criar um registro por motorista
+      if (motoristas.length > 0 && caminhoes.length === 0) {
+        motoristas.forEach(motorista => {
+          result.push({
+            id: frete.id,
+            data_emissao: frete.data_emissao,
+            origem: frete.origem,
+            destino: frete.destino,
+            cliente: frete.cliente,
+            motorista: motorista,
+            caminhao_placa: 'N/A',
+            caminhao_tipo: 'N/A',
+            valor_frete: frete.valor_frete
+          });
+        });
+        return;
+      }
+
+      // Se há caminhões mas não motoristas, criar um registro por caminhão
+      if (caminhoes.length > 0 && motoristas.length === 0) {
+        caminhoes.forEach(caminhao => {
+          result.push({
+            id: frete.id,
+            data_emissao: frete.data_emissao,
+            origem: frete.origem,
+            destino: frete.destino,
+            cliente: frete.cliente,
+            motorista: 'N/A',
+            caminhao_placa: caminhao.placa,
+            caminhao_tipo: caminhao.tipo,
+            valor_frete: frete.valor_frete
+          });
+        });
+        return;
+      }
+
+      // Se há ambos, criar um registro para cada combinação
+      motoristas.forEach(motorista => {
+        caminhoes.forEach(caminhao => {
+          result.push({
+            id: frete.id,
+            data_emissao: frete.data_emissao,
+            origem: frete.origem,
+            destino: frete.destino,
+            cliente: frete.cliente,
+            motorista: motorista,
+            caminhao_placa: caminhao.placa,
+            caminhao_tipo: caminhao.tipo,
+            valor_frete: frete.valor_frete
+          });
+        });
+      });
+    });
+
+    return result;
   }
 
   // Adicionar logo no PDF
