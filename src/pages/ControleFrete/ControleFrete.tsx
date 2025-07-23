@@ -12,7 +12,6 @@ import './ControleFrete.css';
 
 type CaminhaoSelecionado = {
   caminhao_id: string;
-  configuracao: 'Truck' | 'Julieta';
   reboque_id?: string;
 };
 
@@ -187,7 +186,6 @@ const ControleFrete: React.FC = () => {
     const caminhoesVinc = await freteCaminhaoService.getByFreteId(frete.id!);
     setCaminhoesSelecionados(caminhoesVinc.map(v => ({
       caminhao_id: v.caminhao_id.toString(),
-      configuracao: v.configuracao,
       reboque_id: v.reboque_id ? v.reboque_id.toString() : undefined
     })));
     const motoristasVinc = await freteMotoristaService.getByFreteId(frete.id!);
@@ -256,11 +254,14 @@ const ControleFrete: React.FC = () => {
 
       // Salvar vínculos de caminhões
       for (const caminhaoVinc of caminhoesSelecionados) {
+        const caminhao = caminhoes.find(c => c.id === parseInt(caminhaoVinc.caminhao_id));
+        const configuracao = caminhao?.tipo === 'Julieta' ? 'Julieta' : 'Truck';
+        
         await freteCaminhaoService.create({
           frete_id: freteId!,
           caminhao_id: parseInt(caminhaoVinc.caminhao_id),
-          configuracao: caminhaoVinc.configuracao,
-          reboque_id: caminhaoVinc.configuracao === 'Julieta' && caminhaoVinc.reboque_id
+          configuracao: configuracao,
+          reboque_id: configuracao === 'Julieta' && caminhaoVinc.reboque_id
             ? parseInt(caminhaoVinc.reboque_id)
             : null
         });
@@ -963,60 +964,34 @@ const ControleFrete: React.FC = () => {
                                 </option>
                               ))}
                             </select>
-                            {/* Radios Truck/Julieta */}
-                            <div className="config-row" style={{ display: 'flex', gap: 24, marginBottom: 8 }}>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <input
-                                  type="radio"
-                                  name={`configuracao-${idx}`}
-                                  value="Truck"
-                                  checked={item.configuracao === 'Truck'}
-                                  onChange={() => {
-                                    const novos = [...caminhoesSelecionados];
-                                    novos[idx].configuracao = 'Truck';
-                                    delete novos[idx].reboque_id;
-                                    setCaminhoesSelecionados(novos);
-                                  }}
-                                />
-                                Truck
-                              </label>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <input
-                                  type="radio"
-                                  name={`configuracao-${idx}`}
-                                  value="Julieta"
-                                  checked={item.configuracao === 'Julieta'}
-                                  onChange={() => {
-                                    const novos = [...caminhoesSelecionados];
-                                    novos[idx].configuracao = 'Julieta';
-                                    setCaminhoesSelecionados(novos);
-                                  }}
-                                />
-                                Julieta
-                              </label>
-                            </div>
-                            {/* Select de reboque se for Julieta */}
-                            {item.configuracao === 'Julieta' && (
-                              <div style={{ marginBottom: 4 }}>
-                                <label style={{ fontWeight: 500, fontSize: '0.95rem', marginBottom: 2, display: 'block' }}>Reboque</label>
-                                <select
-                                  value={item.reboque_id || ''}
-                                  onChange={e => {
-                                    const novos = [...caminhoesSelecionados];
-                                    novos[idx].reboque_id = e.target.value;
-                                    setCaminhoesSelecionados(novos);
-                                  }}
-                                  required
-                                >
-                                  <option value="">Selecione o reboque</option>
-                                  {reboques.map(reb => (
-                                    <option key={reb.id} value={reb.id}>
-                                      {reb.placa} - {reb.conjunto}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
+                            {/* Select de reboque se o caminhão for do tipo Julieta */}
+                            {(() => {
+                              const caminhao = caminhoes.find(c => c.id === parseInt(item.caminhao_id));
+                              if (caminhao?.tipo === 'Julieta') {
+                                return (
+                                  <div style={{ marginBottom: 4 }}>
+                                    <label style={{ fontWeight: 500, fontSize: '0.95rem', marginBottom: 2, display: 'block' }}>Reboque</label>
+                                    <select
+                                      value={item.reboque_id || ''}
+                                      onChange={e => {
+                                        const novos = [...caminhoesSelecionados];
+                                        novos[idx].reboque_id = e.target.value;
+                                        setCaminhoesSelecionados(novos);
+                                      }}
+                                      required
+                                    >
+                                      <option value="">Selecione o reboque</option>
+                                      {reboques.map(reb => (
+                                        <option key={reb.id} value={reb.id}>
+                                          {reb.placa} - {reb.conjunto}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         ))}
                         <div className="add-button-container">
@@ -1027,7 +1002,7 @@ const ControleFrete: React.FC = () => {
                             onClick={() =>
                               setCaminhoesSelecionados([
                                 ...caminhoesSelecionados,
-                                { caminhao_id: '', configuracao: 'Truck' }
+                                { caminhao_id: '' }
                               ])
                             }
                           >
@@ -1188,7 +1163,7 @@ const ControleFrete: React.FC = () => {
                   <th>Nº CB</th>
                   <th>Cliente</th>
                   <th>Placa</th>
-                  <th>Tipo Veículo</th>
+                  <th>Tipo de Veículo</th>
                   <th>Motorista</th>
                   <th>Faixa</th>
                   <th>Total KM</th>
@@ -1196,14 +1171,13 @@ const ControleFrete: React.FC = () => {
                   <th>Saldo a Receber</th>
                   <th>Tipo Pagamento</th>
                   <th>Data Pagamento</th>
-                  <th>Configuração</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {fretesFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={18} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={17} style={{ textAlign: 'center', padding: '2rem' }}>
                       {filtroSituacao ? `Nenhum frete com situação "${filtroSituacao}"` : 'Nenhum frete cadastrado'}
                     </td>
                   </tr>
@@ -1237,12 +1211,13 @@ const ControleFrete: React.FC = () => {
                       <td>
                         {vinculosCaminhoes[frete.id!] && vinculosCaminhoes[frete.id!].length > 0 ? (
                           <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                            {vinculosCaminhoes[frete.id!].map((v, i) => {
-                              const cam = caminhoes.find(c => c.id === v.caminhao_id);
-                              return (
-                                <li key={i}>{cam ? cam.tipo : v.configuracao}</li>
-                              );
-                            })}
+                            {vinculosCaminhoes[frete.id!].map((item, i) => (
+                              <li key={i}>
+                                {item.configuracao === 'Truck'
+                                  ? 'Truck'
+                                  : `Julieta${item.reboque_id ? ` (${reboques.find(r => r.id === item.reboque_id)?.placa || ''})` : ''}`}
+                              </li>
+                            ))}
                           </ul>
                         ) : '-'}
                       </td>
@@ -1264,19 +1239,6 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.saldo_receber ? formatCurrency(frete.saldo_receber) : '-'}</td>
                       <td>{frete.situacao === 'Pago' ? (frete.tipo_pagamento || '-') : '-'}</td>
                       <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
-                      <td>
-                        {vinculosCaminhoes[frete.id!] && vinculosCaminhoes[frete.id!].length > 0 ? (
-                          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                            {vinculosCaminhoes[frete.id!].map((item, i) => (
-                              <li key={i}>
-                                {item.configuracao === 'Truck'
-                                  ? 'Truck'
-                                  : `Julieta${item.reboque_id ? ` (Reboque: ${reboques.find(r => r.id === item.reboque_id)?.placa || ''})` : ''}`}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : '-'}
-                      </td>
                       <td>
                         <div className="actions">
                           <button 
