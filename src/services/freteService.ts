@@ -263,6 +263,8 @@ export const freteService = {
       .from('fretes_historico')
       .select('*')
       .eq('frete_id', freteId)
+      .order('arquivado_em', { ascending: false })
+      .limit(1)
       .single();
 
     if (fetchError) {
