@@ -37,11 +37,7 @@ export const freteService = {
   async getAll(): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `)
+      .select('*')
       .order('data_emissao', { ascending: true });
     
     if (error) {
@@ -55,11 +51,7 @@ export const freteService = {
   async getById(id: number): Promise<Frete | null> {
     const { data, error } = await supabase
       .from('fretes')
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
@@ -75,11 +67,7 @@ export const freteService = {
     const { data, error } = await supabase
       .from('fretes')
       .insert([frete])
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `)
+      .select('*')
       .single();
     
     if (error) {
@@ -95,11 +83,7 @@ export const freteService = {
       .from('fretes')
       .update(frete)
       .eq('id', id)
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `)
+      .select('*')
       .single();
     
     if (error) {
@@ -125,11 +109,7 @@ export const freteService = {
   async getBySituacao(situacao: string): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `)
+      .select('*')
       .eq('situacao', situacao)
       .order('data_emissao', { ascending: true });
     
@@ -144,11 +124,7 @@ export const freteService = {
   async getByPeriodo(dataInicio: string, dataFim: string): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `)
+      .select('*')
       .gte('data_emissao', dataInicio)
       .lte('data_emissao', dataFim)
       .order('data_emissao', { ascending: true });
@@ -164,11 +140,7 @@ export const freteService = {
   async getByMotorista(motoristaId: number): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `)
+      .select('*')
       .eq('motorista_id', motoristaId)
       .order('data_emissao', { ascending: true });
     
@@ -213,11 +185,7 @@ export const freteService = {
   }): Promise<Frete[]> {
     let query = supabase
       .from('fretes_historico')
-      .select(`
-        *,
-        caminhao:caminhoes(placa, tipo),
-        motorista:motoristas(nome)
-      `);
+      .select('*');
 
     // Aplicar filtros
     if (filtros.dataInicio) {

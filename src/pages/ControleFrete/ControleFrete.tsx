@@ -283,6 +283,8 @@ const ControleFrete: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este frete?')) {
       try {
+        await freteCaminhaoService.deleteByFreteId(id);
+        await freteMotoristaService.deleteByFreteId(id);
         await freteService.delete(id);
         setFretes(fretes.filter(f => f.id !== id));
         alert('Frete excluído com sucesso!');
