@@ -56,37 +56,7 @@ export class PDFService {
     doc.setFontSize(8);
     
     fretes.forEach((frete, index) => {
-      // Verificar quebra de página (com mais margem de segurança)
-      if (currentY + 20 > pageHeight - 40) {
-        doc.addPage();
-        currentY = 20;
-        
-        // Redesenhar cabeçalho na nova página
-        doc.setFillColor(139, 0, 0);
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        
-        currentX = startX;
-        headers.forEach((header, i) => {
-          // Garantir que a cor de fundo está sendo aplicada
-          doc.setFillColor(139, 0, 0);
-          doc.rect(currentX, currentY, colWidths[i], 10, 'F');
-          
-          // Garantir que a cor do texto está branca
-          doc.setTextColor(255, 255, 255);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          
-          doc.text(header, currentX + colWidths[i]/2, currentY + 7, { align: 'center' });
-          currentX += colWidths[i];
-        });
-        
-        currentY += 10;
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-      }
+      // Removida a lógica de quebra de página interna - a tabela será movida completamente
       
       // Alternar cor de fundo
       if (index % 2 === 1) {
@@ -566,16 +536,32 @@ export class PDFService {
     if (fechamento.fretes && fechamento.fretes.length > 0) {
       console.log(`[PDF DEBUG] Processando ${fechamento.fretes.length} fretes para o PDF`);
       
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Calcular espaço necessário para toda a tabela
+      const tituloHeight = 20; // altura do título
+      const headerHeight = 10; // altura do cabeçalho
+      const rowHeight = 8; // altura de cada linha
+      const totalTableHeight = tituloHeight + headerHeight + (fechamento.fretes.length * rowHeight);
+      
+      // Verificar se há espaço suficiente para a tabela COMPLETA
+      let finalYResumoAjustado = finalYResumo;
+      if (finalYResumoAjustado + totalTableHeight > pageHeight - 40) {
+        console.log(`[PDF DEBUG] Não há espaço para tabela completa, movendo para nova página`);
+        doc.addPage();
+        finalYResumoAjustado = 20;
+      }
+      
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
-      doc.text('DETALHAMENTO DOS FRETES', 20, finalYResumo + 20);
+      doc.text('DETALHAMENTO DOS FRETES', 20, finalYResumoAjustado + 20);
       
-      // Implementar tabela igual ao relatório de acerto
+      // Implementar tabela igual ao relatório de acerto (sem quebra interna)
       finalYFretes = this.drawFretesTableLikeAcerto(
         doc,
-        finalYResumo + 30,
+        finalYResumoAjustado + 30,
         fechamento.fretes,
-        doc.internal.pageSize.getHeight()
+        pageHeight
       );
     } else {
       console.log(`[PDF DEBUG] Nenhum frete encontrado para exibir`);
