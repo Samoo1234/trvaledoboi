@@ -113,7 +113,7 @@ export class CapaService {
 
 
 
-    // Criar um transporte para cada combinação de frete + motorista + caminhão
+    // Criar um transporte para cada combinação única de frete + motorista + caminhão
     const result: TransporteParaCapa[] = [];
 
     fretes.forEach(frete => {
@@ -172,22 +172,26 @@ export class CapaService {
         return;
       }
 
-      // Se há ambos, criar um registro para cada combinação
-      motoristas.forEach(motorista => {
-        caminhoes.forEach(caminhao => {
-          result.push({
-            id: frete.id,
-            data_emissao: frete.data_emissao,
-            origem: frete.origem,
-            destino: frete.destino,
-            cliente: frete.cliente,
-            motorista: motorista,
-            caminhao_placa: caminhao.placa,
-            caminhao_tipo: caminhao.tipo,
-            valor_frete: frete.valor_frete
-          });
+      // Se há ambos, criar registros únicos baseados no número máximo
+      // Usar o número maior entre motoristas e caminhões para evitar duplicação
+      const maxCount = Math.max(motoristas.length, caminhoes.length);
+      
+      for (let i = 0; i < maxCount; i++) {
+        const motorista = motoristas[i] || motoristas[0] || 'N/A';
+        const caminhao = caminhoes[i] || caminhoes[0];
+        
+        result.push({
+          id: frete.id,
+          data_emissao: frete.data_emissao,
+          origem: frete.origem,
+          destino: frete.destino,
+          cliente: frete.cliente,
+          motorista: motorista,
+          caminhao_placa: caminhao ? caminhao.placa : 'N/A',
+          caminhao_tipo: caminhao ? caminhao.tipo : 'N/A',
+          valor_frete: frete.valor_frete
         });
-      });
+      }
     });
 
     return result;
