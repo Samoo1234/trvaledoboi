@@ -68,6 +68,7 @@ export class CapaService {
       .from('frete_caminhao')
       .select(`
         frete_id,
+        configuracao,
         caminhao:caminhoes(id, placa, tipo)
       `)
       .in('frete_id', freteIds);
@@ -105,7 +106,7 @@ export class CapaService {
           }
           caminhoesPorFrete[freteId].push({
             placa: caminhao.placa,
-            tipo: caminhao.tipo || 'N/A'
+            tipo: vinc.configuracao || caminhao.tipo || 'N/A' // Usar configuração do frete, fallback para tipo do caminhão
           });
         }
       });
