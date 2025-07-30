@@ -1312,7 +1312,7 @@ const ControleFrete: React.FC = () => {
                               <li key={i}>
                                 {item.configuracao === 'Truck'
                                   ? 'Truck'
-                                  : `Julieta${item.reboque_id ? ` (${reboques.find(r => r.id === item.reboque_id)?.placa || ''})` : ''}`}
+                                  : `${item.configuracao}${item.reboque_id ? ` (${reboques.find(r => r.id === item.reboque_id)?.placa || ''})` : ''}`}
                               </li>
                             ))}
                           </ul>
