@@ -36,14 +36,34 @@ export const freteService = {
   async getAll(): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
-      .select('*')
+      .select(`
+        *,
+        frete_caminhoes(
+          caminhao_id,
+          configuracao,
+          reboque_id,
+          caminhoes(placa, tipo)
+        )
+      `)
       .order('data_emissao', { ascending: true });
     
     if (error) {
       throw new Error(error.message);
     }
     
-    return data || [];
+    // Processar os dados para incluir informações de caminhão
+    const fretesProcessados = data?.map(frete => {
+      const caminhaoInfo = frete.frete_caminhoes?.[0]?.caminhoes;
+      return {
+        ...frete,
+        caminhao: caminhaoInfo ? {
+          placa: caminhaoInfo.placa,
+          tipo: caminhaoInfo.tipo
+        } : undefined
+      };
+    }) || [];
+    
+    return fretesProcessados;
   },
 
   // Buscar frete por ID

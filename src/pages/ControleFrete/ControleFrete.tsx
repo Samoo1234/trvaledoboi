@@ -399,7 +399,31 @@ const ControleFrete: React.FC = () => {
       });
     }
 
-    setFretesAcerto(fretesFiltrados);
+    // Garantir que os dados de caminhão estão disponíveis
+    const fretesComCaminhao = fretesFiltrados.map(frete => {
+      // Se já tem dados de caminhão, usar eles
+      if (frete.caminhao) {
+        return frete;
+      }
+      
+      // Caso contrário, tentar buscar dos vínculos
+      const vinculosCaminhao = vinculosCaminhoes[frete.id!];
+      if (vinculosCaminhao && vinculosCaminhao.length > 0) {
+        const caminhaoId = vinculosCaminhao[0].caminhao_id;
+        const caminhao = caminhoes.find(c => c.id === caminhaoId);
+        return {
+          ...frete,
+          caminhao: caminhao ? {
+            placa: caminhao.placa,
+            tipo: caminhao.tipo
+          } : undefined
+        };
+      }
+      
+      return frete;
+    });
+
+    setFretesAcerto(fretesComCaminhao);
   };
 
   const gerarPDFAcerto = async () => {
@@ -607,7 +631,21 @@ const ControleFrete: React.FC = () => {
             doc.setFontSize(8);
           }
           
-          const caminhao = frete.caminhao;
+          // Buscar dados de caminhão do frete ou dos vínculos
+          let caminhaoInfo = frete.caminhao;
+          if (!caminhaoInfo) {
+            const vinculosCaminhao = vinculosCaminhoes[frete.id!];
+            if (vinculosCaminhao && vinculosCaminhao.length > 0) {
+              const caminhaoId = vinculosCaminhao[0].caminhao_id;
+              const caminhao = caminhoes.find(c => c.id === caminhaoId);
+              if (caminhao) {
+                caminhaoInfo = {
+                  placa: caminhao.placa,
+                  tipo: caminhao.tipo
+                };
+              }
+            }
+          }
           
           // Alternar cor de fundo
           if (index % 2 === 1) {
@@ -617,8 +655,8 @@ const ControleFrete: React.FC = () => {
           
           const rowData = [
             formatDisplayDate(frete.data_emissao).substring(0, 5),
-            (caminhao?.tipo || 'N/A').substring(0, 15),
-            caminhao?.placa || 'N/A',
+            (caminhaoInfo?.tipo || 'N/A').substring(0, 15),
+            caminhaoInfo?.placa || 'N/A',
             frete.origem.length > 17 ? frete.origem.substring(0, 17) + '...' : frete.origem,
             frete.destino.length > 17 ? frete.destino.substring(0, 17) + '...' : frete.destino,
             frete.total_km ? frete.total_km.toString() : '-',
@@ -1470,12 +1508,27 @@ const ControleFrete: React.FC = () => {
                 </thead>
                 <tbody>
                   {fretesAcerto.map((frete) => {
-                    const caminhao = frete.caminhao;
+                    // Buscar dados de caminhão do frete ou dos vínculos
+                    let caminhaoInfo = frete.caminhao;
+                    if (!caminhaoInfo) {
+                      const vinculosCaminhao = vinculosCaminhoes[frete.id!];
+                      if (vinculosCaminhao && vinculosCaminhao.length > 0) {
+                        const caminhaoId = vinculosCaminhao[0].caminhao_id;
+                        const caminhao = caminhoes.find(c => c.id === caminhaoId);
+                        if (caminhao) {
+                          caminhaoInfo = {
+                            placa: caminhao.placa,
+                            tipo: caminhao.tipo
+                          };
+                        }
+                      }
+                    }
+                    
                     return (
                       <tr key={frete.id}>
                         <td>{formatDate(frete.data_emissao)}</td>
-                        <td>{caminhao?.tipo || 'N/A'}</td>
-                        <td>{caminhao?.placa || 'N/A'}</td>
+                        <td>{caminhaoInfo?.tipo || 'N/A'}</td>
+                        <td>{caminhaoInfo?.placa || 'N/A'}</td>
                         <td>{frete.pecuarista}</td>
                         <td>{frete.origem}</td>
                         <td>{frete.destino}</td>
