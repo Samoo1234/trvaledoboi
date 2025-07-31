@@ -14,7 +14,6 @@ export interface Frete {
   faixa?: string;
   total_km?: number;
   valor_frete: number;
-  saldo_receber?: number;
   situacao: string;
   tipo_pagamento?: string | null;
   data_pagamento?: string | null;
