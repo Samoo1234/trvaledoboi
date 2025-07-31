@@ -31,6 +31,7 @@ export interface Frete {
   };
   // Dados de configuração do caminhão no frete
   configuracao?: string;
+
 }
 
 export const freteService = {

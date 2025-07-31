@@ -399,34 +399,8 @@ const ControleFrete: React.FC = () => {
       });
     }
 
-    // Garantir que os dados de caminhão estão disponíveis
-    const fretesComCaminhao = fretesFiltrados.map(frete => {
-      // Buscar dados de configuração dos vínculos
-      const vinculosCaminhao = vinculosCaminhoes[frete.id!];
-      if (vinculosCaminhao && vinculosCaminhao.length > 0) {
-        const caminhaoId = vinculosCaminhao[0].caminhao_id;
-        const caminhao = caminhoes.find(c => c.id === caminhaoId);
-        const configuracao = vinculosCaminhao[0].configuracao;
-        
-        return {
-          ...frete,
-          caminhao: caminhao ? {
-            placa: caminhao.placa,
-            tipo: configuracao // Usar configuração ao invés do tipo físico
-          } : undefined,
-          configuracao: configuracao // Adicionar configuração separadamente
-        };
-      }
-      
-      // Se não tem vínculos, usar dados diretos do frete
-      if (frete.caminhao) {
-        return frete;
-      }
-      
-      return frete;
-    });
-
-    setFretesAcerto(fretesComCaminhao);
+    // Manter apenas uma linha por frete - os caminhões serão mostrados na renderização
+    setFretesAcerto(fretesFiltrados);
   };
 
   const gerarPDFAcerto = async () => {
@@ -634,29 +608,40 @@ const ControleFrete: React.FC = () => {
             doc.setFontSize(8);
           }
           
-          // Buscar dados de caminhão do frete ou dos vínculos
-          let caminhaoInfo = frete.caminhao;
-          let configuracao = frete.configuracao;
+          // Buscar todos os caminhões vinculados a este frete
+          const vinculosCaminhao = vinculosCaminhoes[frete.id!];
           
-          if (!caminhaoInfo || !configuracao) {
-            const vinculosCaminhao = vinculosCaminhoes[frete.id!];
-            if (vinculosCaminhao && vinculosCaminhao.length > 0) {
-              const caminhaoId = vinculosCaminhao[0].caminhao_id;
-              const caminhao = caminhoes.find(c => c.id === caminhaoId);
-              if (caminhao) {
-                caminhaoInfo = {
-                  placa: caminhao.placa,
-                  tipo: caminhao.tipo
-                };
-              }
-              configuracao = vinculosCaminhao[0].configuracao;
+          // Preparar arrays para concatenar informações de todos os caminhões
+          const descricoesConfiguracao: string[] = [];
+          const placasCaminhoes: string[] = [];
+          
+          if (vinculosCaminhao && vinculosCaminhao.length > 0) {
+            vinculosCaminhao.forEach(vinculo => {
+              const caminhao = caminhoes.find(c => c.id === vinculo.caminhao_id);
+              const configuracao = vinculo.configuracao;
+              const reboqueId = vinculo.reboque_id;
+              
+              // Formatar configuração igual à tabela principal
+              const descricaoConfiguracao = configuracao === 'Truck' 
+                ? 'Truck'
+                : `${configuracao}${reboqueId ? ` (${reboques.find(r => r.id === reboqueId)?.placa || ''})` : ''}`;
+              
+              descricoesConfiguracao.push(descricaoConfiguracao);
+              placasCaminhoes.push(caminhao?.placa || 'N/A');
+            });
+          } else {
+            // Fallback para dados diretos do frete
+            if (frete.caminhao) {
+              const descricaoConfiguracao = frete.configuracao === 'Truck' 
+                ? 'Truck'
+                : `${frete.configuracao || 'N/A'}`;
+              descricoesConfiguracao.push(descricaoConfiguracao);
+              placasCaminhoes.push(frete.caminhao.placa);
+            } else {
+              descricoesConfiguracao.push('N/A');
+              placasCaminhoes.push('N/A');
             }
           }
-          
-          // Formatar configuração igual à tabela principal
-          const descricaoConfiguracao = configuracao === 'Truck' 
-            ? 'Truck'
-            : `${configuracao}${vinculosCaminhoes[frete.id!]?.[0]?.reboque_id ? ` (${reboques.find(r => r.id === vinculosCaminhoes[frete.id!][0].reboque_id)?.placa || ''})` : ''}`;
           
           // Alternar cor de fundo
           if (index % 2 === 1) {
@@ -664,10 +649,23 @@ const ControleFrete: React.FC = () => {
             doc.rect(startX, currentY, totalWidth, 8, 'F');
           }
           
+          // Calcular altura necessária para acomodar múltiplas linhas
+          const maxItems = Math.max(descricoesConfiguracao.length, placasCaminhoes.length);
+          const lineHeight = 3;
+          const cellHeight = Math.max(8, maxItems * lineHeight);
+          
+          // Ajustar altura da linha se necessário
+          if (cellHeight > 8) {
+            if (index % 2 === 1) {
+              doc.setFillColor(245, 245, 245);
+              doc.rect(startX, currentY, totalWidth, cellHeight, 'F');
+            }
+          }
+          
           const rowData = [
             formatDisplayDate(frete.data_emissao).substring(0, 5),
-            (descricaoConfiguracao || 'N/A').substring(0, 15),
-            caminhaoInfo?.placa || 'N/A',
+            '', // Será preenchido manualmente
+            '', // Será preenchido manualmente
             frete.origem.length > 17 ? frete.origem.substring(0, 17) + '...' : frete.origem,
             frete.destino.length > 17 ? frete.destino.substring(0, 17) + '...' : frete.destino,
             frete.total_km ? frete.total_km.toString() : '-',
@@ -678,15 +676,36 @@ const ControleFrete: React.FC = () => {
           rowData.forEach((data, i) => {
             // Desenhar borda da célula
             doc.setDrawColor(200, 200, 200);
-            doc.rect(currentX, currentY, colWidths[i], 8);
+            doc.rect(currentX, currentY, colWidths[i], cellHeight);
             
-            // Texto - todos centralizados
-            doc.text(data, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+            // Tratamento especial para colunas de descrição e placa
+            if (i === 1) { // Coluna de descrição
+              if (descricoesConfiguracao.length > 0) {
+                descricoesConfiguracao.forEach((descricao, index) => {
+                  const yPos = currentY + 2 + (index * lineHeight);
+                  doc.text(descricao.substring(0, 15), currentX + colWidths[i]/2, yPos, { align: 'center' });
+                });
+              } else {
+                doc.text('N/A', currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+              }
+            } else if (i === 2) { // Coluna de placa
+              if (placasCaminhoes.length > 0) {
+                placasCaminhoes.forEach((placa, index) => {
+                  const yPos = currentY + 2 + (index * lineHeight);
+                  doc.text(placa, currentX + colWidths[i]/2, yPos, { align: 'center' });
+                });
+              } else {
+                doc.text('N/A', currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+              }
+            } else {
+              // Texto normal para outras colunas
+              doc.text(data, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+            }
             
             currentX += colWidths[i];
           });
           
-          currentY += 8;
+          currentY += cellHeight;
         });
         
         return currentY;
@@ -1519,35 +1538,66 @@ const ControleFrete: React.FC = () => {
                 </thead>
                 <tbody>
                   {fretesAcerto.map((frete) => {
-                    // Buscar dados de caminhão do frete ou dos vínculos
-                    let caminhaoInfo = frete.caminhao;
-                    let configuracao = frete.configuracao;
+                    // Buscar todos os caminhões vinculados a este frete
+                    const vinculosCaminhao = vinculosCaminhoes[frete.id!];
                     
-                    if (!caminhaoInfo || !configuracao) {
-                      const vinculosCaminhao = vinculosCaminhoes[frete.id!];
-                      if (vinculosCaminhao && vinculosCaminhao.length > 0) {
-                        const caminhaoId = vinculosCaminhao[0].caminhao_id;
-                        const caminhao = caminhoes.find(c => c.id === caminhaoId);
-                        if (caminhao) {
-                          caminhaoInfo = {
-                            placa: caminhao.placa,
-                            tipo: caminhao.tipo
-                          };
-                        }
-                        configuracao = vinculosCaminhao[0].configuracao;
+                    // Preparar arrays para concatenar informações de todos os caminhões
+                    const descricoesConfiguracao: string[] = [];
+                    const placasCaminhoes: string[] = [];
+                    
+                    if (vinculosCaminhao && vinculosCaminhao.length > 0) {
+                      vinculosCaminhao.forEach(vinculo => {
+                        const caminhao = caminhoes.find(c => c.id === vinculo.caminhao_id);
+                        const configuracao = vinculo.configuracao;
+                        const reboqueId = vinculo.reboque_id;
+                        
+                        // Formatar configuração igual à tabela principal
+                        const descricaoConfiguracao = configuracao === 'Truck' 
+                          ? 'Truck'
+                          : `${configuracao}${reboqueId ? ` (${reboques.find(r => r.id === reboqueId)?.placa || ''})` : ''}`;
+                        
+                        descricoesConfiguracao.push(descricaoConfiguracao);
+                        placasCaminhoes.push(caminhao?.placa || 'N/A');
+                      });
+                    } else {
+                      // Fallback para dados diretos do frete
+                      if (frete.caminhao) {
+                        const descricaoConfiguracao = frete.configuracao === 'Truck' 
+                          ? 'Truck'
+                          : `${frete.configuracao || 'N/A'}`;
+                        descricoesConfiguracao.push(descricaoConfiguracao);
+                        placasCaminhoes.push(frete.caminhao.placa);
+                      } else {
+                        descricoesConfiguracao.push('N/A');
+                        placasCaminhoes.push('N/A');
                       }
                     }
-                    
-                    // Formatar configuração igual à tabela principal
-                    const descricaoConfiguracao = configuracao === 'Truck' 
-                      ? 'Truck'
-                      : `${configuracao}${vinculosCaminhoes[frete.id!]?.[0]?.reboque_id ? ` (${reboques.find(r => r.id === vinculosCaminhoes[frete.id!][0].reboque_id)?.placa || ''})` : ''}`;
                     
                     return (
                       <tr key={frete.id}>
                         <td>{formatDate(frete.data_emissao)}</td>
-                        <td>{descricaoConfiguracao || 'N/A'}</td>
-                        <td>{caminhaoInfo?.placa || 'N/A'}</td>
+                        <td>
+                          {descricoesConfiguracao.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              {descricoesConfiguracao.map((descricao, index) => (
+                                <div key={index} style={{ fontSize: '0.9em' }}>
+                                  {descricao}
+                                </div>
+                              ))}
+                            </div>
+                          ) : 'N/A'}
+                        </td>
+                        <td>
+                          {placasCaminhoes.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              {placasCaminhoes.map((placa, index) => (
+                                <div key={index} style={{ fontSize: '0.9em' }}>
+                                  {placa}
+                                </div>
+                              ))}
+                            </div>
+                          ) : 'N/A'}
+                        </td>
                         <td>{frete.pecuarista}</td>
                         <td>{frete.origem}</td>
                         <td>{frete.destino}</td>
