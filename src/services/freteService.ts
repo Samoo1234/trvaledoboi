@@ -29,6 +29,8 @@ export interface Frete {
   motorista?: {
     nome: string;
   };
+  // Dados de configuração do caminhão no frete
+  configuracao?: string;
 }
 
 export const freteService = {
@@ -54,12 +56,14 @@ export const freteService = {
     // Processar os dados para incluir informações de caminhão
     const fretesProcessados = data?.map(frete => {
       const caminhaoInfo = frete.frete_caminhao?.[0]?.caminhoes;
+      const configuracao = frete.frete_caminhao?.[0]?.configuracao;
       return {
         ...frete,
         caminhao: caminhaoInfo ? {
           placa: caminhaoInfo.placa,
           tipo: caminhaoInfo.tipo
-        } : undefined
+        } : undefined,
+        configuracao: configuracao
       };
     }) || [];
     

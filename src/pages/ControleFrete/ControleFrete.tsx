@@ -401,23 +401,26 @@ const ControleFrete: React.FC = () => {
 
     // Garantir que os dados de caminhão estão disponíveis
     const fretesComCaminhao = fretesFiltrados.map(frete => {
-      // Se já tem dados de caminhão, usar eles
-      if (frete.caminhao) {
-        return frete;
-      }
-      
-      // Caso contrário, tentar buscar dos vínculos
+      // Buscar dados de configuração dos vínculos
       const vinculosCaminhao = vinculosCaminhoes[frete.id!];
       if (vinculosCaminhao && vinculosCaminhao.length > 0) {
         const caminhaoId = vinculosCaminhao[0].caminhao_id;
         const caminhao = caminhoes.find(c => c.id === caminhaoId);
+        const configuracao = vinculosCaminhao[0].configuracao;
+        
         return {
           ...frete,
           caminhao: caminhao ? {
             placa: caminhao.placa,
-            tipo: caminhao.tipo
-          } : undefined
+            tipo: configuracao // Usar configuração ao invés do tipo físico
+          } : undefined,
+          configuracao: configuracao // Adicionar configuração separadamente
         };
+      }
+      
+      // Se não tem vínculos, usar dados diretos do frete
+      if (frete.caminhao) {
+        return frete;
       }
       
       return frete;
@@ -633,7 +636,9 @@ const ControleFrete: React.FC = () => {
           
           // Buscar dados de caminhão do frete ou dos vínculos
           let caminhaoInfo = frete.caminhao;
-          if (!caminhaoInfo) {
+          let configuracao = frete.configuracao;
+          
+          if (!caminhaoInfo || !configuracao) {
             const vinculosCaminhao = vinculosCaminhoes[frete.id!];
             if (vinculosCaminhao && vinculosCaminhao.length > 0) {
               const caminhaoId = vinculosCaminhao[0].caminhao_id;
@@ -644,8 +649,14 @@ const ControleFrete: React.FC = () => {
                   tipo: caminhao.tipo
                 };
               }
+              configuracao = vinculosCaminhao[0].configuracao;
             }
           }
+          
+          // Formatar configuração igual à tabela principal
+          const descricaoConfiguracao = configuracao === 'Truck' 
+            ? 'Truck'
+            : `${configuracao}${vinculosCaminhoes[frete.id!]?.[0]?.reboque_id ? ` (${reboques.find(r => r.id === vinculosCaminhoes[frete.id!][0].reboque_id)?.placa || ''})` : ''}`;
           
           // Alternar cor de fundo
           if (index % 2 === 1) {
@@ -655,7 +666,7 @@ const ControleFrete: React.FC = () => {
           
           const rowData = [
             formatDisplayDate(frete.data_emissao).substring(0, 5),
-            (caminhaoInfo?.tipo || 'N/A').substring(0, 15),
+            (descricaoConfiguracao || 'N/A').substring(0, 15),
             caminhaoInfo?.placa || 'N/A',
             frete.origem.length > 17 ? frete.origem.substring(0, 17) + '...' : frete.origem,
             frete.destino.length > 17 ? frete.destino.substring(0, 17) + '...' : frete.destino,
@@ -1510,7 +1521,9 @@ const ControleFrete: React.FC = () => {
                   {fretesAcerto.map((frete) => {
                     // Buscar dados de caminhão do frete ou dos vínculos
                     let caminhaoInfo = frete.caminhao;
-                    if (!caminhaoInfo) {
+                    let configuracao = frete.configuracao;
+                    
+                    if (!caminhaoInfo || !configuracao) {
                       const vinculosCaminhao = vinculosCaminhoes[frete.id!];
                       if (vinculosCaminhao && vinculosCaminhao.length > 0) {
                         const caminhaoId = vinculosCaminhao[0].caminhao_id;
@@ -1521,13 +1534,19 @@ const ControleFrete: React.FC = () => {
                             tipo: caminhao.tipo
                           };
                         }
+                        configuracao = vinculosCaminhao[0].configuracao;
                       }
                     }
+                    
+                    // Formatar configuração igual à tabela principal
+                    const descricaoConfiguracao = configuracao === 'Truck' 
+                      ? 'Truck'
+                      : `${configuracao}${vinculosCaminhoes[frete.id!]?.[0]?.reboque_id ? ` (${reboques.find(r => r.id === vinculosCaminhoes[frete.id!][0].reboque_id)?.placa || ''})` : ''}`;
                     
                     return (
                       <tr key={frete.id}>
                         <td>{formatDate(frete.data_emissao)}</td>
-                        <td>{caminhaoInfo?.tipo || 'N/A'}</td>
+                        <td>{descricaoConfiguracao || 'N/A'}</td>
                         <td>{caminhaoInfo?.placa || 'N/A'}</td>
                         <td>{frete.pecuarista}</td>
                         <td>{frete.origem}</td>
