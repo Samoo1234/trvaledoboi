@@ -38,7 +38,7 @@ export const freteService = {
       .from('fretes')
       .select(`
         *,
-        frete_caminhoes(
+        frete_caminhao(
           caminhao_id,
           configuracao,
           reboque_id,
@@ -53,7 +53,7 @@ export const freteService = {
     
     // Processar os dados para incluir informações de caminhão
     const fretesProcessados = data?.map(frete => {
-      const caminhaoInfo = frete.frete_caminhoes?.[0]?.caminhoes;
+      const caminhaoInfo = frete.frete_caminhao?.[0]?.caminhoes;
       return {
         ...frete,
         caminhao: caminhaoInfo ? {
