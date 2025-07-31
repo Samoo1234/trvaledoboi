@@ -1370,7 +1370,7 @@ const ControleFrete: React.FC = () => {
                   <th>Faixa</th>
                   <th>Total KM</th>
                   <th>Valor Frete</th>
-                  <th>Valores por Caminhão</th>
+                  <th>Valores Detalhados</th>
                   <th>Tipo Pagamento</th>
                   <th>Data Pagamento</th>
                   <th>Ações</th>
@@ -1593,7 +1593,7 @@ const ControleFrete: React.FC = () => {
                     <th>Destinatário/Faz</th>
                     <th>Base Cálculo</th>
                     <th>Valor</th>
-                    <th>Valores por Caminhão</th>
+                    <th>Valores Detalhados</th>
                     <th>Situação</th>
                     <th>Tipo Pagamento</th>
                     <th>Data Pagamento</th>
