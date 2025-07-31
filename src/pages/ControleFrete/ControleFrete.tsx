@@ -312,6 +312,38 @@ const ControleFrete: React.FC = () => {
     }
   };
 
+  // Função auxiliar para calcular valores individuais e total por frete
+  const calcularValoresPorCaminhao = (freteId: number) => {
+    const vinculos = vinculosCaminhoes[freteId];
+    if (!vinculos || vinculos.length === 0) {
+      return {
+        valoresIndividuais: [],
+        total: 0
+      };
+    }
+    
+    const valoresIndividuais = vinculos.map(vinculo => {
+      const configuracao = vinculo.configuracao;
+      const reboqueId = vinculo.reboque_id;
+      
+      const descricaoConfiguracao = configuracao === 'Truck'
+        ? 'Truck'
+        : `${configuracao}${reboqueId ? ` (${reboques.find(r => r.id === reboqueId)?.placa || ''})` : ''}`;
+      
+      return {
+        valor: vinculo.valor_frete || 0,
+        descricao: descricaoConfiguracao
+      };
+    });
+    
+    const total = valoresIndividuais.reduce((sum, item) => sum + item.valor, 0);
+    
+    return {
+      valoresIndividuais,
+      total
+    };
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -539,10 +571,10 @@ const ControleFrete: React.FC = () => {
       // (Detalhamento dos fretes será colocado após dados bancários)
       
       // Função para desenhar tabela de fretes
-      const drawFretesTable = (startY: number) => {
-        const headers = ['Data', 'Tipo Veículo', 'Placa', 'Origem', 'Destino', 'KM', 'Valor'];
-        const colWidths = [22, 25, 20, 38, 38, 17, 28]; // Total: 188mm - centralizada
-        const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+                  const drawFretesTable = (startY: number) => {
+              const headers = ['Data', 'Tipo Veículo', 'Origem', 'Destino', 'KM', 'Valor', 'Valores Detalhados'];
+              const colWidths = [21, 28, 31, 31, 15, 25, 38]; // Total: 189mm - aumentado mais 1mm cada coluna
+              const totalWidth = colWidths.reduce((a, b) => a + b, 0);
         const startX = (pageWidth - totalWidth) / 2; // Centralizar na página
         console.log(`[ACERTO PDF DEBUG] Centralizando tabela: startX=${startX}, totalWidth=${totalWidth}`);
         let currentY = startY;
@@ -557,18 +589,18 @@ const ControleFrete: React.FC = () => {
         headers.forEach((header, i) => {
           // Garantir que a cor de fundo está sendo aplicada
           doc.setFillColor(139, 0, 0);
-          doc.rect(currentX, currentY, colWidths[i], 10, 'F');
+          doc.rect(currentX, currentY, colWidths[i], 12, 'F');
           
           // Garantir que a cor do texto está branca
           doc.setTextColor(255, 255, 255);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           
-          doc.text(header, currentX + colWidths[i]/2, currentY + 7, { align: 'center' });
+          doc.text(header, currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
           currentX += colWidths[i];
         });
         
-        currentY += 10;
+        currentY += 12;
         
         // Dados dos fretes
         doc.setTextColor(0, 0, 0);
@@ -591,18 +623,18 @@ const ControleFrete: React.FC = () => {
             headers.forEach((header, i) => {
               // Garantir que a cor de fundo está sendo aplicada
               doc.setFillColor(139, 0, 0);
-              doc.rect(currentX, currentY, colWidths[i], 10, 'F');
+              doc.rect(currentX, currentY, colWidths[i], 12, 'F');
               
               // Garantir que a cor do texto está branca
               doc.setTextColor(255, 255, 255);
               doc.setFont('helvetica', 'bold');
               doc.setFontSize(9);
               
-              doc.text(header, currentX + colWidths[i]/2, currentY + 7, { align: 'center' });
+              doc.text(header, currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
               currentX += colWidths[i];
             });
             
-            currentY += 10;
+            currentY += 12;
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(8);
@@ -613,11 +645,9 @@ const ControleFrete: React.FC = () => {
           
           // Preparar arrays para concatenar informações de todos os caminhões
           const descricoesConfiguracao: string[] = [];
-          const placasCaminhoes: string[] = [];
           
           if (vinculosCaminhao && vinculosCaminhao.length > 0) {
             vinculosCaminhao.forEach(vinculo => {
-              const caminhao = caminhoes.find(c => c.id === vinculo.caminhao_id);
               const configuracao = vinculo.configuracao;
               const reboqueId = vinculo.reboque_id;
               
@@ -627,7 +657,6 @@ const ControleFrete: React.FC = () => {
                 : `${configuracao}${reboqueId ? ` (${reboques.find(r => r.id === reboqueId)?.placa || ''})` : ''}`;
               
               descricoesConfiguracao.push(descricaoConfiguracao);
-              placasCaminhoes.push(caminhao?.placa || 'N/A');
             });
           } else {
             // Fallback para dados diretos do frete
@@ -636,10 +665,8 @@ const ControleFrete: React.FC = () => {
                 ? 'Truck'
                 : `${frete.configuracao || 'N/A'}`;
               descricoesConfiguracao.push(descricaoConfiguracao);
-              placasCaminhoes.push(frete.caminhao.placa);
             } else {
               descricoesConfiguracao.push('N/A');
-              placasCaminhoes.push('N/A');
             }
           }
           
@@ -649,27 +676,28 @@ const ControleFrete: React.FC = () => {
             doc.rect(startX, currentY, totalWidth, 8, 'F');
           }
           
-          // Calcular altura necessária para acomodar múltiplas linhas
-          const maxItems = Math.max(descricoesConfiguracao.length, placasCaminhoes.length);
-          const lineHeight = 3;
-          const cellHeight = Math.max(8, maxItems * lineHeight);
+          // Calcular valores por caminhão para o PDF
+          const { valoresIndividuais, total } = calcularValoresPorCaminhao(frete.id!);
           
-          // Ajustar altura da linha se necessário
-          if (cellHeight > 8) {
-            if (index % 2 === 1) {
-              doc.setFillColor(245, 245, 245);
-              doc.rect(startX, currentY, totalWidth, cellHeight, 'F');
-            }
+          // Calcular altura necessária para acomodar múltiplas linhas
+          const maxItems = Math.max(descricoesConfiguracao.length, valoresIndividuais.length);
+          const lineHeight = 4;
+          const cellHeight = Math.max(12, maxItems * lineHeight + (valoresIndividuais.length > 1 ? lineHeight : 0) + 4);
+          
+          // Aplicar cor de fundo alternada
+          if (index % 2 === 1) {
+            doc.setFillColor(245, 245, 245);
+            doc.rect(startX, currentY, totalWidth, cellHeight, 'F');
           }
           
           const rowData = [
             formatDisplayDate(frete.data_emissao).substring(0, 5),
             '', // Será preenchido manualmente
-            '', // Será preenchido manualmente
-            frete.origem.length > 17 ? frete.origem.substring(0, 17) + '...' : frete.origem,
-            frete.destino.length > 17 ? frete.destino.substring(0, 17) + '...' : frete.destino,
+            frete.origem.length > 18 ? frete.origem.substring(0, 18) + '...' : frete.origem,
+            frete.destino.length > 18 ? frete.destino.substring(0, 18) + '...' : frete.destino,
             frete.total_km ? frete.total_km.toString() : '-',
-            formatCurrency(frete.valor_frete)
+            formatCurrency(frete.valor_frete),
+            '' // Será preenchido manualmente
           ];
           
           currentX = startX;
@@ -678,28 +706,33 @@ const ControleFrete: React.FC = () => {
             doc.setDrawColor(200, 200, 200);
             doc.rect(currentX, currentY, colWidths[i], cellHeight);
             
-            // Tratamento especial para colunas de descrição e placa
+            // Tratamento especial para colunas de descrição e valores detalhados
             if (i === 1) { // Coluna de descrição
               if (descricoesConfiguracao.length > 0) {
                 descricoesConfiguracao.forEach((descricao, index) => {
-                  const yPos = currentY + 2 + (index * lineHeight);
+                  const yPos = currentY + 4 + (index * lineHeight);
                   doc.text(descricao.substring(0, 15), currentX + colWidths[i]/2, yPos, { align: 'center' });
                 });
               } else {
-                doc.text('N/A', currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+                doc.text('N/A', currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
               }
-            } else if (i === 2) { // Coluna de placa
-              if (placasCaminhoes.length > 0) {
-                placasCaminhoes.forEach((placa, index) => {
-                  const yPos = currentY + 2 + (index * lineHeight);
-                  doc.text(placa, currentX + colWidths[i]/2, yPos, { align: 'center' });
+            } else if (i === 6) { // Coluna de valores detalhados
+              if (valoresIndividuais.length > 0) {
+                valoresIndividuais.forEach((item, index) => {
+                  const yPos = currentY + 4 + (index * lineHeight);
+                  const texto = `${formatCurrency(item.valor)} (${item.descricao.substring(0, 10)})`;
+                  doc.text(texto, currentX + colWidths[i]/2, yPos, { align: 'center' });
                 });
+                if (valoresIndividuais.length > 1) {
+                  const yPos = currentY + 4 + (valoresIndividuais.length * lineHeight);
+                  doc.text(`Total: ${formatCurrency(total)}`, currentX + colWidths[i]/2, yPos, { align: 'center' });
+                }
               } else {
-                doc.text('N/A', currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+                doc.text('N/A', currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
               }
             } else {
               // Texto normal para outras colunas
-              doc.text(data, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+              doc.text(data, currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
             }
             
             currentX += colWidths[i];
@@ -1337,6 +1370,7 @@ const ControleFrete: React.FC = () => {
                   <th>Faixa</th>
                   <th>Total KM</th>
                   <th>Valor Frete</th>
+                  <th>Valores por Caminhão</th>
                   <th>Tipo Pagamento</th>
                   <th>Data Pagamento</th>
                   <th>Ações</th>
@@ -1404,6 +1438,31 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.faixa || '-'}</td>
                       <td>{frete.total_km || '-'}</td>
                       <td>{formatCurrency(frete.valor_frete)}</td>
+                      <td>
+                        {(() => {
+                          const { valoresIndividuais, total } = calcularValoresPorCaminhao(frete.id!);
+                          if (valoresIndividuais.length === 0) {
+                            return '-';
+                          }
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              {valoresIndividuais.map((item, index) => (
+                                <div key={index} style={{ fontSize: '0.9em' }}>
+                                  {formatCurrency(item.valor)} ({item.descricao})
+                                </div>
+                              ))}
+                              {valoresIndividuais.length > 1 && (
+                                <>
+                                  <div style={{ borderTop: '1px solid #ddd', margin: '2px 0' }}></div>
+                                  <div style={{ fontSize: '0.9em', fontWeight: 'bold' }}>
+                                    Total: {formatCurrency(total)}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td>{frete.situacao === 'Pago' ? (frete.tipo_pagamento || '-') : '-'}</td>
                       <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
                       <td>
@@ -1512,7 +1571,10 @@ const ControleFrete: React.FC = () => {
                 {clienteSelecionado && ` para ${clienteSelecionado}`}
               </div>
               <div className="total">
-                Total: {formatCurrency(fretesAcerto.reduce((sum, f) => sum + f.valor_frete, 0))}
+                Total: {formatCurrency(fretesAcerto.reduce((sum, f) => {
+                  const { total } = calcularValoresPorCaminhao(f.id!);
+                  return sum + total;
+                }, 0))}
               </div>
             </div>
           )}
@@ -1531,6 +1593,7 @@ const ControleFrete: React.FC = () => {
                     <th>Destinatário/Faz</th>
                     <th>Base Cálculo</th>
                     <th>Valor</th>
+                    <th>Valores por Caminhão</th>
                     <th>Situação</th>
                     <th>Tipo Pagamento</th>
                     <th>Data Pagamento</th>
@@ -1603,6 +1666,31 @@ const ControleFrete: React.FC = () => {
                         <td>{frete.destino}</td>
                         <td>{frete.total_km ? `${frete.total_km}KM` : 'N/A'}</td>
                         <td>{formatCurrency(frete.valor_frete)}</td>
+                        <td>
+                          {(() => {
+                            const { valoresIndividuais, total } = calcularValoresPorCaminhao(frete.id!);
+                            if (valoresIndividuais.length === 0) {
+                              return '-';
+                            }
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                {valoresIndividuais.map((item, index) => (
+                                  <div key={index} style={{ fontSize: '0.9em' }}>
+                                    {formatCurrency(item.valor)} ({item.descricao})
+                                  </div>
+                                ))}
+                                {valoresIndividuais.length > 1 && (
+                                  <>
+                                    <div style={{ borderTop: '1px solid #ddd', margin: '2px 0' }}></div>
+                                    <div style={{ fontSize: '0.9em', fontWeight: 'bold' }}>
+                                      Total: {formatCurrency(total)}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td>
                           <span className={`status ${getSituacaoClass(frete.situacao)}`}>
                             {frete.situacao}
