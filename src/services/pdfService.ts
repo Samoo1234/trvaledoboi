@@ -64,13 +64,24 @@ export class PDFService {
         doc.rect(startX, currentY, totalWidth, 8, 'F');
       }
       
+      // Calcular valor individual do motorista para este frete
+      let valorIndividualFrete = frete.valor_frete;
+      
+      // Se o frete tem informação de valor individual calculado, usar ela
+      if (frete.valor_individual_motorista) {
+        valorIndividualFrete = frete.valor_individual_motorista;
+        console.log(`[PDF DEBUG] Usando valor individual calculado: R$ ${valorIndividualFrete}`);
+      } else {
+        console.log(`[PDF DEBUG] Usando valor total do frete: R$ ${valorIndividualFrete}`);
+      }
+      
       const rowData = [
         this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM
         frete.pecuarista?.length > 20 ? frete.pecuarista.substring(0, 20) + '...' : frete.pecuarista || 'N/A', // Cliente
         frete.origem.length > 22 ? frete.origem.substring(0, 22) + '...' : frete.origem,
         frete.destino.length > 22 ? frete.destino.substring(0, 22) + '...' : frete.destino,
         frete.total_km ? frete.total_km.toString() : '-',
-        this.formatCurrency(frete.valor_frete)
+        this.formatCurrency(valorIndividualFrete)
       ];
       
       currentX = startX;
@@ -391,7 +402,12 @@ export class PDFService {
   }
 
   async gerarRelatorioFechamento(fechamento: FechamentoDetalhado): Promise<void> {
-    const doc = new jsPDF();
+    try {
+      console.log('[PDF DEBUG] Iniciando geração do PDF...');
+      console.log('[PDF DEBUG] Fechamento recebido:', fechamento);
+      console.log('[PDF DEBUG] Fretes:', fechamento.fretes);
+      
+      const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     
     // Configurar fonte
@@ -643,6 +659,11 @@ export class PDFService {
     
     // Download do PDF
     doc.save(nomeArquivo);
+    console.log('[PDF DEBUG] PDF gerado com sucesso!');
+  } catch (error) {
+    console.error('[PDF DEBUG] Erro ao gerar PDF:', error);
+    throw error;
+  }
   }
 
   async gerarRelatorioConsolidado(fechamentos: any[], periodo: string): Promise<void> {

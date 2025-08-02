@@ -356,14 +356,20 @@ const FechamentoMotoristas: React.FC = () => {
 
   const gerarRelatorioPDF = async (fechamentoId: number) => {
     try {
+      console.log(`[DEBUG PDF] Tentando gerar PDF para fechamento ID: ${fechamentoId}`);
       const fechamentoDetalhado = await fechamentoService.getById(fechamentoId);
+      console.log(`[DEBUG PDF] Fechamento detalhado encontrado:`, fechamentoDetalhado);
+      
       if (fechamentoDetalhado) {
+        console.log(`[DEBUG PDF] Iniciando geração do PDF...`);
         await pdfService.gerarRelatorioFechamento(fechamentoDetalhado);
+        console.log(`[DEBUG PDF] PDF gerado com sucesso!`);
       } else {
+        console.error(`[DEBUG PDF] Fechamento não encontrado para ID: ${fechamentoId}`);
         alert('Fechamento não encontrado.');
       }
     } catch (error) {
-      console.error('Erro ao gerar relatório PDF:', error);
+      console.error('[DEBUG PDF] Erro ao gerar relatório PDF:', error);
       alert('Erro ao gerar relatório PDF.');
     }
   };

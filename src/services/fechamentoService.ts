@@ -126,25 +126,74 @@ class FechamentoService {
     const ultimoDiaMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
     const fimMes = `${ano}-${mes.padStart(2, '0')}-${ultimoDiaMes.toString().padStart(2, '0')}`;
 
+    // Buscar fretes através da tabela frete_motorista
     const { data: fretes, error: fretesError } = await supabase
-      .from('fretes')
+      .from('frete_motorista')
       .select(`
-        id, data_emissao, origem, destino, valor_frete, total_km, pecuarista,
-        caminhao:caminhoes(placa, tipo)
+        frete:fretes(
+          id, data_emissao, origem, destino, valor_frete, total_km, pecuarista,
+          caminhao:caminhoes(placa, tipo)
+        )
       `)
-      .eq('motorista_id', data.motorista_id)
-      .gte('data_emissao', inicioMes)
-      .lte('data_emissao', fimMes)
-      .order('data_emissao', { ascending: true });
+      .eq('motorista_id', data.motorista_id);
 
     if (fretesError) throw fretesError;
 
+    // Filtrar fretes por período no código JavaScript
+    const fretesFiltrados = (fretes || []).filter(freteRelacao => {
+      const frete = freteRelacao.frete;
+      if (!frete) return false;
+      
+      const dataEmissao = (frete as any).data_emissao;
+      return dataEmissao >= inicioMes && dataEmissao <= fimMes;
+    });
+
+    // Ordenar por data de emissão
+    fretesFiltrados.sort((a, b) => {
+      const dataA = (a.frete as any)?.data_emissao || '';
+      const dataB = (b.frete as any)?.data_emissao || '';
+      return dataA.localeCompare(dataB);
+    });
+
     // Calcular comissão por frete usando porcentagem personalizada
     const porcentagemComissao = this.calcularPorcentagemComissao(data.motorista);
-    const fretesComComissao = fretes?.map(frete => ({
-      ...frete,
-      valor_comissao: frete.valor_frete * porcentagemComissao
-    })) || [];
+    const fretesComComissao = [];
+    
+    for (const freteRelacao of fretesFiltrados) {
+      const frete = freteRelacao.frete;
+      if (!frete) continue;
+      
+      // Verificar se o motorista está neste frete
+      const { data: motoristasFrete, error: motoristasError } = await supabase
+        .from('frete_motorista')
+        .select('motorista_id')
+        .eq('frete_id', (frete as any).id);
+      
+      let valorIndividual = 0;
+      
+      if (motoristasError) {
+        console.warn(`Erro ao buscar motoristas do frete ${(frete as any).id}:`, motoristasError);
+        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+      } else {
+        const motoristaEstaNoFrete = motoristasFrete?.some(m => m.motorista_id === data.motorista_id);
+        
+        if (motoristaEstaNoFrete) {
+          // Dividir igualmente entre os motoristas
+          const totalMotoristas = motoristasFrete?.length || 1;
+          valorIndividual = (parseFloat((frete as any).valor_frete) || 0) / totalMotoristas;
+          console.log(`[DEBUG PDF] Frete ${(frete as any).id}: ${totalMotoristas} motoristas, valor individual R$ ${valorIndividual}`);
+        } else {
+          console.warn(`[DEBUG PDF] Motorista ${data.motorista_id} não está no frete ${(frete as any).id}`);
+          valorIndividual = 0;
+        }
+      }
+      
+      fretesComComissao.push({
+        ...frete,
+        valor_individual_motorista: valorIndividual,
+        valor_comissao: valorIndividual * porcentagemComissao
+      });
+    }
 
     // Buscar abastecimentos se for motorista terceiro
     let abastecimentos: any[] = [];

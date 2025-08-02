@@ -164,8 +164,11 @@ export const freteService = {
   async getByMotorista(motoristaId: number): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
-      .select('*')
-      .eq('motorista_id', motoristaId)
+      .select(`
+        *,
+        frete_motorista!inner(motorista_id)
+      `)
+      .eq('frete_motorista.motorista_id', motoristaId)
       .order('data_emissao', { ascending: true });
     
     if (error) {
