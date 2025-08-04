@@ -241,8 +241,16 @@ class FechamentoService {
 
     const { data: fretes, error: fretesError } = await supabase
       .from('fretes')
-      .select('valor_frete, data_emissao, origem, destino, pecuarista')
-      .eq('motorista_id', motoristaId)
+      .select(`
+        id,
+        valor_frete,
+        data_emissao,
+        origem,
+        destino,
+        pecuarista,
+        frete_motorista!inner(motorista_id)
+      `)
+      .eq('frete_motorista.motorista_id', motoristaId)
       .gte('data_emissao', inicioMes)
       .lte('data_emissao', fimMes);
 
@@ -285,9 +293,33 @@ class FechamentoService {
       }
     }
 
-    // Calcular valores
+    // Calcular valores individuais por motorista
+    let valorBruto = 0;
     const totalFretes = fretes?.length || 0;
-    const valorBruto = fretes?.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0) || 0;
+
+    for (const frete of fretes || []) {
+      const freteId = (frete as any).id;
+      console.log(`[DEBUG DETALHADO] Processando frete ID: ${freteId}, valor total: R$ ${frete.valor_frete}`);
+
+      const { data: motoristasFrete, error: motoristasError } = await supabase
+        .from('frete_motorista')
+        .select('motorista_id')
+        .eq('frete_id', freteId);
+
+      if (motoristasError) {
+        console.warn(`Erro ao buscar motoristas do frete ${freteId}:`, motoristasError);
+        continue;
+      }
+
+      const totalMotoristas = motoristasFrete?.length || 1;
+      const valorIndividual = (parseFloat(frete.valor_frete) || 0) / totalMotoristas;
+
+      console.log(`[DEBUG DETALHADO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, ${totalMotoristas} motoristas, valor individual R$ ${valorIndividual}`);
+      console.log(`[DEBUG DETALHADO] Motoristas encontrados:`, motoristasFrete);
+
+      valorBruto += valorIndividual;
+    }
+    console.log(`[DEBUG FINAL] Valor bruto total calculado para ${motorista.nome}: R$ ${valorBruto}`);
     
     // Usar porcentagem personalizada ou padrão
     const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
@@ -469,8 +501,16 @@ class FechamentoService {
         // Buscar fretes do período customizado
         const { data: fretes, error: fretesError } = await supabase
           .from('fretes')
-          .select('valor_frete, data_emissao, origem, destino, pecuarista')
-          .eq('motorista_id', motorista.id)
+          .select(`
+            id,
+            valor_frete,
+            data_emissao,
+            origem,
+            destino,
+            pecuarista,
+            frete_motorista!inner(motorista_id)
+          `)
+          .eq('frete_motorista.motorista_id', motorista.id)
           .gte('data_emissao', dataInicio)
           .lte('data_emissao', dataFim);
 
@@ -500,9 +540,32 @@ class FechamentoService {
           console.warn(`Erro ao processar vales para ${motorista.nome}:`, error);
         }
 
-        // Calcular valores
+        // Calcular valores individuais por motorista
+        let valorBruto = 0;
         const totalFretes = fretes.length;
-        const valorBruto = fretes.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0);
+
+        for (const frete of fretes) {
+          const freteId = (frete as any).id;
+          console.log(`[DEBUG PERIODO] Processando frete ID: ${freteId}, valor total: R$ ${frete.valor_frete}`);
+
+          const { data: motoristasFrete, error: motoristasError } = await supabase
+            .from('frete_motorista')
+            .select('motorista_id')
+            .eq('frete_id', freteId);
+
+          if (motoristasError) {
+            console.warn(`Erro ao buscar motoristas do frete ${freteId}:`, motoristasError);
+            continue;
+          }
+
+          const totalMotoristas = motoristasFrete?.length || 1;
+          const valorIndividual = (parseFloat(frete.valor_frete) || 0) / totalMotoristas;
+
+          console.log(`[DEBUG PERIODO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, ${totalMotoristas} motoristas, valor individual R$ ${valorIndividual}`);
+
+          valorBruto += valorIndividual;
+        }
+        console.log(`[DEBUG PERIODO] Valor bruto total calculado para ${motorista.nome}: R$ ${valorBruto}`);
         
         // Usar porcentagem personalizada ou padrão
         const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
