@@ -253,10 +253,10 @@ const ControleFrete: React.FC = () => {
       // Salvar vínculos de caminhões
       for (const caminhaoVinc of caminhoesSelecionados) {
         const caminhao = caminhoes.find(c => c.id === parseInt(caminhaoVinc.caminhao_id));
-        let configuracao: 'Truck' | 'Julieta' | 'Carreta Baixa' | '2 Pisos' = 'Truck';
+        let configuracao: 'Truck' | 'Julieta' | 'Carreta Baixa' | 'Carreta 2 Pisos' = 'Truck';
         if (caminhao?.tipo === 'Julieta') configuracao = 'Julieta';
         else if (caminhao?.tipo === 'Carreta Baixa') configuracao = 'Carreta Baixa';
-        else if (caminhao?.tipo === '2 Pisos') configuracao = '2 Pisos';
+        else if (caminhao?.tipo === 'Carreta 2 Pisos') configuracao = 'Carreta 2 Pisos';
         else if (caminhao?.tipo === 'Truck' && caminhaoVinc.reboque_id) configuracao = 'Julieta';
         
         await freteCaminhaoService.create({

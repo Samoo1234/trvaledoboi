@@ -4,7 +4,7 @@ export interface FreteCaminhao {
   id?: number;
   frete_id: number;
   caminhao_id: number;
-  configuracao: 'Truck' | 'Julieta' | 'Carreta Baixa' | '2 Pisos';
+  configuracao: 'Truck' | 'Julieta' | 'Carreta Baixa' | 'Carreta 2 Pisos';
   reboque_id?: number | null;
   valor_frete?: number | null;
 }
