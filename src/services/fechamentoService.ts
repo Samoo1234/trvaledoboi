@@ -163,33 +163,45 @@ class FechamentoService {
       const frete = freteRelacao.frete;
       if (!frete) continue;
       
-      // Verificar se o motorista está neste frete
-      const { data: motoristasFrete, error: motoristasError } = await supabase
-        .from('frete_motorista')
-        .select('motorista_id')
-        .eq('frete_id', (frete as any).id);
-      
+      // Buscar valor individual do motorista específico
       let valorIndividual = 0;
       
-      if (motoristasError) {
-        console.warn(`Erro ao buscar motoristas do frete ${(frete as any).id}:`, motoristasError);
+      // Buscar o frete_motorista para obter o caminhao_id
+      const { data: freteMotorista, error: freteMotoristaError } = await supabase
+        .from('frete_motorista')
+        .select('caminhao_id')
+        .eq('frete_id', (frete as any).id)
+        .eq('motorista_id', data.motorista_id)
+        .single();
+      
+      if (freteMotoristaError) {
+        console.warn(`Erro ao buscar caminhão do motorista no frete ${(frete as any).id}:`, freteMotoristaError);
         valorIndividual = parseFloat((frete as any).valor_frete) || 0;
-      } else {
-        const motoristaEstaNoFrete = motoristasFrete?.some(m => m.motorista_id === data.motorista_id);
-        
-        if (motoristaEstaNoFrete) {
-          // Dividir igualmente entre os motoristas
-          const totalMotoristas = motoristasFrete?.length || 1;
-          valorIndividual = (parseFloat((frete as any).valor_frete) || 0) / totalMotoristas;
-          console.log(`[DEBUG PDF] Frete ${(frete as any).id}: ${totalMotoristas} motoristas, valor individual R$ ${valorIndividual}`);
+      } else if (freteMotorista && freteMotorista.caminhao_id) {
+        // Fretes com caminhão específico - buscar valor individual
+        const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+          .from('frete_caminhao')
+          .select('valor_frete')
+          .eq('frete_id', (frete as any).id)
+          .eq('caminhao_id', freteMotorista.caminhao_id)
+          .single();
+
+        if (freteCaminhaoError) {
+          console.warn(`Erro ao buscar valor do caminhão no frete ${(frete as any).id}:`, freteCaminhaoError);
+          valorIndividual = parseFloat((frete as any).valor_frete) || 0;
         } else {
-          console.warn(`[DEBUG PDF] Motorista ${data.motorista_id} não está no frete ${(frete as any).id}`);
-          valorIndividual = 0;
+          valorIndividual = parseFloat(freteCaminhao.valor_frete) || 0;
+          console.log(`[DEBUG PDF] Frete ${(frete as any).id}: motorista ${data.motorista_id} no caminhão ${freteMotorista.caminhao_id}, valor individual R$ ${valorIndividual}`);
         }
+      } else {
+        // Fretes sem caminhão específico - usar valor total do frete
+        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+        console.log(`[DEBUG PDF] Frete ${(frete as any).id}: motorista ${data.motorista_id} sem caminhão específico, usando valor total R$ ${valorIndividual}`);
       }
       
       fretesComComissao.push({
         ...frete,
+        valor_frete: valorIndividual, // Usar valor individual em vez do valor total
         valor_individual_motorista: valorIndividual,
         valor_comissao: valorIndividual * porcentagemComissao
       });
@@ -248,7 +260,7 @@ class FechamentoService {
         origem,
         destino,
         pecuarista,
-        frete_motorista!inner(motorista_id)
+        frete_motorista!inner(motorista_id, caminhao_id)
       `)
       .eq('frete_motorista.motorista_id', motoristaId)
       .gte('data_emissao', inicioMes)
@@ -301,21 +313,34 @@ class FechamentoService {
       const freteId = (frete as any).id;
       console.log(`[DEBUG DETALHADO] Processando frete ID: ${freteId}, valor total: R$ ${frete.valor_frete}`);
 
-      const { data: motoristasFrete, error: motoristasError } = await supabase
-        .from('frete_motorista')
-        .select('motorista_id')
-        .eq('frete_id', freteId);
+      // Buscar valor individual do motorista específico
+      let valorIndividual = 0;
+      
+      // Verificar se o frete tem caminhao_id associado
+      const freteMotorista = (frete as any).frete_motorista;
+      if (freteMotorista && freteMotorista.caminhao_id) {
+        // Fretes com caminhão específico - buscar valor individual
+        const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+          .from('frete_caminhao')
+          .select('valor_frete')
+          .eq('frete_id', freteId)
+          .eq('caminhao_id', freteMotorista.caminhao_id)
+          .single();
 
-      if (motoristasError) {
-        console.warn(`Erro ao buscar motoristas do frete ${freteId}:`, motoristasError);
-        continue;
+        if (freteCaminhaoError) {
+          console.warn(`Erro ao buscar valor do caminhão no frete ${freteId}:`, freteCaminhaoError);
+          valorIndividual = parseFloat(frete.valor_frete) || 0;
+        } else {
+          valorIndividual = parseFloat(freteCaminhao.valor_frete) || 0;
+          console.log(`[DEBUG DETALHADO] Frete ${freteId}: motorista ${motoristaId} no caminhão ${freteMotorista.caminhao_id}, valor individual R$ ${valorIndividual}`);
+        }
+      } else {
+        // Fretes sem caminhão específico - usar valor total do frete
+        valorIndividual = parseFloat(frete.valor_frete) || 0;
+        console.log(`[DEBUG DETALHADO] Frete ${freteId}: motorista ${motoristaId} sem caminhão específico, usando valor total R$ ${valorIndividual}`);
       }
 
-      const totalMotoristas = motoristasFrete?.length || 1;
-      const valorIndividual = (parseFloat(frete.valor_frete) || 0) / totalMotoristas;
-
-      console.log(`[DEBUG DETALHADO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, ${totalMotoristas} motoristas, valor individual R$ ${valorIndividual}`);
-      console.log(`[DEBUG DETALHADO] Motoristas encontrados:`, motoristasFrete);
+      console.log(`[DEBUG DETALHADO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, valor individual R$ ${valorIndividual}`);
 
       valorBruto += valorIndividual;
     }
@@ -508,7 +533,7 @@ class FechamentoService {
             origem,
             destino,
             pecuarista,
-            frete_motorista!inner(motorista_id)
+            frete_motorista!inner(motorista_id, caminhao_id)
           `)
           .eq('frete_motorista.motorista_id', motorista.id)
           .gte('data_emissao', dataInicio)
@@ -548,20 +573,34 @@ class FechamentoService {
           const freteId = (frete as any).id;
           console.log(`[DEBUG PERIODO] Processando frete ID: ${freteId}, valor total: R$ ${frete.valor_frete}`);
 
-          const { data: motoristasFrete, error: motoristasError } = await supabase
-            .from('frete_motorista')
-            .select('motorista_id')
-            .eq('frete_id', freteId);
+          // Buscar valor individual do motorista específico
+          let valorIndividual = 0;
+          
+          // Verificar se o frete tem caminhao_id associado
+          const freteMotorista = (frete as any).frete_motorista;
+          if (freteMotorista && freteMotorista.caminhao_id) {
+            // Fretes com caminhão específico - buscar valor individual
+            const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+              .from('frete_caminhao')
+              .select('valor_frete')
+              .eq('frete_id', freteId)
+              .eq('caminhao_id', freteMotorista.caminhao_id)
+              .single();
 
-          if (motoristasError) {
-            console.warn(`Erro ao buscar motoristas do frete ${freteId}:`, motoristasError);
-            continue;
+            if (freteCaminhaoError) {
+              console.warn(`Erro ao buscar valor do caminhão no frete ${freteId}:`, freteCaminhaoError);
+              valorIndividual = parseFloat(frete.valor_frete) || 0;
+            } else {
+              valorIndividual = parseFloat(freteCaminhao.valor_frete) || 0;
+              console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} no caminhão ${freteMotorista.caminhao_id}, valor individual R$ ${valorIndividual}`);
+            }
+          } else {
+            // Fretes sem caminhão específico - usar valor total do frete
+            valorIndividual = parseFloat(frete.valor_frete) || 0;
+            console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} sem caminhão específico, usando valor total R$ ${valorIndividual}`);
           }
 
-          const totalMotoristas = motoristasFrete?.length || 1;
-          const valorIndividual = (parseFloat(frete.valor_frete) || 0) / totalMotoristas;
-
-          console.log(`[DEBUG PERIODO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, ${totalMotoristas} motoristas, valor individual R$ ${valorIndividual}`);
+          console.log(`[DEBUG PERIODO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, valor individual R$ ${valorIndividual}`);
 
           valorBruto += valorIndividual;
         }

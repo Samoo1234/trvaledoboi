@@ -33,6 +33,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       label: 'Dashboard',
     },
     {
+      path: '/cadastro-clientes',
+      icon: Users,
+      label: 'Cadastro de Clientes',
+    },
+    {
       path: '/controle-frete',
       icon: Package,
       label: 'Controle de Frete',

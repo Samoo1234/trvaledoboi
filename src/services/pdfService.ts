@@ -64,16 +64,10 @@ export class PDFService {
         doc.rect(startX, currentY, totalWidth, 8, 'F');
       }
       
-      // Calcular valor individual do motorista para este frete
-      let valorIndividualFrete = frete.valor_frete;
+      // Usar sempre o valor individual do motorista (correto para viagens com múltiplos veículos)
+      let valorIndividualFrete = frete.valor_individual_motorista || frete.valor_frete;
       
-      // Se o frete tem informação de valor individual calculado, usar ela
-      if (frete.valor_individual_motorista) {
-        valorIndividualFrete = frete.valor_individual_motorista;
-        console.log(`[PDF DEBUG] Usando valor individual calculado: R$ ${valorIndividualFrete}`);
-      } else {
-        console.log(`[PDF DEBUG] Usando valor total do frete: R$ ${valorIndividualFrete}`);
-      }
+      console.log(`[PDF DEBUG] Frete ${frete.id}: valor individual R$ ${valorIndividualFrete} (valor total: R$ ${frete.valor_frete})`);
       
       const rowData = [
         this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM

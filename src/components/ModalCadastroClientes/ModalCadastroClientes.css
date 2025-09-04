@@ -1,0 +1,201 @@
+/* Modal SIMPLES e FUNCIONAL */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 20px 20px 20px 270px; /* Padding esquerdo para compensar sidebar */
+}
+
+.modal-content {
+  background: white;
+  border-radius: 10px;
+  width: calc(100vw - 300px); /* Desconta sidebar (250px) + margens (50px) */
+  max-width: 1200px; /* Largura máxima */
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5em;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-form {
+  padding: 30px; /* Padding maior para mais espaço */
+}
+
+/* Busca */
+.busca-cpf {
+  margin-bottom: 20px;
+}
+
+.busca-cpf label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #333;
+}
+
+.input-busca input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+/* Formulário */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px; /* Gap maior entre seções */
+  margin-bottom: 30px; /* Margem maior abaixo */
+}
+
+.form-section {
+  background: #f9f9f9;
+  padding: 25px; /* Padding maior nas seções */
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.form-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.1em;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px; /* Gap maior entre campos */
+  margin-bottom: 20px; /* Margem maior entre linhas */
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #555;
+}
+
+.form-group input,
+.form-group select {
+  padding: 12px 15px; /* Padding maior nos campos */
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Botões */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
+}
+
+.btn-cancelar,
+.btn-salvar,
+.btn-fazendas {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+.btn-cancelar {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-fazendas {
+  background: #ffc107;
+  color: #212529;
+}
+
+.btn-fazendas:hover {
+  background: #e0a800;
+}
+
+.btn-salvar {
+  background: #28a745;
+  color: white;
+}
+
+/* Mensagens */
+.mensagem {
+  padding: 15px;
+  border-radius: 6px;
+  margin: 0 20px 20px 20px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.mensagem.sucesso {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.mensagem.erro {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 20px; /* Reset padding em mobile */
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-content {
+    width: calc(100vw - 40px); /* Em mobile, desconta apenas margens */
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+}

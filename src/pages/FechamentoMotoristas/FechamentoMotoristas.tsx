@@ -210,28 +210,18 @@ const FechamentoMotoristas: React.FC = () => {
         const existente = fechamentos.find(f => f.motorista_id === fechamento.motorista_id);
         
         if (existente) {
-          // Atualizar fechamento existente - CORRIGIR: preservar bônus e recalcular valor líquido
-          const bonusExistente = existente.bonus || 0; // Preservar bônus atual
-          const novoValorLiquido = fechamento.valor_comissao - fechamento.descontos + bonusExistente;
-          
-          const atualizado = await fechamentoService.update(existente.id!, {
-            total_fretes: fechamento.total_fretes,
-            valor_bruto: fechamento.valor_bruto,
-            valor_comissao: fechamento.valor_comissao,
-            descontos: fechamento.descontos,
-            bonus: bonusExistente, // Manter bônus existente
-            valor_liquido: novoValorLiquido // Calcular corretamente: comissão - descontos + bônus
-          });
-          fechamentosSalvos.push(atualizado);
+          // NÃO ATUALIZAR fechamentos existentes - apenas adicionar novos
+          console.log(`[DEBUG] Fechamento já existe para motorista ${fechamento.motorista_id}, mantendo valores existentes`);
+          fechamentosSalvos.push(existente);
         } else {
-          // Criar novo fechamento
+          // Criar novo fechamento apenas se não existir
           const novo = await fechamentoService.create(fechamento);
           fechamentosSalvos.push(novo);
         }
       }
 
       setFechamentos(fechamentosSalvos);
-      alert(`Fechamento calculado com sucesso! ${fechamentosSalvos.length} motorista(s) processado(s).`);
+      alert(`Fechamento processado! ${fechamentosSalvos.length} motorista(s) encontrado(s). Fechamentos existentes foram preservados.`);
       
     } catch (error) {
       console.error('Erro ao calcular fechamento:', error);
