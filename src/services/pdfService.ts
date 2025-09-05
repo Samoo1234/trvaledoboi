@@ -288,22 +288,32 @@ export class PDFService {
         const blob = await response.blob();
         const reader = new FileReader();
         
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           reader.onload = function(e) {
-            if (e.target?.result) {
-              try {
+            try {
+              if (e.target?.result) {
                 doc.addImage(e.target.result as string, 'PNG', x, y, width, height);
-              } catch (error) {
-                console.log('Erro ao adicionar logo no PDF:', error);
+                console.log('[PDF DEBUG] Logo adicionada com sucesso');
               }
+              resolve();
+            } catch (error) {
+              console.warn('[PDF DEBUG] Erro ao adicionar logo no PDF:', error);
+              resolve(); // Continuar sem logo em caso de erro
             }
-            resolve();
           };
+          
+          reader.onerror = function() {
+            console.warn('[PDF DEBUG] Erro ao ler arquivo de logo');
+            resolve(); // Continuar sem logo em caso de erro
+          };
+          
           reader.readAsDataURL(blob);
         });
+      } else {
+        console.warn('[PDF DEBUG] Logo não encontrada (status:', response.status, ')');
       }
     } catch (error) {
-      console.log('Logo não encontrada, continuando sem logo:', error);
+      console.warn('[PDF DEBUG] Erro ao carregar logo, continuando sem logo:', error);
     }
   }
 
@@ -400,6 +410,15 @@ export class PDFService {
       console.log('[PDF DEBUG] Iniciando geração do PDF...');
       console.log('[PDF DEBUG] Fechamento recebido:', fechamento);
       console.log('[PDF DEBUG] Fretes:', fechamento.fretes);
+      
+      // Validar dados essenciais
+      if (!fechamento) {
+        throw new Error('Dados do fechamento não fornecidos');
+      }
+      
+      if (!fechamento.motorista) {
+        throw new Error('Dados do motorista não encontrados');
+      }
       
       const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -655,8 +674,22 @@ export class PDFService {
     doc.save(nomeArquivo);
     console.log('[PDF DEBUG] PDF gerado com sucesso!');
   } catch (error) {
-    console.error('[PDF DEBUG] Erro ao gerar PDF:', error);
-    throw error;
+    console.error('[PDF DEBUG] Erro detalhado ao gerar PDF:', error);
+    
+    // Verificar se é um erro específico do jsPDF
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid coordinates')) {
+        throw new Error('Erro de coordenadas inválidas no PDF. Verifique os dados do fechamento.');
+      } else if (error.message.includes('Invalid image')) {
+        throw new Error('Erro ao processar imagem no PDF. Verifique o arquivo de logo.');
+      } else if (error.message.includes('Invalid font')) {
+        throw new Error('Erro de fonte no PDF. Verifique a configuração de fontes.');
+      } else {
+        throw new Error(`Erro na geração do PDF: ${error.message}`);
+      }
+    } else {
+      throw new Error('Erro desconhecido na geração do PDF');
+    }
   }
   }
 

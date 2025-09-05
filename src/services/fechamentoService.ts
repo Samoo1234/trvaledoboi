@@ -126,14 +126,15 @@ class FechamentoService {
     const ultimoDiaMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
     const fimMes = `${ano}-${mes.padStart(2, '0')}-${ultimoDiaMes.toString().padStart(2, '0')}`;
 
-    // Buscar fretes através da tabela frete_motorista
+    // Buscar fretes através da tabela frete_motorista com valores individuais
     const { data: fretes, error: fretesError } = await supabase
       .from('frete_motorista')
       .select(`
         frete:fretes(
           id, data_emissao, origem, destino, valor_frete, total_km, pecuarista,
           caminhao:caminhoes(placa, tipo)
-        )
+        ),
+        caminhao_id
       `)
       .eq('motorista_id', data.motorista_id);
 
@@ -163,57 +164,38 @@ class FechamentoService {
       const frete = freteRelacao.frete;
       if (!frete) continue;
       
-      // Buscar valor individual do motorista específico
+      // Buscar valor individual do frete_caminhao separadamente
       let valorIndividual = 0;
       
-      // Buscar TODAS as entradas do motorista para este frete
-      const { data: fretesMotorista, error: freteMotoristaError } = await supabase
-        .from('frete_motorista')
-        .select('caminhao_id')
-        .eq('frete_id', (frete as any).id)
-        .eq('motorista_id', data.motorista_id);
-      
-      if (freteMotoristaError || !fretesMotorista || fretesMotorista.length === 0) {
-        console.warn(`Erro ao buscar caminhão do motorista no frete ${(frete as any).id}:`, freteMotoristaError);
-        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
-      } else {
-        // Somar TODOS os valores individuais do motorista para este frete
-        let valorTotalIndividual = 0;
-        
-        // Buscar o valor individual do motorista (uma entrada por motorista)
-        if (fretesMotorista.length > 0 && fretesMotorista[0].caminhao_id) {
+      if (freteRelacao.caminhao_id) {
+        try {
           const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
             .from('frete_caminhao')
             .select('valor_frete')
             .eq('frete_id', (frete as any).id)
-            .eq('caminhao_id', fretesMotorista[0].caminhao_id)
+            .eq('caminhao_id', freteRelacao.caminhao_id)
             .limit(1);
 
           if (!freteCaminhaoError && freteCaminhao && freteCaminhao.length > 0) {
-            valorTotalIndividual = parseFloat(freteCaminhao[0].valor_frete) || 0;
+            valorIndividual = parseFloat(freteCaminhao[0].valor_frete) || 0;
+          } else {
+            // Fallback para valor total do frete
+            valorIndividual = parseFloat((frete as any).valor_frete) || 0;
           }
-        }
-        
-        if (valorTotalIndividual > 0) {
-          valorIndividual = valorTotalIndividual;
-          console.log(`[DEBUG PDF] Frete ${(frete as any).id}: motorista ${data.motorista_id} tem ${fretesMotorista.length} entradas, valor total individual R$ ${valorIndividual}`);
-        } else {
-          // Fallback para valor total do frete
+        } catch (error) {
+          console.warn(`Erro ao buscar valor individual do frete ${(frete as any).id}:`, error);
           valorIndividual = parseFloat((frete as any).valor_frete) || 0;
-          console.log(`[DEBUG PDF] Frete ${(frete as any).id}: motorista ${data.motorista_id} sem valores individuais, usando valor total R$ ${valorIndividual}`);
         }
+      } else {
+        // Fallback para valor total do frete
+        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
       }
-      
-      // Para fechamentos já calculados, usar valores proporcionais baseados no fechamento salvo
-      const valorBrutoFechamento = parseFloat(data.valor_bruto as string) || 0;
-      const totalFretesCalculados = fretes?.length || 1;
-      const valorProporcional = valorBrutoFechamento / totalFretesCalculados;
       
       fretesComComissao.push({
         ...frete,
-        valor_frete: valorProporcional, // Usar valor proporcional do fechamento
-        valor_individual_motorista: valorProporcional, // Garantir que está definido
-        valor_comissao: valorProporcional * porcentagemComissao
+        valor_frete: valorIndividual,
+        valor_individual_motorista: valorIndividual,
+        valor_comissao: valorIndividual * porcentagemComissao
       });
     }
 
@@ -235,10 +217,26 @@ class FechamentoService {
       }
     }
 
+    // Para fechamentos já calculados, usar os valores salvos em vez de recalcular
+    // Isso garante consistência entre o que foi salvo e o que é exibido
+    const valorBrutoSalvo = parseFloat(data.valor_bruto.toString()) || 0;
+    const valorComissaoSalvo = parseFloat(data.valor_comissao.toString()) || 0;
+    
+    // Se os valores calculados são diferentes dos salvos, usar os salvos
+    const valorBrutoCalculado = fretesComComissao.reduce((sum, f) => sum + f.valor_frete, 0);
+    
+    if (Math.abs(valorBrutoCalculado - valorBrutoSalvo) > 0.01) {
+      console.warn(`[FECHAMENTO DEBUG] Diferença entre valores calculados (${valorBrutoCalculado}) e salvos (${valorBrutoSalvo}) para fechamento ${data.id}`);
+      console.warn(`[FECHAMENTO DEBUG] Usando valores salvos para manter consistência`);
+    }
+
     return {
       ...data,
       fretes: fretesComComissao,
-      abastecimentos: abastecimentos.length > 0 ? abastecimentos : undefined
+      abastecimentos: abastecimentos.length > 0 ? abastecimentos : undefined,
+      // Garantir que os valores principais sejam os salvos no fechamento
+      valor_bruto: valorBrutoSalvo,
+      valor_comissao: valorComissaoSalvo
     };
   }
 

@@ -360,7 +360,27 @@ const FechamentoMotoristas: React.FC = () => {
       }
     } catch (error) {
       console.error('[DEBUG PDF] Erro ao gerar relatório PDF:', error);
-      alert('Erro ao gerar relatório PDF.');
+      
+      // Exibir mensagem de erro mais específica
+      let mensagemErro = 'Erro ao gerar relatório PDF.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Dados do fechamento não fornecidos')) {
+          mensagemErro = 'Erro: Dados do fechamento não foram fornecidos.';
+        } else if (error.message.includes('Dados do motorista não encontrados')) {
+          mensagemErro = 'Erro: Dados do motorista não foram encontrados.';
+        } else if (error.message.includes('coordenadas inválidas')) {
+          mensagemErro = 'Erro: Problema com os dados do fechamento. Verifique se todos os campos estão preenchidos corretamente.';
+        } else if (error.message.includes('processar imagem')) {
+          mensagemErro = 'Erro: Problema ao processar a logo do sistema. O PDF será gerado sem a logo.';
+        } else if (error.message.includes('fonte')) {
+          mensagemErro = 'Erro: Problema com a formatação do PDF.';
+        } else {
+          mensagemErro = `Erro: ${error.message}`;
+        }
+      }
+      
+      alert(mensagemErro);
     }
   };
 
