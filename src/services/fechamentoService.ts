@@ -541,26 +541,36 @@ class FechamentoService {
 
     for (const motorista of motoristas || []) {
       try {
-        // Buscar fretes do período customizado
-        const { data: fretes, error: fretesError } = await supabase
-          .from('fretes')
+        // Buscar fretes do período customizado através da tabela frete_motorista
+        const { data: fretesMotorista, error: fretesMotoristaError } = await supabase
+          .from('frete_motorista')
           .select(`
-            id,
-            valor_frete,
-            data_emissao,
-            origem,
-            destino,
-            pecuarista,
-            frete_motorista!inner(motorista_id, caminhao_id)
+            frete_id,
+            caminhao_id,
+            fretes!inner(
+              id,
+              valor_frete,
+              data_emissao,
+              origem,
+              destino,
+              pecuarista
+            )
           `)
-          .eq('frete_motorista.motorista_id', motorista.id)
-          .gte('data_emissao', dataInicio)
-          .lte('data_emissao', dataFim);
+          .eq('motorista_id', motorista.id)
+          .gte('fretes.data_emissao', dataInicio)
+          .lte('fretes.data_emissao', dataFim);
 
-        if (fretesError) {
-          console.error(`Erro ao buscar fretes para ${motorista.nome}:`, fretesError);
+        if (fretesMotoristaError) {
+          console.error(`Erro ao buscar fretes para ${motorista.nome}:`, fretesMotoristaError);
           continue;
         }
+
+        if (!fretesMotorista || fretesMotorista.length === 0) continue;
+
+        // Extrair apenas os fretes únicos
+        const fretes = fretesMotorista.map(fm => fm.fretes).filter((frete, index, self) => 
+          index === self.findIndex(f => f.id === frete.id)
+        );
 
         if (!fretes || fretes.length === 0) continue;
 
