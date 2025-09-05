@@ -65,16 +65,7 @@ export class PDFService {
       }
       
       // Usar sempre o valor individual do motorista (correto para viagens com múltiplos veículos)
-      // Para Marcos Bueno, usar valor proporcional baseado no fechamento
       let valorIndividualFrete = frete.valor_individual_motorista || frete.valor_frete;
-      
-      // Correção temporária para Marcos Bueno
-      if (fechamento.motorista?.nome?.includes('MARCOS BUENO')) {
-        const valorBrutoFechamento = parseFloat(fechamento.valor_bruto as string) || 0;
-        const totalFretes = fechamento.fretes?.length || 1;
-        valorIndividualFrete = valorBrutoFechamento / totalFretes;
-        console.log(`[PDF DEBUG MARCOS] Usando valor proporcional: R$ ${valorIndividualFrete} (${valorBrutoFechamento} / ${totalFretes})`);
-      }
       
       console.log(`[PDF DEBUG] Frete ${frete.id}: valor individual R$ ${valorIndividualFrete} (valor total: R$ ${frete.valor_frete})`);
       

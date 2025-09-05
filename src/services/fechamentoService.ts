@@ -204,11 +204,16 @@ class FechamentoService {
         }
       }
       
+      // Para fechamentos já calculados, usar valores proporcionais baseados no fechamento salvo
+      const valorBrutoFechamento = parseFloat(data.valor_bruto as string) || 0;
+      const totalFretesCalculados = fretes?.length || 1;
+      const valorProporcional = valorBrutoFechamento / totalFretesCalculados;
+      
       fretesComComissao.push({
         ...frete,
-        valor_frete: valorIndividual, // Usar valor individual em vez do valor total
-        valor_individual_motorista: valorIndividual, // Garantir que está definido
-        valor_comissao: valorIndividual * porcentagemComissao
+        valor_frete: valorProporcional, // Usar valor proporcional do fechamento
+        valor_individual_motorista: valorProporcional, // Garantir que está definido
+        valor_comissao: valorProporcional * porcentagemComissao
       });
     }
 
