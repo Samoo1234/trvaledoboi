@@ -69,9 +69,15 @@ export class PDFService {
       
       // CORREÇÃO: Garantir que o valor individual seja usado corretamente
       // Se valor_individual_motorista não existir ou for inválido, usar valor_frete
-      if (!valorIndividualFrete || valorIndividualFrete <= 0 || valorIndividualFrete === 625.73) {
+      if (!valorIndividualFrete || valorIndividualFrete <= 0) {
         valorIndividualFrete = frete.valor_frete;
         console.warn(`[PDF DEBUG] Frete ${frete.id}: valor individual inválido (${frete.valor_individual_motorista}), usando valor total R$ ${frete.valor_frete}`);
+      }
+      
+      // Validação adicional para valores suspeitos
+      if (valorIndividualFrete > frete.valor_frete) {
+        console.warn(`[PDF DEBUG] Frete ${frete.id}: valor individual (${valorIndividualFrete}) maior que valor total (${frete.valor_frete}), usando valor total`);
+        valorIndividualFrete = frete.valor_frete;
       }
       
       console.log(`[PDF DEBUG] Frete ${frete.id}: valor individual R$ ${valorIndividualFrete} (valor total: R$ ${frete.valor_frete})`);

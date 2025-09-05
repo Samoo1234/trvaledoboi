@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { valeService } from './valeService';
+import { ValidadorFechamentos } from '../utils/validacaoFechamentos';
 
 export interface FechamentoMotorista {
   id?: number;
@@ -61,8 +62,8 @@ class FechamentoService {
       return motorista.porcentagem_comissao / 100; // Converter % para decimal
     }
     
-    // Usar padrão baseado no tipo
-    return motorista.tipo_motorista === 'Terceiro' ? 0.90 : 0.10;
+    // CORREÇÃO: Terceiros devem ter 100% de comissão, não 90%
+    return motorista.tipo_motorista === 'Terceiro' ? 1.00 : 0.10;
   }
   async getAll(): Promise<FechamentoMotorista[]> {
     const { data, error } = await supabase
@@ -379,8 +380,9 @@ class FechamentoService {
     const bonus = 0; // Bônus inicia como 0, pode ser editado depois
     
     if (motorista.tipo_motorista === 'Terceiro') {
-      // Para terceiros: descontos = apenas abastecimentos, vales são linha separada
+      // CORREÇÃO: Para terceiros: descontos = apenas abastecimentos, vales são linha separada
       descontos = totalAbastecimentos;
+      // CORREÇÃO: Valor líquido = comissão - abastecimentos - vales + bônus
       valorLiquido = valorComissao - totalAbastecimentos - totalVales + bonus;
       
       // DEBUG MATEMÁTICO DETALHADO
@@ -388,8 +390,8 @@ class FechamentoService {
       console.log(`[MATH DEBUG] Valor bruto: ${valorBruto}`);
       console.log(`[MATH DEBUG] Porcentagem: ${(porcentagemComissao * 100).toFixed(0)}%`);
       console.log(`[MATH DEBUG] Comissão calculada: ${valorBruto} * ${porcentagemComissao} = ${valorComissao}`);
-      console.log(`[MATH DEBUG] Abastecimentos: ${totalAbastecimentos}`);
-      console.log(`[MATH DEBUG] Vales: ${totalVales}`);
+      console.log(`[MATH DEBUG] Abastecimentos (descontos): ${totalAbastecimentos}`);
+      console.log(`[MATH DEBUG] Vales (separado): ${totalVales}`);
       console.log(`[MATH DEBUG] Bônus: ${bonus}`);
       console.log(`[MATH DEBUG] Fórmula: ${valorComissao} - ${totalAbastecimentos} - ${totalVales} + ${bonus}`);
       console.log(`[MATH DEBUG] Resultado: ${valorLiquido}`);
@@ -444,8 +446,25 @@ class FechamentoService {
     };
   }
 
+  // VALIDAÇÃO DE INTEGRIDADE DOS DADOS
+  private validarFechamento(fechamento: FechamentoMotorista): void {
+    const validacao = ValidadorFechamentos.validarFechamento(fechamento);
+    
+    if (!validacao.valido) {
+      throw new Error(`Erro de validação: ${validacao.erros.join(', ')}`);
+    }
+    
+    // Log de avisos se houver
+    if (validacao.avisos.length > 0) {
+      console.warn(`Avisos para fechamento ${fechamento.id}:`, validacao.avisos);
+    }
+  }
+
   async create(fechamento: Omit<FechamentoMotorista, 'id' | 'created_at' | 'updated_at'>): Promise<FechamentoMotorista> {
     console.log('[Service] Tentando criar fechamento no banco:', fechamento);
+    
+    // VALIDAÇÃO ANTES DE SALVAR
+    this.validarFechamento(fechamento as FechamentoMotorista);
     
     // Remover campos que não devem ir para o banco
     const { motorista, ...fechamentoParaBanco } = fechamento;
@@ -474,6 +493,24 @@ class FechamentoService {
   }
 
   async update(id: number, fechamento: Partial<FechamentoMotorista>): Promise<FechamentoMotorista> {
+    // Buscar fechamento atual para validação
+    const { data: fechamentoAtual, error: fetchError } = await supabase
+      .from('fechamentos_motoristas')
+      .select(`
+        *,
+        motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Mesclar dados atuais com atualizações
+    const fechamentoAtualizado = { ...fechamentoAtual, ...fechamento };
+    
+    // VALIDAÇÃO ANTES DE ATUALIZAR
+    this.validarFechamento(fechamentoAtualizado);
+
     const { data, error } = await supabase
       .from('fechamentos_motoristas')
       .update({
