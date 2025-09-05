@@ -604,7 +604,7 @@ class FechamentoService {
             console.warn(`Erro ao buscar caminhão do motorista no frete ${freteId}:`, freteMotoristaError);
             valorIndividual = parseFloat(frete.valor_frete) || 0;
           } else {
-            // Somar TODOS os valores individuais do motorista para este frete
+            // Buscar o valor individual do motorista para este frete específico
             let valorTotalIndividual = 0;
             
             // Buscar o valor individual do motorista (uma entrada por motorista)
@@ -623,7 +623,7 @@ class FechamentoService {
             
             if (valorTotalIndividual > 0) {
               valorIndividual = valorTotalIndividual;
-              console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} tem ${fretesMotorista.length} entradas, valor total individual R$ ${valorIndividual}`);
+              console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} tem valor individual R$ ${valorIndividual}`);
             } else {
               // Fallback para valor total do frete
               valorIndividual = parseFloat(frete.valor_frete) || 0;
