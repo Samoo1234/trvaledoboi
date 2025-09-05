@@ -62,8 +62,8 @@ class FechamentoService {
       return motorista.porcentagem_comissao / 100; // Converter % para decimal
     }
     
-    // CORREÇÃO: Terceiros devem ter 100% de comissão, não 90%
-    return motorista.tipo_motorista === 'Terceiro' ? 1.00 : 0.10;
+    // CORREÇÃO: Respeitar configuração personalizada do administrador
+    return motorista.tipo_motorista === 'Terceiro' ? 0.90 : 0.10;
   }
   async getAll(): Promise<FechamentoMotorista[]> {
     const { data, error } = await supabase

@@ -36,18 +36,18 @@ export class ValidadorFechamentos {
       erros.push(`Valor líquido incorreto. Esperado: R$ ${valorLiquidoCalculado.toFixed(2)}, Atual: R$ ${fechamento.valor_liquido.toFixed(2)}`);
     }
 
-    // 3. Validar comissão baseada no tipo de motorista
+    // 3. Validar comissão baseada no tipo de motorista e configuração do administrador
     if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
-      const porcentagemEsperada = fechamento.motorista.porcentagem_comissao || 100;
+      const porcentagemEsperada = fechamento.motorista.porcentagem_comissao || 90; // Padrão 90% para terceiros
       const comissaoEsperada = fechamento.valor_bruto * (porcentagemEsperada / 100);
       if (Math.abs(fechamento.valor_comissao - comissaoEsperada) > 0.01) {
-        erros.push(`Comissão incorreta para terceiro. Esperado: R$ ${comissaoEsperada.toFixed(2)}, Atual: R$ ${fechamento.valor_comissao.toFixed(2)}`);
+        erros.push(`Comissão incorreta para terceiro. Esperado: R$ ${comissaoEsperada.toFixed(2)} (${porcentagemEsperada}%), Atual: R$ ${fechamento.valor_comissao.toFixed(2)}`);
       }
     } else if (fechamento.motorista?.tipo_motorista === 'Funcionário') {
-      const porcentagemEsperada = fechamento.motorista.porcentagem_comissao || 10;
+      const porcentagemEsperada = fechamento.motorista.porcentagem_comissao || 10; // Padrão 10% para funcionários
       const comissaoEsperada = fechamento.valor_bruto * (porcentagemEsperada / 100);
       if (Math.abs(fechamento.valor_comissao - comissaoEsperada) > 0.01) {
-        erros.push(`Comissão incorreta para funcionário. Esperado: R$ ${comissaoEsperada.toFixed(2)}, Atual: R$ ${fechamento.valor_comissao.toFixed(2)}`);
+        erros.push(`Comissão incorreta para funcionário. Esperado: R$ ${comissaoEsperada.toFixed(2)} (${porcentagemEsperada}%), Atual: R$ ${fechamento.valor_comissao.toFixed(2)}`);
       }
     }
 
