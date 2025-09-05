@@ -16,6 +16,11 @@ type CaminhaoSelecionado = {
   valor_frete?: string;
 };
 
+type MotoristaSelecionado = {
+  motorista_id: string;
+  caminhao_id: string; // Associar motorista ao caminhão específico
+};
+
 const ControleFrete: React.FC = () => {
   const [fretes, setFretes] = useState<Frete[]>([]);
   const [caminhoes, setCaminhoes] = useState<Caminhao[]>([]);
@@ -56,7 +61,7 @@ const ControleFrete: React.FC = () => {
 
   // Arrays para múltiplos caminhões e motoristas
   const [caminhoesSelecionados, setCaminhoesSelecionados] = useState<CaminhaoSelecionado[]>([]);
-  const [motoristasSelecionados, setMotoristasSelecionados] = useState<string[]>([]);
+  const [motoristasSelecionados, setMotoristasSelecionados] = useState<MotoristaSelecionado[]>([]);
 
   // Estado para reboques
   const [reboques, setReboques] = useState<Reboque[]>([]);
@@ -188,7 +193,10 @@ const ControleFrete: React.FC = () => {
       valor_frete: v.valor_frete ? v.valor_frete.toString() : undefined
     })));
     const motoristasVinc = await freteMotoristaService.getByFreteId(frete.id!);
-    setMotoristasSelecionados(motoristasVinc.map(v => v.motorista_id.toString()));
+    setMotoristasSelecionados(motoristasVinc.map(v => ({
+      motorista_id: v.motorista_id.toString(),
+      caminhao_id: v.caminhao_id ? v.caminhao_id.toString() : (caminhoesVinc[0]?.caminhao_id || 0).toString()
+    })));
     
     setEditingId(typeof frete.id === 'number' ? frete.id : null);
     setShowForm(true);
@@ -201,6 +209,13 @@ const ControleFrete: React.FC = () => {
       // Validações básicas
       if (caminhoesSelecionados.length === 0 || motoristasSelecionados.length === 0) {
         alert('Selecione pelo menos um caminhão e um motorista');
+        return;
+      }
+
+      // Validar se todos os motoristas têm caminhão associado
+      const motoristasSemCaminhao = motoristasSelecionados.filter(m => !m.caminhao_id);
+      if (motoristasSemCaminhao.length > 0) {
+        alert('Todos os motoristas devem estar associados a um caminhão');
         return;
       }
 
@@ -268,9 +283,13 @@ const ControleFrete: React.FC = () => {
         });
       }
       
-      // Salvar vínculos de motoristas
-      for (const motoristaId of motoristasSelecionados) {
-        await freteMotoristaService.create({ frete_id: freteId!, motorista_id: parseInt(motoristaId) });
+      // Salvar vínculos de motoristas com caminhão específico
+      for (const motorista of motoristasSelecionados) {
+        await freteMotoristaService.create({ 
+          frete_id: freteId!, 
+          motorista_id: parseInt(motorista.motorista_id),
+          caminhao_id: parseInt(motorista.caminhao_id)
+        });
       }
       
       alert(editingId ? 'Frete atualizado com sucesso!' : 'Frete cadastrado com sucesso!');
@@ -1211,7 +1230,7 @@ const ControleFrete: React.FC = () => {
                       
                       <div className="dynamic-field-group">
                         <h4>👨‍💼 Motoristas *</h4>
-                        {motoristasSelecionados.map((id, idx) => (
+                        {motoristasSelecionados.map((motorista, idx) => (
                           <div key={idx} className="motorista-card">
                             {/* Botão remover só ícone no topo direito */}
                             <button
@@ -1223,21 +1242,41 @@ const ControleFrete: React.FC = () => {
                             >
                               <Trash2 size={18} />
                             </button>
+                            
                             {/* Select do motorista */}
                             <select
-                              value={id}
+                              value={motorista.motorista_id}
                               onChange={e => {
                                 const novos = [...motoristasSelecionados];
-                                novos[idx] = e.target.value;
+                                novos[idx] = { ...novos[idx], motorista_id: e.target.value };
                                 setMotoristasSelecionados(novos);
                               }}
                               required
                               style={{ marginBottom: 8 }}
                             >
                               <option value="">Selecione o motorista</option>
-                              {motoristas.map(motorista => (
-                                <option key={motorista.id} value={motorista.id}>
-                                  {motorista.nome} - {motorista.tipo_motorista}
+                              {motoristas.map(m => (
+                                <option key={m.id} value={m.id}>
+                                  {m.nome} - {m.tipo_motorista}
+                                </option>
+                              ))}
+                            </select>
+                            
+                            {/* Select do caminhão para este motorista */}
+                            <select
+                              value={motorista.caminhao_id}
+                              onChange={e => {
+                                const novos = [...motoristasSelecionados];
+                                novos[idx] = { ...novos[idx], caminhao_id: e.target.value };
+                                setMotoristasSelecionados(novos);
+                              }}
+                              required
+                              style={{ marginBottom: 8 }}
+                            >
+                              <option value="">Selecione o caminhão</option>
+                              {caminhoesSelecionados.map(caminhao => (
+                                <option key={caminhao.caminhao_id} value={caminhao.caminhao_id}>
+                                  {caminhoes.find(c => c.id === parseInt(caminhao.caminhao_id))?.placa || `Caminhão ${caminhao.caminhao_id}`}
                                 </option>
                               ))}
                             </select>
@@ -1248,7 +1287,7 @@ const ControleFrete: React.FC = () => {
                             type="button"
                             className="btn-add-small"
                             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                            onClick={() => setMotoristasSelecionados([...motoristasSelecionados, ''])}
+                            onClick={() => setMotoristasSelecionados([...motoristasSelecionados, { motorista_id: '', caminhao_id: '' }])}
                           >
                             <User size={16} /> + Adicionar motorista
                           </button>

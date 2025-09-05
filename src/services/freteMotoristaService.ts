@@ -4,6 +4,7 @@ export interface FreteMotorista {
   id?: number;
   frete_id: number;
   motorista_id: number;
+  caminhao_id: number | null; // Adicionar campo caminhao_id
 }
 
 export const freteMotoristaService = {
