@@ -178,9 +178,11 @@ class FechamentoService {
 
           if (!freteCaminhaoError && freteCaminhao && freteCaminhao.length > 0) {
             valorIndividual = parseFloat(freteCaminhao[0].valor_frete) || 0;
+            console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: valor individual encontrado R$ ${valorIndividual}`);
           } else {
             // Fallback para valor total do frete
             valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+            console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: usando valor total R$ ${valorIndividual} (frete_caminhao não encontrado)`);
           }
         } catch (error) {
           console.warn(`Erro ao buscar valor individual do frete ${(frete as any).id}:`, error);
