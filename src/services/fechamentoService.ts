@@ -599,7 +599,7 @@ class FechamentoService {
 
         for (const frete of fretes) {
           const freteId = (frete as any).id;
-          console.log(`[DEBUG PERIODO] Processando frete ID: ${freteId}, valor total: R$ ${frete.valor_frete}`);
+          console.log(`[DEBUG PERIODO] Processando frete ID: ${freteId}, valor total: R$ ${(frete as any).valor_frete}`);
 
           // Buscar TODAS as entradas do motorista para este frete
           let valorIndividual = 0;
@@ -612,7 +612,7 @@ class FechamentoService {
           
           if (freteMotoristaError || !fretesMotorista || fretesMotorista.length === 0) {
             console.warn(`Erro ao buscar caminhão do motorista no frete ${freteId}:`, freteMotoristaError);
-            valorIndividual = parseFloat(frete.valor_frete) || 0;
+            valorIndividual = parseFloat((frete as any).valor_frete) || 0;
           } else {
             // Buscar o valor individual do motorista para este frete específico
             let valorTotalIndividual = 0;
@@ -636,12 +636,12 @@ class FechamentoService {
               console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} tem valor individual R$ ${valorIndividual}`);
             } else {
               // Fallback para valor total do frete
-              valorIndividual = parseFloat(frete.valor_frete) || 0;
+              valorIndividual = parseFloat((frete as any).valor_frete) || 0;
               console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} sem valores individuais, usando valor total R$ ${valorIndividual}`);
             }
           }
 
-          console.log(`[DEBUG PERIODO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, valor individual R$ ${valorIndividual}`);
+          console.log(`[DEBUG PERIODO] Frete ${freteId}: Valor total R$ ${(frete as any).valor_frete}, valor individual R$ ${valorIndividual}`);
 
           valorBruto += valorIndividual;
         }
