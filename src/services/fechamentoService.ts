@@ -568,8 +568,8 @@ class FechamentoService {
         if (!fretesMotorista || fretesMotorista.length === 0) continue;
 
         // Extrair apenas os fretes únicos
-        const fretes = fretesMotorista.map(fm => fm.fretes).filter((frete, index, self) => 
-          index === self.findIndex(f => f.id === frete.id)
+        const fretes = fretesMotorista.map(fm => fm.fretes).filter((frete: any, index, self) => 
+          index === self.findIndex((f: any) => f.id === frete.id)
         );
 
         if (!fretes || fretes.length === 0) continue;
