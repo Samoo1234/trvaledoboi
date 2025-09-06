@@ -5,6 +5,26 @@ import { caminhaoService, Caminhao } from '../../services/caminhaoService';
 import { formatDisplayDate, getCurrentDate } from '../../services/dateUtils';
 import './ManutencaoCaminhoes.css';
 
+interface RelatorioManutencaoPorTipo {
+  tipo: string;
+  quantidade: number;
+  valorTotal: number;
+}
+
+interface RelatorioManutencaoPorCaminhao {
+  placa: string;
+  caminhao: string;
+  totalManutencoes: number;
+  valorTotal: number;
+}
+
+interface RelatorioConsolidado {
+  totalManutencoes: number;
+  valorTotal: number;
+  manutencoesPorTipo: RelatorioManutencaoPorTipo[];
+  manutencoesPorCaminhao: RelatorioManutencaoPorCaminhao[];
+}
+
 const ManutencaoCaminhoes: React.FC = () => {
   const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
   const [caminhoes, setCaminhoes] = useState<Caminhao[]>([]);
@@ -20,7 +40,7 @@ const ManutencaoCaminhoes: React.FC = () => {
     tipoManutencao: ''
   });
   const [activeTab, setActiveTab] = useState<'lista' | 'relatorios'>('lista');
-  const [relatorioData, setRelatorioData] = useState<any>(null);
+  const [relatorioData, setRelatorioData] = useState<RelatorioConsolidado | null>(null);
 
   const [formData, setFormData] = useState<ManutencaoCreateData>({
     caminhao_id: 0,
@@ -413,7 +433,7 @@ const ManutencaoCaminhoes: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {relatorioData.manutencoesPorTipo.map((item: any, index: number) => (
+                  {relatorioData.manutencoesPorTipo.map((item: RelatorioManutencaoPorTipo, index: number) => (
                     <tr key={index}>
                       <td>
                         <span 
@@ -443,7 +463,7 @@ const ManutencaoCaminhoes: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {relatorioData.manutencoesPorCaminhao.map((item: any, index: number) => (
+                  {relatorioData.manutencoesPorCaminhao.map((item: RelatorioManutencaoPorCaminhao, index: number) => (
                     <tr key={index}>
                       <td><strong>{item.placa}</strong></td>
                       <td>{item.caminhao}</td>
@@ -498,7 +518,7 @@ const ManutencaoCaminhoes: React.FC = () => {
                   <label>Tipo de Manutenção *</label>
                   <select
                     value={formData.tipo_manutencao}
-                    onChange={(e) => setFormData({...formData, tipo_manutencao: e.target.value as any})}
+                    onChange={(e) => setFormData({...formData, tipo_manutencao: e.target.value as 'Preventiva' | 'Corretiva' | 'Emergencial'})}
                     required
                   >
                     <option value="Preventiva">Preventiva</option>

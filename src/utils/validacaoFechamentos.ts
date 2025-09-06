@@ -7,9 +7,35 @@ export interface ResultadoValidacao {
   avisos: string[];
 }
 
+export interface FechamentoParaValidacao {
+  valor_bruto: number;
+  valor_comissao: number;
+  descontos: number;
+  bonus: number;
+  valor_liquido: number;
+  motorista?: {
+    nome?: string;
+    tipo_motorista: string;
+    porcentagem_comissao?: number;
+  };
+}
+
+export interface ProblemaValidacao {
+  motorista: string;
+  erros: string[];
+  avisos: string[];
+}
+
+export interface ResultadoValidacaoPeriodo {
+  total: number;
+  validos: number;
+  invalidos: number;
+  problemas: ProblemaValidacao[];
+}
+
 export class ValidadorFechamentos {
   // Validar um fechamento individual
-  static validarFechamento(fechamento: any): ResultadoValidacao {
+  static validarFechamento(fechamento: FechamentoParaValidacao): ResultadoValidacao {
     const erros: string[] = [];
     const avisos: string[] = [];
 
@@ -72,21 +98,8 @@ export class ValidadorFechamentos {
   }
 
   // Validar todos os fechamentos de um período
-  static validarPeriodo(fechamentos: any[]): {
-    total: number;
-    validos: number;
-    invalidos: number;
-    problemas: Array<{
-      motorista: string;
-      erros: string[];
-      avisos: string[];
-    }>;
-  } {
-    const problemas: Array<{
-      motorista: string;
-      erros: string[];
-      avisos: string[];
-    }> = [];
+  static validarPeriodo(fechamentos: FechamentoParaValidacao[]): ResultadoValidacaoPeriodo {
+    const problemas: ProblemaValidacao[] = [];
 
     let validos = 0;
     let invalidos = 0;
@@ -115,16 +128,7 @@ export class ValidadorFechamentos {
   }
 
   // Gerar relatório de validação
-  static gerarRelatorio(validacao: {
-    total: number;
-    validos: number;
-    invalidos: number;
-    problemas: Array<{
-      motorista: string;
-      erros: string[];
-      avisos: string[];
-    }>;
-  }): string {
+  static gerarRelatorio(validacao: ResultadoValidacaoPeriodo): string {
     let relatorio = `=== RELATÓRIO DE VALIDAÇÃO DE FECHAMENTOS ===\n`;
     relatorio += `Total de fechamentos: ${validacao.total}\n`;
     relatorio += `Válidos: ${validacao.validos}\n`;
@@ -158,7 +162,7 @@ export class ValidadorFechamentos {
 }
 
 // Função utilitária para validar fechamentos em tempo real
-export const validarFechamentosTempoReal = async (fechamentos: any[]): Promise<void> => {
+export const validarFechamentosTempoReal = async (fechamentos: FechamentoParaValidacao[]): Promise<void> => {
   const validacao = ValidadorFechamentos.validarPeriodo(fechamentos);
   
   if (validacao.invalidos > 0) {

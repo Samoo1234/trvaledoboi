@@ -4,6 +4,58 @@ import { formatDisplayDate } from './dateUtils';
 import { valeService } from './valeService';
 import { supabase } from './supabaseClient';
 
+interface FreteParaPDF {
+  id: number;
+  data_emissao: string;
+  origem: string;
+  destino: string;
+  valor_frete: number;
+  valor_individual_motorista?: number;
+  total_km?: number;
+  pecuarista?: string;
+  caminhao?: {
+    placa: string;
+    tipo: string;
+  };
+}
+
+interface ValeParaPDF {
+  id: number;
+  data_vale: string;
+  valor: number;
+  descricao: string;
+  motorista?: {
+    nome: string;
+  };
+}
+
+
+interface AbastecimentoParaPDF {
+  id: number;
+  data_abastecimento: string;
+  posto_tanque: string;
+  combustivel: string;
+  quantidade_litros: number;
+  preco_total: number;
+}
+
+interface FechamentoParaPDF {
+  id?: number;
+  motorista_id: number;
+  periodo: string;
+  valor_bruto: number;
+  valor_comissao: number;
+  descontos: number;
+  bonus: number;
+  valor_liquido: number;
+  total_fretes?: number;
+  status?: string;
+  motorista?: {
+    nome: string;
+    tipo_motorista: string;
+  };
+}
+
 export class PDFService {
   private formatCurrency(value: number): string {
     return new Intl.NumberFormat('pt-BR', {
@@ -17,7 +69,7 @@ export class PDFService {
     return formatDisplayDate(dateString);
   }
 
-  private drawFretesTableLikeAcerto(doc: jsPDF, startY: number, fretes: any[], pageHeight: number): number {
+  private drawFretesTableLikeAcerto(doc: jsPDF, startY: number, fretes: FreteParaPDF[], pageHeight: number): number {
     const headers = ['Data', 'Cliente', 'Origem', 'Destino', 'KM', 'Valor'];
     const colWidths = [22, 35, 40, 40, 17, 34]; // Total: 188mm - 6 colunas redistribuídas
     const totalWidth = colWidths.reduce((a, b) => a + b, 0);
@@ -84,7 +136,7 @@ export class PDFService {
       
       const rowData = [
         this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM
-        frete.pecuarista?.length > 20 ? frete.pecuarista.substring(0, 20) + '...' : frete.pecuarista || 'N/A', // Cliente
+        frete.pecuarista && frete.pecuarista.length > 20 ? frete.pecuarista.substring(0, 20) + '...' : frete.pecuarista || 'N/A', // Cliente
         frete.origem.length > 22 ? frete.origem.substring(0, 22) + '...' : frete.origem,
         frete.destino.length > 22 ? frete.destino.substring(0, 22) + '...' : frete.destino,
         frete.total_km ? frete.total_km.toString() : '-',
@@ -109,7 +161,7 @@ export class PDFService {
     return currentY;
   }
 
-  private drawValesTable(doc: jsPDF, startY: number, vales: any[], pageHeight: number): number {
+  private drawValesTable(doc: jsPDF, startY: number, vales: ValeParaPDF[], pageHeight: number): number {
     const headers = ['Data', 'Descrição', 'Valor'];
     const colWidths = [30, 100, 50]; // Total: 180mm
     const rowHeight = 8;
@@ -203,7 +255,7 @@ export class PDFService {
     return currentY;
   }
 
-  private drawAbastecimentosTable(doc: jsPDF, startY: number, abastecimentos: any[], pageHeight: number): number {
+  private drawAbastecimentosTable(doc: jsPDF, startY: number, abastecimentos: AbastecimentoParaPDF[], pageHeight: number): number {
     const headers = ['Data', 'Posto', 'Combust.', 'Qt Litros', 'Valor'];
     const colWidths = [25, 45, 25, 25, 35];
     let currentY = startY;
@@ -652,7 +704,13 @@ export class PDFService {
           finalYVales = this.drawValesTable(
             doc,
             finalYAbastecimentos + 30,
-            valesDetalhados,
+            valesDetalhados.map((vale: any) => ({
+              id: vale.id || 0,
+              data_vale: vale.data_vale,
+              valor: vale.valor,
+              descricao: vale.descricao || '',
+              motorista: vale.motorista ? { nome: vale.motorista.nome } : undefined
+            })),
             pageHeight
           );
         }
@@ -706,7 +764,7 @@ export class PDFService {
   }
   }
 
-  async gerarRelatorioConsolidado(fechamentos: any[], periodo: string): Promise<void> {
+  async gerarRelatorioConsolidado(fechamentos: FechamentoParaPDF[], periodo: string): Promise<void> {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     
@@ -735,7 +793,7 @@ export class PDFService {
     
     // Resumo geral
     const totalMotoristas = fechamentos.length;
-    const totalFretes = fechamentos.reduce((sum, f) => sum + f.total_fretes, 0);
+    const totalFretes = fechamentos.reduce((sum, f) => sum + (f.total_fretes || 0), 0);
     const valorBrutoTotal = fechamentos.reduce((sum, f) => sum + f.valor_bruto, 0);
     const totalComissoes = fechamentos.reduce((sum, f) => sum + f.valor_comissao, 0);
     
@@ -778,11 +836,11 @@ export class PDFService {
       return [
         fechamento.motorista?.nome || 'N/A',
         fechamento.motorista?.tipo_motorista || 'N/A',
-        fechamento.total_fretes.toString(),
+        (fechamento.total_fretes || 0).toString(),
         this.formatCurrency(fechamento.valor_bruto),
         this.formatCurrency(fechamento.valor_comissao),
         this.formatCurrency(valorLiquidoFinal),
-        fechamento.status
+        fechamento.status || 'N/A'
       ];
     });
     
@@ -1096,7 +1154,13 @@ export class PDFService {
           finalYVales = this.drawValesTable(
             doc,
             finalYAbastecimentos + 30,
-            valesDetalhados,
+            valesDetalhados.map((vale: any) => ({
+              id: vale.id || 0,
+              data_vale: vale.data_vale,
+              valor: vale.valor,
+              descricao: vale.descricao || '',
+              motorista: vale.motorista ? { nome: vale.motorista.nome } : undefined
+            })),
             pageHeight
           );
         }

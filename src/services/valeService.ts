@@ -135,7 +135,7 @@ class ValeService {
 
   // Atualizar um vale
   async update(id: number, valeData: Partial<ValeCreateData>): Promise<Vale> {
-    let updateData: any = { ...valeData };
+    let updateData: Partial<ValeCreateData> & { periodo?: string } = { ...valeData };
     
     // CORREÇÃO: Se a data foi alterada, recalcular o período sem problema de fuso horário
     if (valeData.data_vale) {

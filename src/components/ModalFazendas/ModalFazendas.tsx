@@ -78,7 +78,7 @@ const ModalFazendas: React.FC<ModalFazendasProps> = ({
     }
   }, [isOpen, cliente.id, carregarFazendas]);
 
-  const calcularDistancia = async (endereco: any) => {
+  const calcularDistancia = async (endereco: { logradouro?: string; numero?: string; municipio?: string; uf?: string }) => {
     try {
       if (validarEnderecoParaDistancia(endereco)) {
         return await calcularDistanciaBarraGarcas(endereco);
@@ -136,11 +136,12 @@ const ModalFazendas: React.FC<ModalFazendasProps> = ({
       await carregarFazendas();
       limparFormulario();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao salvar fazenda:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       setMensagem({
         tipo: 'erro',
-        texto: `Erro ao salvar: ${error.message}`
+        texto: `Erro ao salvar: ${errorMessage}`
       });
     } finally {
       setSalvando(false);
@@ -188,11 +189,12 @@ const ModalFazendas: React.FC<ModalFazendasProps> = ({
       });
 
       await carregarFazendas();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao excluir fazenda:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       setMensagem({
         tipo: 'erro',
-        texto: `Erro ao excluir: ${error.message}`
+        texto: `Erro ao excluir: ${errorMessage}`
       });
     }
   };

@@ -2,6 +2,21 @@ import { supabase } from './supabaseClient';
 import jsPDF from 'jspdf';
 import { formatDisplayDate } from './dateUtils';
 
+interface VinculoMotorista {
+  frete_id: number;
+  motorista: {
+    nome: string;
+  };
+}
+
+interface VinculoCaminhao {
+  frete_id: number;
+  caminhao: {
+    placa: string;
+    tipo?: string;
+  };
+}
+
 export interface TransporteParaCapa {
   id: number;
   data_emissao: string;

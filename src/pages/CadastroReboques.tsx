@@ -30,7 +30,7 @@ const CadastroReboques: React.FC = () => {
       return;
     }
     try {
-      await reboqueService.create({ caminhao_id: null as any, placa, conjunto });
+      await reboqueService.create({ caminhao_id: null, placa, conjunto });
       setPlaca('');
       setConjunto('');
       await loadReboques();

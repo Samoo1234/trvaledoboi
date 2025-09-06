@@ -152,7 +152,7 @@ class ManutencaoService {
 
   // Atualizar manutenção
   async update(id: number, manutencaoData: Partial<ManutencaoCreateData>): Promise<Manutencao> {
-    let updateData: any = { ...manutencaoData };
+    let updateData: Partial<ManutencaoCreateData> & { periodo?: string } = { ...manutencaoData };
     
     // Se a data foi alterada, recalcular o período
     if (manutencaoData.data_manutencao) {

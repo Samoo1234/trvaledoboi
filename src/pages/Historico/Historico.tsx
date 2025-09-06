@@ -150,9 +150,9 @@ const Historico: React.FC = () => {
         if (activeTab === 'fretes') {
           buscarFretesArquivados();
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Erro ao reabrir frete:', error);
-        const mensagem = error?.message || 'Erro desconhecido';
+        const mensagem = error instanceof Error ? error.message : 'Erro desconhecido';
         alert(`❌ Erro ao reabrir frete: ${mensagem}\n\nTente novamente ou contate o suporte.`);
       } finally {
         setLoading(false);
@@ -170,9 +170,9 @@ const Historico: React.FC = () => {
         if (activeTab === 'fechamentos') {
           buscarFechamentosArquivados();
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Erro ao reabrir fechamento:', error);
-        const mensagem = error?.message || 'Erro desconhecido';
+        const mensagem = error instanceof Error ? error.message : 'Erro desconhecido';
         alert(`❌ Erro ao reabrir fechamento: ${mensagem}\n\nTente novamente ou contate o suporte.`);
       } finally {
         setLoading(false);

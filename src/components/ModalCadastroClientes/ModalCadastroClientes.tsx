@@ -151,11 +151,12 @@ const ModalCadastroClientes: React.FC<ModalCadastroClientesProps> = ({
         onClose();
       }, 2000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao salvar cliente:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       setMensagem({
         tipo: 'erro',
-        texto: `Erro ao salvar: ${error.message}`
+        texto: `Erro ao salvar: ${errorMessage}`
       });
     } finally {
       setSalvando(false);

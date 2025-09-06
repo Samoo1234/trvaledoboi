@@ -29,34 +29,55 @@ export interface FechamentoMotorista {
   };
 }
 
-export interface FechamentoDetalhado extends FechamentoMotorista {
-  fretes: Array<{
+export interface FreteComComissao {
+  id: number;
+  data_emissao: string;
+  origem: string;
+  destino: string;
+  valor_frete: number;
+  valor_comissao: number;
+  total_km?: number;
+  pecuarista?: string;
+  caminhao?: {
+    placa: string;
+    tipo: string;
+  };
+}
+
+export interface AbastecimentoParaFechamento {
+  id: number;
+  data_abastecimento: string;
+  posto_tanque: string;
+  combustivel: string;
+  quantidade_litros: number;
+  preco_total: number;
+}
+
+export interface FreteRelacao {
+  frete: {
     id: number;
     data_emissao: string;
     origem: string;
     destino: string;
     valor_frete: number;
-    valor_comissao: number;
     total_km?: number;
     pecuarista?: string;
-    caminhao?: {
-      placa: string;
-      tipo: string;
-    };
-  }>;
-  abastecimentos?: Array<{
-    id: number;
-    data_abastecimento: string;
-    posto_tanque: string;
-    combustivel: string;
-    quantidade_litros: number;
-    preco_total: number;
-  }>;
+  };
+  caminhao_id: number;
+  caminhao?: {
+    placa: string;
+    tipo: string;
+  };
+}
+
+export interface FechamentoDetalhado extends FechamentoMotorista {
+  fretes: FreteComComissao[];
+  abastecimentos?: AbastecimentoParaFechamento[];
 }
 
 class FechamentoService {
   // Calcular porcentagem de comissão baseada no tipo e configuração personalizada
-  private calcularPorcentagemComissao(motorista: any): number {
+  private calcularPorcentagemComissao(motorista: { tipo_motorista: string; porcentagem_comissao?: number }): number {
     // Se tem porcentagem personalizada, usar ela
     if (motorista.porcentagem_comissao && motorista.porcentagem_comissao > 0) {
       return motorista.porcentagem_comissao / 100; // Converter % para decimal
@@ -142,18 +163,18 @@ class FechamentoService {
     if (fretesError) throw fretesError;
 
     // Filtrar fretes por período no código JavaScript
-    const fretesFiltrados = (fretes || []).filter(freteRelacao => {
+    const fretesFiltrados = (fretes || []).filter((freteRelacao: any) => {
       const frete = freteRelacao.frete;
       if (!frete) return false;
       
-      const dataEmissao = (frete as any).data_emissao;
+      const dataEmissao = frete.data_emissao;
       return dataEmissao >= inicioMes && dataEmissao <= fimMes;
     });
 
     // Ordenar por data de emissão
-    fretesFiltrados.sort((a, b) => {
-      const dataA = (a.frete as any)?.data_emissao || '';
-      const dataB = (b.frete as any)?.data_emissao || '';
+    fretesFiltrados.sort((a: any, b: any) => {
+      const dataA = a.frete?.data_emissao || '';
+      const dataB = b.frete?.data_emissao || '';
       return dataA.localeCompare(dataB);
     });
 
@@ -182,16 +203,16 @@ class FechamentoService {
             console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: valor individual encontrado R$ ${valorIndividual}`);
           } else {
             // Fallback para valor total do frete
-            valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+            valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
             console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: usando valor total R$ ${valorIndividual} (frete_caminhao não encontrado)`);
           }
         } catch (error) {
           console.warn(`Erro ao buscar valor individual do frete ${(frete as any).id}:`, error);
-          valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+          valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
         }
       } else {
         // Fallback para valor total do frete
-        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+        valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
       }
       
       fretesComComissao.push({
@@ -203,7 +224,7 @@ class FechamentoService {
     }
 
     // Buscar abastecimentos se for motorista terceiro
-    let abastecimentos: any[] = [];
+    let abastecimentos: AbastecimentoParaFechamento[] = [];
     if (data.motorista?.tipo_motorista === 'Terceiro') {
       const { data: abastecimentosData, error: abastecimentosError } = await supabase
         .from('abastecimentos')
@@ -322,7 +343,7 @@ class FechamentoService {
 
     for (const frete of fretes || []) {
       const freteId = (frete as any).id;
-      console.log(`[DEBUG DETALHADO] Processando frete ID: ${freteId}, valor total: R$ ${frete.valor_frete}`);
+      console.log(`[DEBUG DETALHADO] Processando frete ID: ${freteId}, valor total: R$ ${(frete as any).valor_frete}`);
 
       // Buscar TODAS as entradas do motorista para este frete
       let valorIndividual = 0;
@@ -335,7 +356,7 @@ class FechamentoService {
       
       if (freteMotoristaError || !fretesMotorista || fretesMotorista.length === 0) {
         console.warn(`Erro ao buscar caminhão do motorista no frete ${freteId}:`, freteMotoristaError);
-        valorIndividual = parseFloat(frete.valor_frete) || 0;
+        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
       } else {
         // Somar TODOS os valores individuais do motorista para este frete
         let valorTotalIndividual = 0;
@@ -359,12 +380,12 @@ class FechamentoService {
           console.log(`[DEBUG DETALHADO] Frete ${freteId}: motorista ${motoristaId} tem ${fretesMotorista.length} entradas, valor total individual R$ ${valorIndividual}`);
         } else {
           // Fallback para valor total do frete
-          valorIndividual = parseFloat(frete.valor_frete) || 0;
+          valorIndividual = parseFloat((frete as any).valor_frete) || 0;
           console.log(`[DEBUG DETALHADO] Frete ${freteId}: motorista ${motoristaId} sem valores individuais, usando valor total R$ ${valorIndividual}`);
         }
       }
 
-      console.log(`[DEBUG DETALHADO] Frete ${freteId}: Valor total R$ ${frete.valor_frete}, valor individual R$ ${valorIndividual}`);
+      console.log(`[DEBUG DETALHADO] Frete ${freteId}: Valor total R$ ${(frete as any).valor_frete}, valor individual R$ ${valorIndividual}`);
 
       valorBruto += valorIndividual;
     }
@@ -610,7 +631,7 @@ class FechamentoService {
         if (!fretesMotorista || fretesMotorista.length === 0) continue;
 
         // Extrair apenas os fretes únicos
-        const fretes = fretesMotorista.map(fm => fm.fretes).filter((frete: any, index, self) => 
+        const fretes = fretesMotorista.map(fm => fm.fretes).filter((frete: any, index: number, self: any[]) => 
           index === self.findIndex((f: any) => f.id === frete.id)
         );
 
@@ -654,7 +675,7 @@ class FechamentoService {
           
           if (freteMotoristaError || !fretesMotorista || fretesMotorista.length === 0) {
             console.warn(`Erro ao buscar caminhão do motorista no frete ${freteId}:`, freteMotoristaError);
-            valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+            valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
           } else {
             // Buscar o valor individual do motorista para este frete específico
             let valorTotalIndividual = 0;
@@ -678,7 +699,7 @@ class FechamentoService {
               console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} tem valor individual R$ ${valorIndividual}`);
             } else {
               // Fallback para valor total do frete
-              valorIndividual = parseFloat((frete as any).valor_frete) || 0;
+              valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
               console.log(`[DEBUG PERIODO] Frete ${freteId}: motorista ${motorista.id} sem valores individuais, usando valor total R$ ${valorIndividual}`);
             }
           }
@@ -785,7 +806,7 @@ class FechamentoService {
       
       if (freteMotoristaError || !fretesMotorista || fretesMotorista.length === 0) {
         console.warn(`Erro ao buscar caminhão do motorista no frete ${frete.id}:`, freteMotoristaError);
-        valorIndividual = parseFloat(frete.valor_frete) || 0;
+        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
       } else {
         // Somar TODOS os valores individuais do motorista para este frete
         let valorTotalIndividual = 0;
@@ -809,7 +830,7 @@ class FechamentoService {
           console.log(`[DEBUG HISTORICO] Frete ${frete.id}: motorista ${motoristaId} tem ${fretesMotorista.length} entradas, valor total individual R$ ${valorIndividual}`);
         } else {
           // Fallback para valor total do frete
-          valorIndividual = parseFloat(frete.valor_frete) || 0;
+          valorIndividual = parseFloat((frete as any).valor_frete) || 0;
           console.log(`[DEBUG HISTORICO] Frete ${frete.id}: motorista ${motoristaId} sem valores individuais, usando valor total R$ ${valorIndividual}`);
         }
       }
@@ -846,7 +867,7 @@ class FechamentoService {
     }
 
     // Buscar abastecimentos se for motorista terceiro (com filtro de data opcional)
-    let abastecimentos: any[] = [];
+    let abastecimentos: AbastecimentoParaFechamento[] = [];
     if (motorista?.tipo_motorista === 'Terceiro') {
       let abastecimentosQuery = supabase
         .from('abastecimentos')
@@ -905,7 +926,7 @@ class FechamentoService {
     // Calcular total de abastecimentos para terceiros (para campo descontos)
     let totalAbastecimentos = 0;
     if (motorista?.tipo_motorista === 'Terceiro' && abastecimentos.length > 0) {
-      totalAbastecimentos = abastecimentos.reduce((sum, abast) => sum + (parseFloat(abast.preco_total) || 0), 0);
+      totalAbastecimentos = abastecimentos.reduce((sum, abast) => sum + (Number(abast.preco_total) || 0), 0);
       console.log(`[DEBUG] Total de abastecimentos calculado: R$ ${totalAbastecimentos}`);
     }
 
