@@ -90,12 +90,12 @@
 
 .form-group input {
   width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
+  padding: 1rem 1rem 1rem 3.5rem !important;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.3s ease;
-  background: #f9fafb;
+  background: white;
 }
 
 .form-group input:focus {
@@ -207,7 +207,7 @@
   top: 50%;
   transform: translateY(-50%);
   color: #6b7280;
-  z-index: 1;
+  z-index: 10;
   pointer-events: none;
 }
 
@@ -240,7 +240,7 @@
   cursor: pointer;
   color: #6b7280;
   padding: 0.25rem;
-  z-index: 2;
+  z-index: 10;
 }
 
 .system-info {
@@ -286,7 +286,7 @@
   }
   
   .form-group input {
-    padding: 0.875rem 0.875rem 0.875rem 2.75rem;
+    padding: 0.875rem 0.875rem 0.875rem 3.25rem !important;
   }
   
   .login-button {
@@ -313,7 +313,7 @@
   }
   
   .form-group input {
-    padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+    padding: 0.75rem 0.75rem 0.75rem 3rem !important;
     font-size: 0.9rem;
   }
   
