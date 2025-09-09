@@ -84,6 +84,7 @@ export class CapaService {
       .select(`
         frete_id,
         configuracao,
+        valor_frete,
         caminhao:caminhoes(id, placa, tipo)
       `)
       .in('frete_id', freteIds);
@@ -94,7 +95,7 @@ export class CapaService {
 
     // Organizar dados por frete_id
     const motoristasPorFrete: { [freteId: number]: string[] } = {};
-    const caminhoesPorFrete: { [freteId: number]: { placa: string, tipo: string }[] } = {};
+    const caminhoesPorFrete: { [freteId: number]: { placa: string, tipo: string, valor_frete: number }[] } = {};
 
     // Processar motoristas
     if (vinculosMotoristas) {
@@ -121,7 +122,8 @@ export class CapaService {
           }
           caminhoesPorFrete[freteId].push({
             placa: caminhao.placa,
-            tipo: vinc.configuracao || caminhao.tipo || 'N/A' // Usar configuração do frete, fallback para tipo do caminhão
+            tipo: vinc.configuracao || caminhao.tipo || 'N/A', // Usar configuração do frete, fallback para tipo do caminhão
+            valor_frete: vinc.valor_frete || 0 // Usar valor individual do caminhão
           });
         }
       });
@@ -182,7 +184,7 @@ export class CapaService {
             motorista: 'N/A',
             caminhao_placa: caminhao.placa,
             caminhao_tipo: caminhao.tipo,
-            valor_frete: frete.valor_frete
+            valor_frete: caminhao.valor_frete || frete.valor_frete // Usar valor individual do caminhão
           });
         });
         return;
@@ -205,7 +207,7 @@ export class CapaService {
           motorista: motorista,
           caminhao_placa: caminhao ? caminhao.placa : 'N/A',
           caminhao_tipo: caminhao ? caminhao.tipo : 'N/A',
-          valor_frete: frete.valor_frete
+          valor_frete: caminhao ? caminhao.valor_frete : frete.valor_frete // Usar valor individual do caminhão
         });
       }
     });
