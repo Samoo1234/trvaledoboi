@@ -188,6 +188,77 @@ const FechamentoMotoristas: React.FC = () => {
     setFechamentos([]);
   };
 
+  // Função para aplicar filtros de motorista
+  const aplicarFiltrosMotorista = async () => {
+    if (!motoristasSelecionado) {
+      alert('Por favor, selecione um motorista.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Se há filtros de data, usá-los; senão, buscar histórico completo
+      const dataInicio = filtrosMotorista.dataInicio || undefined;
+      const dataFim = filtrosMotorista.dataFim || undefined;
+      
+      const fechamentoDetalhado = await fechamentoService.getHistoricoDetalhado(
+        motoristasSelecionado, 
+        dataInicio, 
+        dataFim
+      );
+      
+      if (!fechamentoDetalhado) {
+        alert('Nenhum dado encontrado para este motorista no período selecionado.');
+        setFechamentos([]);
+        setDadosTemporarios(false);
+        return;
+      }
+
+      if (fechamentoDetalhado.total_fretes === 0) {
+        alert('Este motorista não possui fretes registrados no período selecionado.');
+        setFechamentos([]);
+        setDadosTemporarios(false);
+        return;
+      }
+
+      // Converter FechamentoDetalhado para FechamentoMotorista para exibição
+      const fechamentoParaExibicao: FechamentoMotorista = {
+        id: 0, // ID temporário para dados calculados
+        motorista_id: fechamentoDetalhado.motorista_id,
+        periodo: dataInicio && dataFim 
+          ? `${dataInicio.split('-').reverse().join('/')} a ${dataFim.split('-').reverse().join('/')}`
+          : 'Histórico completo',
+        valor_bruto: fechamentoDetalhado.valor_bruto,
+        valor_comissao: fechamentoDetalhado.valor_comissao,
+        descontos: fechamentoDetalhado.descontos,
+        bonus: fechamentoDetalhado.bonus || 0,
+        valor_liquido: fechamentoDetalhado.valor_liquido,
+        status: 'Pendente',
+        total_fretes: fechamentoDetalhado.total_fretes,
+        data_fechamento: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        motorista: {
+          id: fechamentoDetalhado.motorista_id,
+          nome: fechamentoDetalhado.motorista?.nome || 'Motorista não encontrado',
+          tipo_motorista: fechamentoDetalhado.motorista?.tipo_motorista || 'Terceiro',
+          porcentagem_comissao: fechamentoDetalhado.motorista?.porcentagem_comissao
+        }
+      };
+
+      setFechamentos([fechamentoParaExibicao]);
+      setDadosTemporarios(true);
+    } catch (error) {
+      console.error('Erro ao carregar dados do motorista:', error);
+      alert('Erro ao carregar dados do motorista. Verifique sua conexão.');
+      setFechamentos([]);
+      setDadosTemporarios(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const calcularFechamento = async () => {
     if (calculandoFechamento) return;
     
@@ -647,9 +718,27 @@ const FechamentoMotoristas: React.FC = () => {
                 title="Data fim (opcional)"
                 placeholder="Data fim"
               />
-              {(filtrosMotorista.dataInicio || filtrosMotorista.dataFim) && (
+              <button 
+                onClick={aplicarFiltrosMotorista}
+                style={{ 
+                  padding: '4px 8px', 
+                  background: '#28a745', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+                title="Aplicar filtro por motorista"
+              >
+                Aplicar
+              </button>
+              {(filtrosMotorista.dataInicio || filtrosMotorista.dataFim || motoristasSelecionado) && (
                 <button 
-                  onClick={limparFiltrosMotorista}
+                  onClick={() => {
+                    setMotoristaSelecionado(null);
+                    limparFiltrosMotorista();
+                  }}
                   style={{ 
                     padding: '4px 8px', 
                     background: '#6c757d', 
@@ -659,7 +748,7 @@ const FechamentoMotoristas: React.FC = () => {
                     fontSize: '12px',
                     cursor: 'pointer'
                   }}
-                  title="Limpar filtros de data"
+                  title="Limpar filtros de motorista"
                 >
                   Limpar
                 </button>
@@ -723,10 +812,10 @@ const FechamentoMotoristas: React.FC = () => {
             modoFiltro === 'mensal' 
               ? gerarPeriodos().find(p => p.valor === selectedPeriodo)?.nome
               : modoFiltro === 'periodo' && filtrosPeriodo.dataInicio && filtrosPeriodo.dataFim 
-                ? `${new Date(filtrosPeriodo.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtrosPeriodo.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}`
+                ? `${filtrosPeriodo.dataInicio.split('-').reverse().join('/')} a ${filtrosPeriodo.dataFim.split('-').reverse().join('/')}`
                 : modoFiltro === 'motorista' && motoristasSelecionado
                   ? `${filtrosMotorista.dataInicio && filtrosMotorista.dataFim 
-                      ? `Período ${new Date(filtrosMotorista.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtrosMotorista.dataFim + 'T00:00:00').toLocaleDateString('pt-BR')} - ` 
+                      ? `Período ${filtrosMotorista.dataInicio.split('-').reverse().join('/')} a ${filtrosMotorista.dataFim.split('-').reverse().join('/')} - ` 
                       : 'Histórico - '}${motoristas.find(m => m.id === motoristasSelecionado)?.nome || 'Motorista'}`
                   : modoFiltro === 'periodo' 
                     ? 'Período não selecionado'

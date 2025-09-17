@@ -115,18 +115,45 @@ class FechamentoService {
 
   // Novo método para buscar por período customizado (data início e fim)
   async getByPeriodoCustomizado(dataInicio: string, dataFim: string): Promise<FechamentoMotorista[]> {
+    // Buscar fechamentos que tenham fretes no período especificado
     const { data, error } = await supabase
       .from('fechamentos_motoristas')
       .select(`
         *,
         motorista:motoristas(id, nome, tipo_motorista, porcentagem_comissao)
       `)
-      .gte('data_fechamento', dataInicio)
-      .lte('data_fechamento', dataFim)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+
+    // Filtrar fechamentos que tenham fretes no período
+    const fechamentosFiltrados = [];
+    
+    for (const fechamento of data || []) {
+      // Verificar se o fechamento tem fretes no período
+      const { data: fretesMotorista, error: fretesError } = await supabase
+        .from('frete_motorista')
+        .select(`
+          fretes!inner(
+            id,
+            data_emissao
+          )
+        `)
+        .eq('motorista_id', fechamento.motorista_id)
+        .gte('fretes.data_emissao', dataInicio)
+        .lte('fretes.data_emissao', dataFim);
+
+      if (fretesError) {
+        console.error(`Erro ao verificar fretes para fechamento ${fechamento.id}:`, fretesError);
+        continue;
+      }
+
+      if (fretesMotorista && fretesMotorista.length > 0) {
+        fechamentosFiltrados.push(fechamento);
+      }
+    }
+
+    return fechamentosFiltrados;
   }
 
   async getById(id: number): Promise<FechamentoDetalhado | null> {
