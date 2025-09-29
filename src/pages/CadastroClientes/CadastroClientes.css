@@ -8,24 +8,26 @@
   position: relative;
   z-index: 999; /* Z-index abaixo do sidebar (1000) */
   box-sizing: border-box; /* Incluir borda no cálculo do tamanho */
-  width: calc(100vw - 250px); /* Largura total menos a largura do sidebar */
+  width: 100%; /* Largura total - adapta automaticamente */
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* Header - Estrutura completamente independente */
 .header {
   background: white; /* Fundo branco */
   color: #721c24; /* Cor vermelha do sistema */
-  padding: 50px 0; /* Padding apenas vertical, horizontal zerado */
+  padding: 30px 20px; /* Padding reduzido */
   text-align: center; /* Centralizar o conteúdo do header */
-  position: fixed; /* Posicionamento fixo para ser relativo à tela */
-  top: 5px; /* Margem de 5px do topo da tela */
-  left: 250px; /* Colar exatamente no sidebar (250px) */
-  right: 5px; /* Margem de 5px da direita da tela */
+  position: relative; /* Posicionamento relativo por padrão */
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 10; /* Z-index baixo para não obstruir o modal */
   border-bottom: 1px solid #e9ecef; /* Linha sutil separando */
   margin: 0; /* Remover margem interna */
   box-sizing: border-box;
-  width: calc(100vw - 255px); /* Largura total menos sidebar (250px) + margem direita (5px) */
+  width: 100%;
 }
 
 .header-content {
@@ -38,10 +40,9 @@
 
 /* Container filho - Agora independente do header */
 .container-filho {
-  width: calc(100% - 4px); /* 100% menos as margens de 2px de cada lado */
+  width: calc(100% - 20px); /* Margens laterais */
   max-width: 1200px; /* Limitar largura máxima para centralização */
-  margin: 2px auto; /* Centralizar horizontalmente com margem automática */
-  margin-top: 120px; /* Espaço para o header absoluto */
+  margin: 20px auto; /* Centralizar horizontalmente com margem automática */
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -197,7 +198,8 @@
 .busca-container {
   position: relative;
   flex: 1;
-  min-width: 300px;
+  min-width: 200px;
+  width: 100%;
 }
 
 .search-icon {
@@ -761,27 +763,18 @@
 }
 
 /* Responsivo */
+
+/* Desktop médio */
 @media (max-width: 1200px) {
-  .cadastro-clientes {
-    width: 100%;
-    margin-left: 0;
-  }
-  
-  .header {
-    left: 0;
-    right: 0;
-    width: 100%;
-  }
-  
   .container-filho {
-    margin: 2px;
-    width: calc(100% - 4px);
+    width: calc(100% - 30px);
+    margin: 15px auto;
   }
   
   .estatisticas {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 15px;
-    padding: 20px 30px;
+    padding: 20px 25px;
   }
   
   .stat-card {
@@ -793,99 +786,172 @@
   }
 }
 
+/* Tablet landscape */
 @media (max-width: 1024px) {
+  .container-filho {
+    width: calc(100% - 20px);
+  }
+  
   .estatisticas {
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
-    padding: 15px 25px;
+    padding: 15px 20px;
   }
   
   .controles {
-    padding: 20px 25px;
+    padding: 20px;
   }
   
   .filtros-avancados {
-    padding: 15px 25px;
+    padding: 15px 20px;
   }
   
   .lista-clientes {
-    padding: 25px;
+    padding: 20px;
+  }
+  
+  .tabela-clientes th,
+  .tabela-clientes td {
+    padding: 14px 10px;
+    font-size: 0.95em;
   }
 }
 
-@media (max-width: 768px) {
-  .cadastro-clientes {
-    margin-left: 0;
-    padding: 10px;
-    width: 100%;
-  }
-  
+/* Tablet portrait */
+@media (max-width: 900px) {
   .header {
-    left: 0;
-    right: 0;
-    width: 100%;
-    padding: 20px 0;
-    position: relative;
-    top: 0;
+    padding: 25px 15px;
   }
   
-  .header-content {
-    padding: 0 20px;
+  .header-content h1 {
+    font-size: 1.8em;
   }
   
-  .container-filho {
-    margin-top: 20px;
-    margin: 20px 10px 10px 10px;
-    width: calc(100% - 20px);
+  .header-content p {
+    font-size: 0.95em;
   }
   
   .estatisticas {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
-    padding: 15px 20px;
+    padding: 15px;
   }
   
   .stat-card {
     padding: 12px;
-    flex-direction: column;
-    text-align: center;
-    gap: 8px;
-  }
-  
-  .stat-icon {
-    width: 36px;
-    height: 36px;
   }
   
   .stat-number {
-    font-size: 1.5em;
+    font-size: 1.6em;
   }
   
   .controles {
     flex-direction: column;
     align-items: stretch;
-    gap: 15px;
-    padding: 20px;
+    padding: 15px;
+    gap: 12px;
   }
   
   .filtros {
     flex-direction: column;
+    width: 100%;
+  }
+  
+  .busca-container {
+    min-width: 100%;
+    width: 100%;
+  }
+  
+  .acoes-principais {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .btn-exportar,
+  .btn-novo-cliente {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .cadastro-clientes {
+    padding: 8px;
+  }
+  
+  .header {
+    padding: 20px 15px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.6em;
+  }
+  
+  .header-content p {
+    font-size: 0.9em;
+  }
+  
+  .container-filho {
+    width: calc(100% - 16px);
+    margin: 15px auto;
+    border-radius: 8px;
+  }
+  
+  .estatisticas {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .stat-card {
+    padding: 10px;
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+  }
+  
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .stat-number {
+    font-size: 1.4em;
+  }
+  
+  .stat-label {
+    font-size: 0.8em;
+  }
+  
+  .controles {
+    padding: 12px;
     gap: 10px;
   }
   
   .busca-container {
-    min-width: auto;
+    min-width: 100%;
   }
   
-  .acoes-principais {
+  .btn-filtros {
+    width: 100%;
     justify-content: center;
   }
   
+  .acoes-principais {
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .btn-exportar,
+  .btn-novo-cliente {
+    padding: 10px 15px;
+    font-size: 0.9em;
+  }
+  
   .filtros-avancados {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 15px;
-    padding: 15px 20px;
+    padding: 12px;
+    gap: 12px;
   }
   
   .filtro-grupo {
@@ -896,6 +962,10 @@
     width: 100%;
   }
   
+  .lista-clientes {
+    padding: 12px;
+  }
+  
   .lista-header {
     flex-direction: column;
     align-items: center;
@@ -903,83 +973,94 @@
     gap: 10px;
   }
   
+  .lista-header h2 {
+    font-size: 1.3em;
+  }
+  
   .tabela-container {
-    font-size: 0.8em;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .tabela-clientes {
+    font-size: 0.85em;
   }
   
   .tabela-clientes th,
   .tabela-clientes td {
-    padding: 12px 8px;
+    padding: 10px 6px;
+    white-space: nowrap;
   }
   
   .contato-item,
   .endereco-item,
   .data-info {
-    font-size: 0.8em;
+    font-size: 0.85em;
   }
   
   .tipo,
   .situacao {
-    min-width: 80px;
+    min-width: 75px;
     font-size: 0.75em;
     padding: 4px 8px;
   }
   
   .acoes {
-    gap: 4px;
+    gap: 5px;
   }
   
   .btn-editar,
   .btn-situacao {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
   
   .paginacao {
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     text-align: center;
   }
   
   .paginacao-botoes {
     justify-content: center;
     flex-wrap: wrap;
+    gap: 4px;
   }
   
   .btn-pagina {
-    min-width: 36px;
-    height: 32px;
-    font-size: 0.8em;
+    min-width: 38px;
+    height: 34px;
+    font-size: 0.85em;
   }
 }
 
+/* Mobile pequeno */
 @media (max-width: 480px) {
   .cadastro-clientes {
     padding: 5px;
   }
   
   .container-filho {
-    margin: 10px 5px;
+    margin: 10px auto;
     width: calc(100% - 10px);
-    border-radius: 8px;
+    border-radius: 6px;
   }
   
   .header {
-    padding: 15px 0;
+    padding: 15px 10px;
   }
   
   .header-content h1 {
-    font-size: 1.5em;
+    font-size: 1.4em;
   }
   
   .header-content p {
-    font-size: 0.9em;
+    font-size: 0.85em;
   }
   
   .estatisticas {
     grid-template-columns: 1fr;
-    padding: 10px 15px;
+    padding: 10px;
     gap: 8px;
   }
   
@@ -987,67 +1068,87 @@
     flex-direction: row;
     text-align: left;
     padding: 10px;
-  }
-  
-  .stat-icon {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .stat-number {
-    font-size: 1.3em;
-  }
-  
-  .controles {
-    padding: 15px;
     gap: 10px;
   }
   
-  .busca-container {
-    order: 1;
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  
+  .stat-number {
+    font-size: 1.4em;
+  }
+  
+  .stat-label {
+    font-size: 0.75em;
+  }
+  
+  .controles {
+    padding: 10px;
+    gap: 8px;
+  }
+  
+  .campo-busca {
+    font-size: 0.9em;
+    padding: 10px 10px 10px 40px;
+  }
+  
+  .btn-filtros {
+    font-size: 0.9em;
+    padding: 10px 15px;
   }
   
   .acoes-principais {
-    order: 2;
-    width: 100%;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 6px;
   }
   
   .btn-novo-cliente,
   .btn-exportar {
-    flex: 1;
-    justify-content: center;
+    width: 100%;
+    font-size: 0.85em;
+    padding: 10px;
   }
   
   .filtros-avancados {
-    padding: 10px 15px;
+    padding: 10px;
+    gap: 10px;
   }
   
   .lista-clientes {
-    padding: 15px;
+    padding: 10px;
+  }
+  
+  .lista-header h2 {
+    font-size: 1.1em;
+  }
+  
+  .info-paginacao {
+    font-size: 0.8em;
   }
   
   .tabela-container {
-    font-size: 0.7em;
+    font-size: 0.75em;
   }
   
   .tabela-clientes th,
   .tabela-clientes td {
-    padding: 6px 3px;
-    font-size: 0.7em;
+    padding: 8px 4px;
   }
   
   .cliente-nome strong {
-    font-size: 0.8em;
+    font-size: 0.85em;
   }
   
   .cliente-nome small {
-    font-size: 0.7em;
+    font-size: 0.75em;
   }
   
   .cpf-cnpj {
-    font-size: 0.7em;
-    padding: 2px 4px;
+    font-size: 0.75em;
+    padding: 3px 5px;
   }
   
   .tipo,
@@ -1063,14 +1164,22 @@
     height: 28px;
   }
   
+  .paginacao {
+    gap: 10px;
+  }
+  
+  .paginacao-info {
+    font-size: 0.75em;
+  }
+  
   .paginacao-botoes {
     gap: 3px;
   }
   
   .btn-pagina {
-    min-width: 32px;
-    height: 28px;
-    font-size: 0.7em;
-    padding: 4px 8px;
+    min-width: 36px;
+    height: 32px;
+    font-size: 0.8em;
+    padding: 6px 8px;
   }
 }
