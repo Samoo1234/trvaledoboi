@@ -551,21 +551,43 @@ export class PDFService {
     
     yPos += 15;
     
-    // Buscar vales do período para motoristas terceiros
+    // Buscar vales e abastecimentos do período para motoristas terceiros
     let totalValesPeriodo = 0;
+    let totalAbastecimentosPeriodo = 0;
+    
     if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.motorista_id) {
       try {
-        // Usar o período do fechamento (formato MM/YYYY)
+        // Buscar vales do período (formato MM/YYYY)
         totalValesPeriodo = await valeService.getTotalByMotoristaAndPeriodo(fechamento.motorista_id, fechamento.periodo);
-        console.log(`[PDF DEBUG] === COMPARAÇÃO DE VALORES PARA TERCEIROS ===`);
+        
+        // Buscar abastecimentos do período
+        const [mes, ano] = fechamento.periodo.split('/');
+        const inicioMes = `${ano}-${mes.padStart(2, '0')}-01`;
+        const ultimoDiaMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+        const fimMes = `${ano}-${mes.padStart(2, '0')}-${ultimoDiaMes.toString().padStart(2, '0')}`;
+        
+        const { data: abastecimentos, error: abastecimentosError } = await supabase
+          .from('abastecimentos')
+          .select('preco_total')
+          .eq('motorista_id', fechamento.motorista_id)
+          .gte('data_abastecimento', inicioMes)
+          .lte('data_abastecimento', fimMes);
+        
+        if (!abastecimentosError && abastecimentos) {
+          totalAbastecimentosPeriodo = abastecimentos.reduce((sum, abast) => sum + (parseFloat(abast.preco_total) || 0), 0);
+        }
+        
+        console.log(`[PDF DEBUG] === VALORES SEPARADOS PARA TERCEIROS ===`);
         console.log(`[PDF DEBUG] Motorista: ${fechamento.motorista?.nome}`);
         console.log(`[PDF DEBUG] Período: ${fechamento.periodo}`);
-        console.log(`[PDF DEBUG] Descontos/Abastecimentos (fechamento.descontos): ${fechamento.descontos}`);
-        console.log(`[PDF DEBUG] Vales do período (totalValesPeriodo): ${totalValesPeriodo}`);
-        console.log(`[PDF DEBUG] Agora são diferentes? ${fechamento.descontos !== totalValesPeriodo}`);
+        console.log(`[PDF DEBUG] Total Abastecimentos: ${totalAbastecimentosPeriodo}`);
+        console.log(`[PDF DEBUG] Total Vales: ${totalValesPeriodo}`);
+        console.log(`[PDF DEBUG] Soma (deve = descontos): ${totalAbastecimentosPeriodo + totalValesPeriodo}`);
+        console.log(`[PDF DEBUG] Descontos salvos: ${fechamento.descontos}`);
       } catch (error) {
-        console.warn('[PDF DEBUG] Erro ao buscar vales do período:', error);
+        console.warn('[PDF DEBUG] Erro ao buscar vales/abastecimentos do período:', error);
         totalValesPeriodo = 0;
+        totalAbastecimentosPeriodo = 0;
       }
     }
     
@@ -582,7 +604,7 @@ export class PDFService {
       ],
       ['Valor Líquido Total', this.formatCurrency(fechamento.valor_comissao)],
       [fechamento.motorista?.tipo_motorista === 'Terceiro' ? 'Descontos/Abastecimentos' : 'Vales/Adiantamentos', 
-       this.formatCurrency(fechamento.descontos)]
+       this.formatCurrency(fechamento.motorista?.tipo_motorista === 'Terceiro' ? totalAbastecimentosPeriodo : fechamento.descontos)]
     ];
     
     // Adicionar linha de vales apenas para motoristas terceiros
@@ -598,14 +620,15 @@ export class PDFService {
     let valorLiquidoReceber = fechamento.valor_liquido;
     
     if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
-      // Para terceiros: comissão - abastecimentos - vales + bonus
-      valorLiquidoReceber = fechamento.valor_comissao - fechamento.descontos - totalValesPeriodo + (fechamento.bonus || 0);
+      // CORREÇÃO: Para terceiros: comissão - abastecimentos - vales + bonus
+      // Usar os valores buscados separadamente, NÃO o fechamento.descontos (que é a soma)
+      valorLiquidoReceber = fechamento.valor_comissao - totalAbastecimentosPeriodo - totalValesPeriodo + (fechamento.bonus || 0);
       console.log(`[PDF DEBUG] === CÁLCULO VALOR LÍQUIDO A RECEBER (TERCEIRO) ===`);
       console.log(`[PDF DEBUG] Comissão: ${fechamento.valor_comissao}`);
-      console.log(`[PDF DEBUG] Abastecimentos: ${fechamento.descontos}`);
+      console.log(`[PDF DEBUG] Abastecimentos: ${totalAbastecimentosPeriodo}`);
       console.log(`[PDF DEBUG] Vales: ${totalValesPeriodo}`);
       console.log(`[PDF DEBUG] Bônus: ${fechamento.bonus || 0}`);
-      console.log(`[PDF DEBUG] Fórmula: ${fechamento.valor_comissao} - ${fechamento.descontos} - ${totalValesPeriodo} + ${fechamento.bonus || 0}`);
+      console.log(`[PDF DEBUG] Fórmula: ${fechamento.valor_comissao} - ${totalAbastecimentosPeriodo} - ${totalValesPeriodo} + ${fechamento.bonus || 0}`);
       console.log(`[PDF DEBUG] Resultado: ${valorLiquidoReceber}`);
     } else {
       // Para funcionários: usar valor já calculado (comissão - vales + bonus)
@@ -954,11 +977,13 @@ export class PDFService {
     
     yPos += 15;
     
-    // Buscar total de vales usando valeService para motoristas terceiros
+    // Buscar total de vales e abastecimentos usando valeService para motoristas terceiros
     let totalValesHistorico = 0;
+    let totalAbastecimentosHistorico = 0;
+    
     if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.motorista_id) {
       try {
-        console.log(`[PDF DEBUG] === BUSCANDO VALES PARA TERCEIROS ===`);
+        console.log(`[PDF DEBUG] === BUSCANDO VALES E ABASTECIMENTOS PARA TERCEIROS ===`);
         console.log(`[PDF DEBUG] Motorista: ${fechamento.motorista?.nome}`);
         console.log(`[PDF DEBUG] Período: ${fechamento.periodo}`);
         
@@ -966,6 +991,7 @@ export class PDFService {
           // Para histórico completo, buscar todos os vales (não implementado no valeService)
           // Por enquanto, usar 0 ou buscar direto no supabase
           totalValesHistorico = 0;
+          totalAbastecimentosHistorico = 0;
           console.log(`[PDF DEBUG] Histórico completo - usando vales do service: 0`);
         } else if (fechamento.periodo.includes(' a ')) {
           // Período específico (YYYY-MM-DD a YYYY-MM-DD) - buscar direto no supabase
@@ -1012,14 +1038,46 @@ export class PDFService {
             totalValesHistorico = vales?.reduce((sum, vale) => sum + (parseFloat(vale.valor) || 0), 0) || 0;
             console.log(`[PDF DEBUG] Total calculado dos vales filtrados: R$ ${totalValesHistorico}`);
           }
+          
+          // Buscar abastecimentos do mesmo período
+          const { data: abastecimentos, error: abastecimentosError } = await supabase
+            .from('abastecimentos')
+            .select('preco_total')
+            .eq('motorista_id', fechamento.motorista_id)
+            .gte('data_abastecimento', dataInicio)
+            .lte('data_abastecimento', dataFim);
+          
+          if (!abastecimentosError && abastecimentos) {
+            totalAbastecimentosHistorico = abastecimentos.reduce((sum, abast) => sum + (parseFloat(abast.preco_total) || 0), 0);
+            console.log(`[PDF DEBUG] Total abastecimentos: R$ ${totalAbastecimentosHistorico}`);
+          }
         } else {
-          // Período formato MM/YYYY - usar valeService
+          // Período formato MM/YYYY - usar valeService e buscar abastecimentos
           totalValesHistorico = await valeService.getTotalByMotoristaAndPeriodo(fechamento.motorista_id, fechamento.periodo);
           console.log(`[PDF DEBUG] Vales período ${fechamento.periodo}: R$ ${totalValesHistorico}`);
+          
+          // Buscar abastecimentos do período
+          const [mes, ano] = fechamento.periodo.split('/');
+          const inicioMes = `${ano}-${mes.padStart(2, '0')}-01`;
+          const ultimoDiaMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
+          const fimMes = `${ano}-${mes.padStart(2, '0')}-${ultimoDiaMes.toString().padStart(2, '0')}`;
+          
+          const { data: abastecimentos, error: abastecimentosError } = await supabase
+            .from('abastecimentos')
+            .select('preco_total')
+            .eq('motorista_id', fechamento.motorista_id)
+            .gte('data_abastecimento', inicioMes)
+            .lte('data_abastecimento', fimMes);
+          
+          if (!abastecimentosError && abastecimentos) {
+            totalAbastecimentosHistorico = abastecimentos.reduce((sum, abast) => sum + (parseFloat(abast.preco_total) || 0), 0);
+            console.log(`[PDF DEBUG] Total abastecimentos: R$ ${totalAbastecimentosHistorico}`);
+          }
         }
       } catch (error) {
-        console.warn('[PDF DEBUG] Erro ao buscar vales:', error);
+        console.warn('[PDF DEBUG] Erro ao buscar vales/abastecimentos:', error);
         totalValesHistorico = 0;
+        totalAbastecimentosHistorico = 0;
       }
     }
     
@@ -1036,7 +1094,7 @@ export class PDFService {
       ],
       ['Valor Líquido Total', this.formatCurrency(fechamento.valor_comissao)],
       [fechamento.motorista?.tipo_motorista === 'Terceiro' ? 'Descontos/Abastecimentos' : 'Vales/Adiantamentos', 
-       this.formatCurrency(fechamento.descontos)]
+       this.formatCurrency(fechamento.motorista?.tipo_motorista === 'Terceiro' ? totalAbastecimentosHistorico : fechamento.descontos)]
     ];
     
     // Adicionar linha de vales apenas para motoristas terceiros
@@ -1052,11 +1110,12 @@ export class PDFService {
     let valorLiquidoReceber = fechamento.valor_liquido;
     
     if (fechamento.motorista?.tipo_motorista === 'Terceiro') {
-      // Para terceiros: comissão - abastecimentos - vales + bonus
-      valorLiquidoReceber = fechamento.valor_comissao - fechamento.descontos - totalValesHistorico + (fechamento.bonus || 0);
+      // CORREÇÃO: Para terceiros: comissão - abastecimentos - vales + bonus
+      // Usar os valores buscados separadamente, NÃO o fechamento.descontos (que é a soma)
+      valorLiquidoReceber = fechamento.valor_comissao - totalAbastecimentosHistorico - totalValesHistorico + (fechamento.bonus || 0);
       console.log(`[PDF DEBUG] === CÁLCULO VALOR LÍQUIDO A RECEBER - CONSOLIDADO (TERCEIRO) ===`);
       console.log(`[PDF DEBUG] Comissão: ${fechamento.valor_comissao}`);
-      console.log(`[PDF DEBUG] Abastecimentos: ${fechamento.descontos}`);
+      console.log(`[PDF DEBUG] Abastecimentos: ${totalAbastecimentosHistorico}`);
       console.log(`[PDF DEBUG] Vales históricos: ${totalValesHistorico}`);
       console.log(`[PDF DEBUG] Bônus: ${fechamento.bonus || 0}`);
       console.log(`[PDF DEBUG] Resultado: ${valorLiquidoReceber}`);
