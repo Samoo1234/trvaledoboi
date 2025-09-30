@@ -218,16 +218,27 @@ class FechamentoService {
       
       if (freteRelacao.caminhao_id) {
         try {
-          const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+          // CORREÇÃO: Buscar TODOS os registros para somar múltiplas configurações
+          const { data: freteCaminhoes, error: freteCaminhaoError } = await supabase
             .from('frete_caminhao')
-            .select('valor_frete')
+            .select('valor_frete, configuracao')
             .eq('frete_id', (frete as any).id)
-            .eq('caminhao_id', freteRelacao.caminhao_id)
-            .limit(1);
+            .eq('caminhao_id', freteRelacao.caminhao_id);
 
-          if (!freteCaminhaoError && freteCaminhao && freteCaminhao.length > 0) {
-            valorIndividual = parseFloat(freteCaminhao[0].valor_frete) || 0;
-            console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: valor individual encontrado R$ ${valorIndividual}`);
+          if (!freteCaminhaoError && freteCaminhoes && freteCaminhoes.length > 0) {
+            // SOMAR todos os valores (ex: Truck R$ 500 + Julieta R$ 2.289 = R$ 2.789)
+            valorIndividual = freteCaminhoes.reduce((sum, fc) => 
+              sum + (parseFloat(fc.valor_frete) || 0), 0
+            );
+            
+            if (freteCaminhoes.length > 1) {
+              console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: ${freteCaminhoes.length} configurações encontradas, somando R$ ${valorIndividual}`);
+              freteCaminhoes.forEach(fc => {
+                console.log(`  - ${fc.configuracao}: R$ ${fc.valor_frete}`);
+              });
+            } else {
+              console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: valor individual encontrado R$ ${valorIndividual}`);
+            }
           } else {
             // Fallback para valor total do frete
             valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
