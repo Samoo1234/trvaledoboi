@@ -224,6 +224,33 @@ const ControleFrete: React.FC = () => {
         return;
       }
 
+      // CORREÇÃO #1: Validar se todos os caminhões têm valor individual preenchido
+      const caminhoesSemValor = caminhoesSelecionados.filter(c => !c.valor_frete || parseFloat(c.valor_frete) <= 0);
+      if (caminhoesSemValor.length > 0) {
+        alert('Todos os caminhões devem ter valor de frete individual preenchido e maior que zero!');
+        return;
+      }
+
+      // CORREÇÃO #2: Validar se soma dos valores individuais = valor total do frete
+      const somaCaminhoes = caminhoesSelecionados.reduce((sum, cam) => {
+        return sum + (parseFloat(cam.valor_frete || '0'));
+      }, 0);
+      
+      const valorTotalFrete = parseFloat(formData.valor_frete);
+      const diferenca = Math.abs(somaCaminhoes - valorTotalFrete);
+      
+      if (diferenca > 0.01) { // Tolerância de 1 centavo para arredondamento
+        alert(
+          `ERRO: Inconsistência nos valores!\n\n` +
+          `Valor total do frete: R$ ${valorTotalFrete.toFixed(2)}\n` +
+          `Soma dos valores individuais dos caminhões: R$ ${somaCaminhoes.toFixed(2)}\n` +
+          `Diferença: R$ ${diferenca.toFixed(2)}\n\n` +
+          `A soma dos valores individuais DEVE ser igual ao valor total do frete.\n` +
+          `Ajuste os valores antes de salvar.`
+        );
+        return;
+      }
+
       if (formData.situacao === 'Pago') {
         if (!formData.tipo_pagamento) {
           alert('Selecione o tipo de pagamento quando a situação for "Pago"');
@@ -274,12 +301,15 @@ const ControleFrete: React.FC = () => {
         else if (caminhao?.tipo === 'Carreta 2 Pisos') configuracao = 'Carreta 2 Pisos';
         else if (caminhao?.tipo === 'Truck' && caminhaoVinc.reboque_id) configuracao = 'Julieta';
         
+        // CORREÇÃO #3: Garantir que valor_frete nunca seja null - validado acima
+        const valorFreteIndividual = parseFloat(caminhaoVinc.valor_frete!);
+        
         await freteCaminhaoService.create({
           frete_id: freteId!,
           caminhao_id: parseInt(caminhaoVinc.caminhao_id),
           configuracao: configuracao,
           reboque_id: caminhaoVinc.reboque_id ? parseInt(caminhaoVinc.reboque_id) : null,
-          valor_frete: caminhaoVinc.valor_frete ? parseFloat(caminhaoVinc.valor_frete) : null
+          valor_frete: valorFreteIndividual
         });
       }
       

@@ -310,20 +310,25 @@ class FechamentoService {
     const ultimoDiaMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
     const fimMes = `${ano}-${mes.padStart(2, '0')}-${ultimoDiaMes.toString().padStart(2, '0')}`;
 
-    const { data: fretes, error: fretesError } = await supabase
-      .from('fretes')
+    // CORREÇÃO: Buscar direto de frete_motorista para evitar duplicação
+    // quando motorista tem múltiplos caminhões no mesmo frete
+    const { data: fretesMotorista, error: fretesError } = await supabase
+      .from('frete_motorista')
       .select(`
-        id,
-        valor_frete,
-        data_emissao,
-        origem,
-        destino,
-        pecuarista,
-        frete_motorista!inner(motorista_id, caminhao_id)
+        frete_id,
+        caminhao_id,
+        fretes!inner(
+          id,
+          valor_frete,
+          data_emissao,
+          origem,
+          destino,
+          pecuarista
+        )
       `)
-      .eq('frete_motorista.motorista_id', motoristaId)
-      .gte('data_emissao', inicioMes)
-      .lte('data_emissao', fimMes);
+      .eq('motorista_id', motoristaId)
+      .gte('fretes.data_emissao', inicioMes)
+      .lte('fretes.data_emissao', fimMes);
 
     if (fretesError) {
       throw new Error(`Erro ao buscar fretes: ${fretesError.message}`);
@@ -338,11 +343,6 @@ class FechamentoService {
     let totalAbastecimentos = 0;
     if (motorista.tipo_motorista === 'Terceiro') {
       try {
-        const [mes, ano] = periodo.split('/');
-        const inicioMes = `${ano}-${mes.padStart(2, '0')}-01`;
-        const ultimoDiaMes = new Date(parseInt(ano), parseInt(mes), 0).getDate();
-        const fimMes = `${ano}-${mes.padStart(2, '0')}-${ultimoDiaMes.toString().padStart(2, '0')}`;
-
         console.log(`[DEBUG ABASTECIMENTOS] Buscando abastecimentos para motorista ${motoristaId} de ${inicioMes} a ${fimMes}`);
 
         const { data: abastecimentos, error: abastecimentosError } = await supabase
@@ -364,59 +364,50 @@ class FechamentoService {
       }
     }
 
-    // Calcular valores individuais por motorista
+    // CORREÇÃO: Calcular valores individuais por motorista usando vínculos diretos
     let valorBruto = 0;
-    const totalFretes = fretes?.length || 0;
+    const totalFretes = fretesMotorista?.length || 0;
 
-    for (const frete of fretes || []) {
-      const freteId = (frete as any).id;
-      console.log(`[DEBUG DETALHADO] Processando frete ID: ${freteId}, valor total: R$ ${(frete as any).valor_frete}`);
+    console.log(`[DEBUG] Total de vínculos frete-motorista encontrados: ${totalFretes}`);
 
-      // Buscar TODAS as entradas do motorista para este frete
+    for (const vinculo of fretesMotorista || []) {
+      const freteId = vinculo.frete_id;
+      const caminhaoId = vinculo.caminhao_id;
+      const freteInfo = (vinculo as any).fretes;
+      
+      console.log(`[DEBUG DETALHADO] Processando frete ID: ${freteId}, caminhão ID: ${caminhaoId}, valor total frete: R$ ${freteInfo?.valor_frete}`);
+
+      // Buscar valor individual deste caminhão específico
       let valorIndividual = 0;
       
-      const { data: fretesMotorista, error: freteMotoristaError } = await supabase
-        .from('frete_motorista')
-        .select('caminhao_id')
-        .eq('frete_id', freteId)
-        .eq('motorista_id', motoristaId);
-      
-      if (freteMotoristaError || !fretesMotorista || fretesMotorista.length === 0) {
-        console.warn(`Erro ao buscar caminhão do motorista no frete ${freteId}:`, freteMotoristaError);
-        valorIndividual = parseFloat((frete as any).valor_frete) || 0;
-      } else {
-        // Somar TODOS os valores individuais do motorista para este frete
-        let valorTotalIndividual = 0;
-        
-        // Buscar o valor individual do motorista (uma entrada por motorista)
-        if (fretesMotorista.length > 0 && fretesMotorista[0].caminhao_id) {
-          const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
-            .from('frete_caminhao')
-            .select('valor_frete')
-            .eq('frete_id', freteId)
-            .eq('caminhao_id', fretesMotorista[0].caminhao_id)
-            .limit(1);
+      if (caminhaoId) {
+        const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+          .from('frete_caminhao')
+          .select('valor_frete')
+          .eq('frete_id', freteId)
+          .eq('caminhao_id', caminhaoId)
+          .single();
 
-          if (!freteCaminhaoError && freteCaminhao && freteCaminhao.length > 0) {
-            valorTotalIndividual = parseFloat(freteCaminhao[0].valor_frete) || 0;
-          }
-        }
-        
-        if (valorTotalIndividual > 0) {
-          valorIndividual = valorTotalIndividual;
-          console.log(`[DEBUG DETALHADO] Frete ${freteId}: motorista ${motoristaId} tem ${fretesMotorista.length} entradas, valor total individual R$ ${valorIndividual}`);
+        if (!freteCaminhaoError && freteCaminhao && freteCaminhao.valor_frete) {
+          valorIndividual = parseFloat(freteCaminhao.valor_frete.toString()) || 0;
+          console.log(`[DEBUG DETALHADO] Frete ${freteId}, Caminhão ${caminhaoId}: valor individual R$ ${valorIndividual}`);
         } else {
-          // Fallback para valor total do frete
-          valorIndividual = parseFloat((frete as any).valor_frete) || 0;
-          console.log(`[DEBUG DETALHADO] Frete ${freteId}: motorista ${motoristaId} sem valores individuais, usando valor total R$ ${valorIndividual}`);
+          console.warn(`[AVISO] Frete ${freteId}, Caminhão ${caminhaoId}: valor individual não encontrado em frete_caminhao!`);
+          console.warn(`[AVISO] Erro:`, freteCaminhaoError);
+          // Não usar fallback - valor deve estar explícito em frete_caminhao
+          console.warn(`[AVISO] Valor será considerado como R$ 0,00. Verifique o cadastro do frete!`);
+          valorIndividual = 0;
         }
+      } else {
+        console.warn(`[AVISO] Frete ${freteId}: caminhao_id não definido no vínculo com motorista ${motoristaId}!`);
+        valorIndividual = 0;
       }
 
-      console.log(`[DEBUG DETALHADO] Frete ${freteId}: Valor total R$ ${(frete as any).valor_frete}, valor individual R$ ${valorIndividual}`);
-
+      console.log(`[DEBUG DETALHADO] Frete ${freteId}: adicionando R$ ${valorIndividual} ao valor bruto`);
       valorBruto += valorIndividual;
     }
-    console.log(`[DEBUG FINAL] Valor bruto total calculado para ${motorista.nome}: R$ ${valorBruto}`);
+    
+    console.log(`[DEBUG FINAL] Valor bruto total calculado para ${motorista.nome}: R$ ${valorBruto} (${totalFretes} vínculos processados)`);
     
     // Usar porcentagem personalizada ou padrão
     const porcentagemComissao = this.calcularPorcentagemComissao(motorista);
