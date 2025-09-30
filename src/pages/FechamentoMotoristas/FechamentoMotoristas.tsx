@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calculator, Eye, FileText, Trash2, Archive } from 'lucide-react';
+import { Calculator, Eye, FileText, Trash2, Archive, RefreshCw } from 'lucide-react';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { pdfService } from '../../services/pdfService';
 import { formatDisplayDate } from '../../services/dateUtils';
@@ -382,6 +382,54 @@ const FechamentoMotoristas: React.FC = () => {
     } catch (error) {
       console.error('Erro ao recalcular descontos:', error);
       alert('Erro ao recalcular descontos.');
+    }
+  };
+
+  const recalcularFechamento = async (id: number) => {
+    if (!window.confirm('Tem certeza que deseja recalcular este fechamento? Todos os valores serão recalculados com base nos fretes atuais. O bônus será mantido.')) {
+      return;
+    }
+
+    try {
+      const fechamento = fechamentos.find(f => f.id === id);
+      if (!fechamento) return;
+
+      console.log(`[DEBUG] Recalculando fechamento completo para ${fechamento.motorista?.nome}...`);
+
+      // Recalcular fechamento completo com dados atualizados
+      const fechamentoRecalculado = await fechamentoService.calcularFechamento(
+        fechamento.motorista_id, 
+        selectedPeriodo
+      );
+
+      console.log(`[DEBUG] Valores recalculados:`);
+      console.log(`  Total de fretes: ${fechamento.total_fretes} → ${fechamentoRecalculado.total_fretes}`);
+      console.log(`  Valor bruto: R$ ${fechamento.valor_bruto} → R$ ${fechamentoRecalculado.valor_bruto}`);
+      console.log(`  Valor comissão: R$ ${fechamento.valor_comissao} → R$ ${fechamentoRecalculado.valor_comissao}`);
+      console.log(`  Descontos: R$ ${fechamento.descontos || 0} → R$ ${fechamentoRecalculado.descontos}`);
+
+      // Manter o bônus atual
+      const bonusAtual = fechamento.bonus || 0;
+      const novoValorLiquido = fechamentoRecalculado.valor_comissao - fechamentoRecalculado.descontos + bonusAtual;
+
+      console.log(`  Bônus (mantido): R$ ${bonusAtual}`);
+      console.log(`  Valor líquido: R$ ${fechamento.valor_liquido} → R$ ${novoValorLiquido}`);
+
+      // Atualizar todos os valores no banco
+      const fechamentoAtualizado = await fechamentoService.update(id, {
+        total_fretes: fechamentoRecalculado.total_fretes,
+        valor_bruto: fechamentoRecalculado.valor_bruto,
+        valor_comissao: fechamentoRecalculado.valor_comissao,
+        descontos: fechamentoRecalculado.descontos,
+        bonus: bonusAtual, // Manter bônus atual
+        valor_liquido: novoValorLiquido
+      });
+
+      setFechamentos(fechamentos.map(f => f.id === id ? fechamentoAtualizado : f));
+      alert('Fechamento recalculado com sucesso! Todos os valores foram atualizados.');
+    } catch (error) {
+      console.error('Erro ao recalcular fechamento:', error);
+      alert('Erro ao recalcular fechamento. Verifique os dados e tente novamente.');
     }
   };
 
@@ -1033,6 +1081,18 @@ const FechamentoMotoristas: React.FC = () => {
                         disabled={dadosTemporarios}
                       >
                         <Eye size={16} />
+                      </button>
+                      <button 
+                        className="btn-action btn-recalcular"
+                        onClick={() => !dadosTemporarios && fechamento.id && recalcularFechamento(fechamento.id)}
+                        title={dadosTemporarios ? "Recálculo não disponível para dados temporários" : "Recalcular Fechamento"}
+                        style={{ 
+                          opacity: dadosTemporarios ? 0.6 : 1,
+                          cursor: dadosTemporarios ? 'not-allowed' : 'pointer'
+                        }}
+                        disabled={dadosTemporarios}
+                      >
+                        <RefreshCw size={16} />
                       </button>
                       <button 
                         className="btn-action"

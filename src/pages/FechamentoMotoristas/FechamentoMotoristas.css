@@ -110,6 +110,14 @@
   background: #5a6268;
 }
 
+.btn-action.btn-recalcular {
+  background: #28a745;
+}
+
+.btn-action.btn-recalcular:hover {
+  background: #218838;
+}
+
 .btn-secondary {
   background: var(--primary-white);
   color: var(--primary-red);
