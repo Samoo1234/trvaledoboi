@@ -431,8 +431,8 @@ class FechamentoService {
     const bonus = 0; // Bônus inicia como 0, pode ser editado depois
     
     if (motorista.tipo_motorista === 'Terceiro') {
-      // CORREÇÃO: Para terceiros: descontos = apenas abastecimentos, vales são linha separada
-      descontos = totalAbastecimentos;
+      // CORREÇÃO: Para terceiros: descontos = abastecimentos + vales (para validação funcionar)
+      descontos = totalAbastecimentos + totalVales;
       // CORREÇÃO: Valor líquido = comissão - abastecimentos - vales + bônus
       valorLiquido = valorComissao - totalAbastecimentos - totalVales + bonus;
       
@@ -984,8 +984,8 @@ class FechamentoService {
     // Definir descontos corretos baseado no tipo de motorista
     let descontos: number;
     if (motorista?.tipo_motorista === 'Terceiro') {
-      // Para terceiros: descontos = abastecimentos
-      descontos = totalAbastecimentos;
+      // Para terceiros: descontos = abastecimentos + vales
+      descontos = totalAbastecimentos + totalVales;
     } else {
       // Para funcionários: descontos = vales
       descontos = totalVales;
