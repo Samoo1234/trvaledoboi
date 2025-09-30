@@ -377,20 +377,32 @@ class FechamentoService {
       
       console.log(`[DEBUG DETALHADO] Processando frete ID: ${freteId}, caminhão ID: ${caminhaoId}, valor total frete: R$ ${freteInfo?.valor_frete}`);
 
-      // Buscar valor individual deste caminhão específico
+      // CORREÇÃO: Buscar TODOS os valores individuais deste caminhão específico e SOMAR
+      // (para casos onde mesmo caminhão tem múltiplas configurações: Truck + Julieta)
       let valorIndividual = 0;
       
       if (caminhaoId) {
-        const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+        const { data: freteCaminhoes, error: freteCaminhaoError } = await supabase
           .from('frete_caminhao')
-          .select('valor_frete')
+          .select('valor_frete, configuracao')
           .eq('frete_id', freteId)
-          .eq('caminhao_id', caminhaoId)
-          .single();
+          .eq('caminhao_id', caminhaoId);
 
-        if (!freteCaminhaoError && freteCaminhao && freteCaminhao.valor_frete) {
-          valorIndividual = parseFloat(freteCaminhao.valor_frete.toString()) || 0;
-          console.log(`[DEBUG DETALHADO] Frete ${freteId}, Caminhão ${caminhaoId}: valor individual R$ ${valorIndividual}`);
+        if (!freteCaminhaoError && freteCaminhoes && freteCaminhoes.length > 0) {
+          // SOMAR todos os valores (ex: Truck R$ 500 + Julieta R$ 2.289 = R$ 2.789)
+          valorIndividual = freteCaminhoes.reduce((sum, fc) => 
+            sum + (parseFloat(fc.valor_frete?.toString() || '0') || 0), 0
+          );
+          
+          if (freteCaminhoes.length > 1) {
+            console.log(`[DEBUG DETALHADO] Frete ${freteId}, Caminhão ${caminhaoId}: ${freteCaminhoes.length} configurações encontradas`);
+            freteCaminhoes.forEach(fc => {
+              console.log(`  - ${fc.configuracao}: R$ ${fc.valor_frete}`);
+            });
+            console.log(`  TOTAL SOMADO: R$ ${valorIndividual}`);
+          } else {
+            console.log(`[DEBUG DETALHADO] Frete ${freteId}, Caminhão ${caminhaoId}: valor individual R$ ${valorIndividual}`);
+          }
         } else {
           console.warn(`[AVISO] Frete ${freteId}, Caminhão ${caminhaoId}: valor individual não encontrado em frete_caminhao!`);
           console.warn(`[AVISO] Erro:`, freteCaminhaoError);
@@ -698,17 +710,19 @@ class FechamentoService {
             // Buscar o valor individual do motorista para este frete específico
             let valorTotalIndividual = 0;
             
-            // Buscar o valor individual do motorista (uma entrada por motorista)
+            // CORREÇÃO: Buscar TODOS os valores individuais e somar (múltiplas configurações)
             if (fretesMotorista.length > 0 && fretesMotorista[0].caminhao_id) {
-              const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+              const { data: freteCaminhoes, error: freteCaminhaoError } = await supabase
                 .from('frete_caminhao')
-                .select('valor_frete')
+                .select('valor_frete, configuracao')
                 .eq('frete_id', freteId)
-                .eq('caminhao_id', fretesMotorista[0].caminhao_id)
-                .limit(1);
+                .eq('caminhao_id', fretesMotorista[0].caminhao_id);
 
-              if (!freteCaminhaoError && freteCaminhao && freteCaminhao.length > 0) {
-                valorTotalIndividual = parseFloat(freteCaminhao[0].valor_frete) || 0;
+              if (!freteCaminhaoError && freteCaminhoes && freteCaminhoes.length > 0) {
+                // SOMAR todos os valores das configurações
+                valorTotalIndividual = freteCaminhoes.reduce((sum, fc) => 
+                  sum + (parseFloat(fc.valor_frete) || 0), 0
+                );
               }
             }
             
