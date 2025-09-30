@@ -219,6 +219,56 @@ const ControleFrete: React.FC = () => {
         return;
       }
 
+      // VALIDAÇÃO CRÍTICA: Verificar se há motoristas duplicados no mesmo caminhão
+      const caminhoesPorMotorista = new Map<string, string[]>();
+      motoristasSelecionados.forEach(m => {
+        const motoristaNome = motoristas.find(mot => mot.id === parseInt(m.motorista_id))?.nome || m.motorista_id;
+        if (!caminhoesPorMotorista.has(m.caminhao_id)) {
+          caminhoesPorMotorista.set(m.caminhao_id, []);
+        }
+        caminhoesPorMotorista.get(m.caminhao_id)!.push(motoristaNome);
+      });
+
+      // Verificar se algum caminhão tem mais de 1 motorista
+      const caminhoesComMultiplosMotoristas: string[] = [];
+      caminhoesPorMotorista.forEach((motoristasNomes, caminhaoId) => {
+        if (motoristasNomes.length > 1) {
+          const caminhaoPlaca = caminhoes.find(c => c.id === parseInt(caminhaoId))?.placa || caminhaoId;
+          caminhoesComMultiplosMotoristas.push(
+            `${caminhaoPlaca}: ${motoristasNomes.join(', ')}`
+          );
+        }
+      });
+
+      if (caminhoesComMultiplosMotoristas.length > 0) {
+        alert(
+          `ERRO: Os seguintes caminhões têm mais de 1 motorista associado:\n\n` +
+          caminhoesComMultiplosMotoristas.join('\n') +
+          `\n\nRegra: 1 CAMINHÃO = 1 MOTORISTA ÚNICO!\n` +
+          `Corrija antes de salvar.`
+        );
+        return;
+      }
+
+      // VALIDAÇÃO CRÍTICA: Verificar se há caminhões sem motorista
+      const caminhoesComMotorista = new Set(motoristasSelecionados.map(m => m.caminhao_id));
+      const caminhoesSemMotorista = caminhoesSelecionados.filter(c => !caminhoesComMotorista.has(c.caminhao_id));
+      
+      if (caminhoesSemMotorista.length > 0) {
+        const placasSemMotorista = caminhoesSemMotorista.map(c => {
+          const caminhao = caminhoes.find(cam => cam.id === parseInt(c.caminhao_id));
+          return caminhao?.placa || c.caminhao_id;
+        });
+        
+        alert(
+          `ERRO: Os seguintes caminhões NÃO têm motorista associado:\n\n` +
+          placasSemMotorista.join(', ') +
+          `\n\nTodos os caminhões DEVEM ter um motorista!\n` +
+          `Corrija antes de salvar.`
+        );
+        return;
+      }
+
       if (!formData.valor_frete || parseFloat(formData.valor_frete) <= 0) {
         alert('Informe um valor de frete válido');
         return;
