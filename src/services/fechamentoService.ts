@@ -38,6 +38,7 @@ export interface FreteComComissao {
   valor_comissao: number;
   total_km?: number;
   pecuarista?: string;
+  configuracao?: string; // Adicionado: Truck, Julieta, etc
   caminhao?: {
     placa: string;
     tipo: string;
@@ -205,7 +206,8 @@ class FechamentoService {
       return dataA.localeCompare(dataB);
     });
 
-    // Calcular comissão por frete usando porcentagem personalizada
+    // CORREÇÃO: Calcular comissão por frete E por configuração
+    // Cada configuração (Truck, Julieta, etc) deve aparecer como linha separada no PDF
     const porcentagemComissao = this.calcularPorcentagemComissao(data.motorista);
     const fretesComComissao = [];
     
@@ -213,12 +215,9 @@ class FechamentoService {
       const frete = freteRelacao.frete;
       if (!frete) continue;
       
-      // Buscar valor individual do frete_caminhao separadamente
-      let valorIndividual = 0;
-      
       if (freteRelacao.caminhao_id) {
         try {
-          // CORREÇÃO: Buscar TODOS os registros para somar múltiplas configurações
+          // Buscar TODAS as configurações deste caminhão neste frete
           const { data: freteCaminhoes, error: freteCaminhaoError } = await supabase
             .from('frete_caminhao')
             .select('valor_frete, configuracao')
@@ -226,39 +225,54 @@ class FechamentoService {
             .eq('caminhao_id', freteRelacao.caminhao_id);
 
           if (!freteCaminhaoError && freteCaminhoes && freteCaminhoes.length > 0) {
-            // SOMAR todos os valores (ex: Truck R$ 500 + Julieta R$ 2.289 = R$ 2.789)
-            valorIndividual = freteCaminhoes.reduce((sum, fc) => 
-              sum + (parseFloat(fc.valor_frete) || 0), 0
-            );
-            
-            if (freteCaminhoes.length > 1) {
-              console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: ${freteCaminhoes.length} configurações encontradas, somando R$ ${valorIndividual}`);
-              freteCaminhoes.forEach(fc => {
-                console.log(`  - ${fc.configuracao}: R$ ${fc.valor_frete}`);
+            // CRIAR UMA LINHA PARA CADA CONFIGURAÇÃO
+            for (const freteCaminhao of freteCaminhoes) {
+              const valorIndividual = parseFloat(freteCaminhao.valor_frete) || 0;
+              
+              console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id} - ${freteCaminhao.configuracao}: R$ ${valorIndividual}`);
+              
+              fretesComComissao.push({
+                ...frete,
+                configuracao: freteCaminhao.configuracao, // Adicionar configuração
+                valor_frete: valorIndividual,
+                valor_individual_motorista: valorIndividual,
+                valor_comissao: valorIndividual * porcentagemComissao
               });
-            } else {
-              console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: valor individual encontrado R$ ${valorIndividual}`);
             }
           } else {
-            // Fallback para valor total do frete
-            valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
+            // Fallback: criar linha sem configuração específica
+            const valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
             console.log(`[FECHAMENTO DEBUG] Frete ${(frete as any).id}: usando valor total R$ ${valorIndividual} (frete_caminhao não encontrado)`);
+            
+            fretesComComissao.push({
+              ...frete,
+              valor_frete: valorIndividual,
+              valor_individual_motorista: valorIndividual,
+              valor_comissao: valorIndividual * porcentagemComissao
+            });
           }
         } catch (error) {
           console.warn(`Erro ao buscar valor individual do frete ${(frete as any).id}:`, error);
-          valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
+          const valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
+          
+          fretesComComissao.push({
+            ...frete,
+            valor_frete: valorIndividual,
+            valor_individual_motorista: valorIndividual,
+            valor_comissao: valorIndividual * porcentagemComissao
+          });
         }
       } else {
-        // Fallback para valor total do frete
-        valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
+        // Fallback: sem caminhão_id
+        const valorIndividual = parseFloat((frete as any).valor_frete.toString()) || 0;
+        
+        fretesComComissao.push({
+          ...frete,
+          valor_frete: valorIndividual,
+          valor_individual_motorista: valorIndividual,
+          valor_comissao: valorIndividual * porcentagemComissao
+        });
       }
-      
-      fretesComComissao.push({
-        ...frete,
-        valor_frete: valorIndividual,
-        valor_individual_motorista: valorIndividual,
-        valor_comissao: valorIndividual * porcentagemComissao
-      });
     }
 
     // Buscar abastecimentos se for motorista terceiro

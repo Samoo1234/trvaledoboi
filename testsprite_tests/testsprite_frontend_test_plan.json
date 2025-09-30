@@ -1,0 +1,170 @@
+{
+  "test_plan": {
+    "project_name": "sistema-logistica",
+    "project_type": "frontend",
+    "base_url": "http://localhost:3000",
+    "tests": [
+      {
+        "id": "test_001",
+        "name": "Login Page Load",
+        "description": "Verificar se a página de login carrega corretamente",
+        "type": "page_load",
+        "url": "/login",
+        "expected_elements": ["input[type='email']", "input[type='password']", "button[type='submit']"]
+      },
+      {
+        "id": "test_002", 
+        "name": "Login Functionality",
+        "description": "Testar funcionalidade de login com credenciais válidas",
+        "type": "form_interaction",
+        "url": "/login",
+        "actions": [
+          {"type": "fill", "selector": "input[type='email']", "value": "admin@test.com"},
+          {"type": "fill", "selector": "input[type='password']", "value": "123456"},
+          {"type": "click", "selector": "button[type='submit']"}
+        ],
+        "expected_result": "redirect_to_dashboard"
+      },
+      {
+        "id": "test_003",
+        "name": "Dashboard Load",
+        "description": "Verificar se o dashboard carrega após login",
+        "type": "page_load",
+        "url": "/",
+        "expected_elements": [".dashboard", ".stats-grid", ".stat-card"]
+      },
+      {
+        "id": "test_004",
+        "name": "Navigation Sidebar",
+        "description": "Verificar se a sidebar de navegação está funcionando",
+        "type": "element_interaction",
+        "url": "/",
+        "actions": [
+          {"type": "click", "selector": "a[href='/cadastro-caminhoes']"},
+          {"type": "wait", "time": 2}
+        ],
+        "expected_result": "navigate_to_caminhoes"
+      },
+      {
+        "id": "test_005",
+        "name": "Cadastro Caminhoes Page",
+        "description": "Verificar se a página de cadastro de caminhões carrega",
+        "type": "page_load",
+        "url": "/cadastro-caminhoes",
+        "expected_elements": ["form", "input[name='placa']", "input[name='modelo']", "button[type='submit']"]
+      },
+      {
+        "id": "test_006",
+        "name": "Cadastro Motoristas Page",
+        "description": "Verificar se a página de cadastro de motoristas carrega",
+        "type": "page_load",
+        "url": "/cadastro-motoristas",
+        "expected_elements": ["form", "input[name='nome']", "input[name='cpf']", "input[name='cnh']"]
+      },
+      {
+        "id": "test_007",
+        "name": "Controle Frete Page",
+        "description": "Verificar se a página de controle de fretes carrega",
+        "type": "page_load",
+        "url": "/controle-frete",
+        "expected_elements": [".fretes-container", "button[data-testid='add-frete']"]
+      },
+      {
+        "id": "test_008",
+        "name": "Controle Abastecimento Page",
+        "description": "Verificar se a página de controle de abastecimento carrega",
+        "type": "page_load",
+        "url": "/controle-abastecimento",
+        "expected_elements": [".abastecimento-container", "form"]
+      },
+      {
+        "id": "test_009",
+        "name": "Fechamento Motoristas Page",
+        "description": "Verificar se a página de fechamento de motoristas carrega",
+        "type": "page_load",
+        "url": "/fechamento-motoristas",
+        "expected_elements": [".fechamento-container", "form"]
+      },
+      {
+        "id": "test_010",
+        "name": "Manutencao Caminhoes Page",
+        "description": "Verificar se a página de manutenção de caminhões carrega",
+        "type": "page_load",
+        "url": "/manutencao-caminhoes",
+        "expected_elements": [".manutencao-container", "form"]
+      },
+      {
+        "id": "test_011",
+        "name": "Capa Transporte Page",
+        "description": "Verificar se a página de capa de transporte carrega",
+        "type": "page_load",
+        "url": "/capa-transporte",
+        "expected_elements": [".capa-container", "form"]
+      },
+      {
+        "id": "test_012",
+        "name": "Gestao Vales Page",
+        "description": "Verificar se a página de gestão de vales carrega",
+        "type": "page_load",
+        "url": "/gestao-vales",
+        "expected_elements": [".vales-container", "form"]
+      },
+      {
+        "id": "test_013",
+        "name": "Cadastro Fornecedores Page",
+        "description": "Verificar se a página de cadastro de fornecedores carrega",
+        "type": "page_load",
+        "url": "/cadastro-fornecedores",
+        "expected_elements": [".fornecedores-container", "form"]
+      },
+      {
+        "id": "test_014",
+        "name": "Historico Page",
+        "description": "Verificar se a página de histórico carrega",
+        "type": "page_load",
+        "url": "/historico",
+        "expected_elements": [".historico-container", ".filtros"]
+      },
+      {
+        "id": "test_015",
+        "name": "Gerenciar Usuarios Page",
+        "description": "Verificar se a página de gerenciar usuários carrega (apenas admin)",
+        "type": "page_load",
+        "url": "/gerenciar-usuarios",
+        "expected_elements": [".usuarios-container", "form"]
+      },
+      {
+        "id": "test_016",
+        "name": "Responsive Design",
+        "description": "Verificar se o design é responsivo em diferentes tamanhos de tela",
+        "type": "responsive_test",
+        "url": "/",
+        "viewport_sizes": ["1920x1080", "1366x768", "768x1024", "375x667"],
+        "expected_elements": [".dashboard", ".sidebar"]
+      },
+      {
+        "id": "test_017",
+        "name": "Form Validation",
+        "description": "Testar validação de formulários",
+        "type": "form_validation",
+        "url": "/cadastro-caminhoes",
+        "actions": [
+          {"type": "click", "selector": "button[type='submit']"}
+        ],
+        "expected_result": "validation_errors"
+      },
+      {
+        "id": "test_018",
+        "name": "Logout Functionality",
+        "description": "Testar funcionalidade de logout",
+        "type": "element_interaction",
+        "url": "/",
+        "actions": [
+          {"type": "click", "selector": "button[data-testid='logout']"}
+        ],
+        "expected_result": "redirect_to_login"
+      }
+    ]
+  }
+}
+

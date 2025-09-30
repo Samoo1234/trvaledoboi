@@ -1,0 +1,134 @@
+{
+  "product_name": "Sistema de Logística e Gestão de Transportes",
+  "product_type": "web_application",
+  "tech_stack": ["React", "TypeScript", "Supabase", "PostgreSQL"],
+  "main_features": [
+    {
+      "name": "Authentication System",
+      "description": "Sistema de autenticação com login, controle de sessão e autorização baseada em perfis",
+      "pages": ["/login"],
+      "components": ["Login", "AuthContext", "ProtectedRoute"]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Dashboard principal com estatísticas em tempo real e atividades recentes",
+      "pages": ["/"],
+      "components": ["Dashboard", "StatsGrid", "RecentActivities"]
+    },
+    {
+      "name": "Fleet Management",
+      "description": "Gestão completa da frota incluindo cadastro de caminhões e reboques",
+      "pages": ["/cadastro-caminhoes", "/cadastro-reboques"],
+      "components": ["CadastroCaminhoes", "CadastroReboques"]
+    },
+    {
+      "name": "Driver Management",
+      "description": "Gestão de motoristas próprios e terceiros",
+      "pages": ["/cadastro-motoristas"],
+      "components": ["CadastroMotoristas"]
+    },
+    {
+      "name": "Client Management",
+      "description": "Cadastro e gestão de clientes",
+      "pages": ["/cadastro-clientes"],
+      "components": ["CadastroClientes"]
+    },
+    {
+      "name": "Freight Control",
+      "description": "Controle completo de fretes com múltiplos caminhões/motoristas",
+      "pages": ["/controle-frete"],
+      "components": ["ControleFrete"]
+    },
+    {
+      "name": "Fuel Management",
+      "description": "Controle de abastecimento com relatórios de consumo",
+      "pages": ["/controle-abastecimento"],
+      "components": ["ControleAbastecimento"]
+    },
+    {
+      "name": "Driver Settlement",
+      "description": "Fechamento automático de motoristas com cálculos de comissões",
+      "pages": ["/fechamento-motoristas"],
+      "components": ["FechamentoMotoristas"]
+    },
+    {
+      "name": "Maintenance Management",
+      "description": "Controle de manutenções de caminhões",
+      "pages": ["/manutencao-caminhoes"],
+      "components": ["ManutencaoCaminhoes"]
+    },
+    {
+      "name": "Transport Cover",
+      "description": "Geração de capas de transporte padronizadas",
+      "pages": ["/capa-transporte"],
+      "components": ["CapaTransporte"]
+    },
+    {
+      "name": "Voucher Management",
+      "description": "Gestão de vales para motoristas",
+      "pages": ["/gestao-vales"],
+      "components": ["GestaoVales"]
+    },
+    {
+      "name": "Supplier Management",
+      "description": "Cadastro e gestão de fornecedores",
+      "pages": ["/cadastro-fornecedores"],
+      "components": ["CadastroFornecedores"]
+    },
+    {
+      "name": "User Management",
+      "description": "Gerenciamento de usuários do sistema",
+      "pages": ["/gerenciar-usuarios"],
+      "components": ["GerenciarUsuarios"]
+    },
+    {
+      "name": "History and Archiving",
+      "description": "Sistema de histórico com arquivamento",
+      "pages": ["/historico"],
+      "components": ["Historico"]
+    }
+  ],
+  "user_roles": [
+    {
+      "name": "Admin",
+      "permissions": ["all"]
+    },
+    {
+      "name": "Operador",
+      "permissions": ["read", "create", "update"]
+    }
+  ],
+  "test_scenarios": [
+    {
+      "name": "User Authentication",
+      "description": "Testar login, logout e controle de acesso",
+      "priority": "high"
+    },
+    {
+      "name": "Dashboard Functionality",
+      "description": "Verificar carregamento e exibição de estatísticas",
+      "priority": "high"
+    },
+    {
+      "name": "CRUD Operations",
+      "description": "Testar operações de criação, leitura, atualização e exclusão",
+      "priority": "high"
+    },
+    {
+      "name": "Form Validation",
+      "description": "Verificar validação de formulários",
+      "priority": "medium"
+    },
+    {
+      "name": "Navigation",
+      "description": "Testar navegação entre páginas",
+      "priority": "medium"
+    },
+    {
+      "name": "Responsive Design",
+      "description": "Verificar responsividade em diferentes dispositivos",
+      "priority": "medium"
+    }
+  ]
+}
+

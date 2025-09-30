@@ -13,6 +13,7 @@ interface FreteParaPDF {
   valor_individual_motorista?: number;
   total_km?: number;
   pecuarista?: string;
+  configuracao?: string; // Adicionado: Truck, Julieta, etc
   caminhao?: {
     placa: string;
     tipo: string;
@@ -70,12 +71,12 @@ export class PDFService {
   }
 
   private drawFretesTableLikeAcerto(doc: jsPDF, startY: number, fretes: FreteParaPDF[], pageHeight: number): number {
-    const headers = ['Data', 'Cliente', 'Origem', 'Destino', 'KM', 'Valor'];
-    const colWidths = [22, 35, 40, 40, 17, 34]; // Total: 188mm - 6 colunas redistribuídas
+    const headers = ['Data', 'Cliente', 'Origem', 'Destino', 'Config', 'KM', 'Valor'];
+    const colWidths = [20, 30, 35, 35, 20, 15, 33]; // Total: 188mm - 7 colunas com Config
     const totalWidth = colWidths.reduce((a, b) => a + b, 0);
     const pageWidth = 210; // Largura do papel A4
     const startX = (pageWidth - totalWidth) / 2; // Centralizar na página = 11mm
-    console.log(`[PDF DEBUG] Nova tabela de fretes: 6 colunas [Data|Cliente|Origem|Destino|KM|Valor]`);
+    console.log(`[PDF DEBUG] Nova tabela de fretes: 7 colunas [Data|Cliente|Origem|Destino|Config|KM|Valor]`);
     console.log(`[PDF DEBUG] Centralizando tabela: startX=${startX}, totalWidth=${totalWidth}`);
     let currentY = startY;
     
@@ -132,13 +133,14 @@ export class PDFService {
         valorIndividualFrete = frete.valor_frete;
       }
       
-      console.log(`[PDF DEBUG] Frete ${frete.id}: valor individual R$ ${valorIndividualFrete} (valor total: R$ ${frete.valor_frete})`);
+      console.log(`[PDF DEBUG] Frete ${frete.id} ${frete.configuracao ? `(${frete.configuracao})` : ''}: valor individual R$ ${valorIndividualFrete} (valor total: R$ ${frete.valor_frete})`);
       
       const rowData = [
         this.formatDate(frete.data_emissao).substring(0, 5), // Apenas DD/MM
-        frete.pecuarista && frete.pecuarista.length > 20 ? frete.pecuarista.substring(0, 20) + '...' : frete.pecuarista || 'N/A', // Cliente
-        frete.origem.length > 22 ? frete.origem.substring(0, 22) + '...' : frete.origem,
-        frete.destino.length > 22 ? frete.destino.substring(0, 22) + '...' : frete.destino,
+        frete.pecuarista && frete.pecuarista.length > 18 ? frete.pecuarista.substring(0, 18) + '...' : frete.pecuarista || 'N/A', // Cliente
+        frete.origem.length > 20 ? frete.origem.substring(0, 20) + '...' : frete.origem,
+        frete.destino.length > 20 ? frete.destino.substring(0, 20) + '...' : frete.destino,
+        frete.configuracao || '-', // Configuração (Truck, Julieta, etc)
         frete.total_km ? frete.total_km.toString() : '-',
         this.formatCurrency(valorIndividualFrete)
       ];
