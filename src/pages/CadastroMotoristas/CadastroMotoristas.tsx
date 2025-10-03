@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, User } from 'lucide-react';
+import { Plus, Edit, Trash2, User, FileText } from 'lucide-react';
 import { motoristaService, Motorista } from '../../services/motoristaService';
+import jsPDF from 'jspdf';
 import './CadastroMotoristas.css';
 
 const CadastroMotoristas: React.FC = () => {
@@ -224,6 +225,98 @@ const CadastroMotoristas: React.FC = () => {
     return telefone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
   };
 
+  const generatePDFReport = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    
+    // Configurações
+    const margin = 20;
+    const lineHeight = 7;
+    let yPosition = margin;
+    
+    // Cabeçalho do relatório
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Relatório de Motoristas', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+    
+    // Data de geração
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Gerado em: ${dataAtual}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+    
+    // Cabeçalho da tabela
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    
+    const colWidths = [60, 40, 40, 40]; // Larguras das colunas
+    const headers = ['Nome', 'CPF', 'Telefone', 'Tipo'];
+    
+    // Desenhar cabeçalho da tabela
+    let xPosition = margin;
+    headers.forEach((header, index) => {
+      doc.rect(xPosition, yPosition - 5, colWidths[index], lineHeight + 2);
+      doc.text(header, xPosition + 2, yPosition);
+      xPosition += colWidths[index];
+    });
+    yPosition += lineHeight + 2;
+    
+    // Dados dos motoristas
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    
+    motoristas.forEach((motorista, index) => {
+      // Verificar se precisa de nova página
+      if (yPosition > pageHeight - 30) {
+        doc.addPage();
+        yPosition = margin;
+        
+        // Redesenhar cabeçalho da tabela
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        xPosition = margin;
+        headers.forEach((header, headerIndex) => {
+          doc.rect(xPosition, yPosition - 5, colWidths[headerIndex], lineHeight + 2);
+          doc.text(header, xPosition + 2, yPosition);
+          xPosition += colWidths[headerIndex];
+        });
+        yPosition += lineHeight + 2;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+      }
+      
+      // Dados da linha
+      xPosition = margin;
+      const dados = [
+        motorista.nome,
+        formatCpfDisplay(motorista.cpf),
+        formatTelefoneDisplay(motorista.telefone),
+        motorista.tipo_motorista
+      ];
+      
+      dados.forEach((dado, colIndex) => {
+        doc.rect(xPosition, yPosition - 5, colWidths[colIndex], lineHeight + 2);
+        doc.text(dado, xPosition + 2, yPosition);
+        xPosition += colWidths[colIndex];
+      });
+      
+      yPosition += lineHeight + 2;
+    });
+    
+    // Rodapé com total
+    yPosition += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(`Total de motoristas: ${motoristas.length}`, margin, yPosition);
+    
+    // Salvar o PDF
+    const fileName = `relatorio_motoristas_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   if (loading) {
     return (
       <div className="cadastro-motoristas">
@@ -241,13 +334,24 @@ const CadastroMotoristas: React.FC = () => {
     <div className="cadastro-motoristas">
       <div className="page-header">
         <h1>Cadastro de Motoristas</h1>
-        <button 
-          className="btn-primary"
-          onClick={() => setShowForm(true)}
-        >
-          <Plus size={20} />
-          Novo Motorista
-        </button>
+        <div className="header-actions">
+          <button 
+            className="btn-secondary"
+            onClick={generatePDFReport}
+            disabled={motoristas.length === 0}
+            title="Gerar relatório em PDF"
+          >
+            <FileText size={20} />
+            Relatório PDF
+          </button>
+          <button 
+            className="btn-primary"
+            onClick={() => setShowForm(true)}
+          >
+            <Plus size={20} />
+            Novo Motorista
+          </button>
+        </div>
       </div>
 
       {showForm && (

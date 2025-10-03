@@ -16,6 +16,12 @@
   margin: 0;
 }
 
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
 /* Botões elegantes - padrão do sistema */
 .form-actions {
   display: flex;
