@@ -36,6 +36,10 @@ const Historico: React.FC = () => {
   const [motoristas, setMotoristas] = useState<Motorista[]>([]);
   const [mostrandoFiltros, setMostrandoFiltros] = useState(false);
   const [filtrosAtivos, setFiltrosAtivos] = useState(false);
+  
+  // Estados para visualização de detalhes
+  const [freteDetalhes, setFreteDetalhes] = useState<Frete | null>(null);
+  const [fechamentoDetalhes, setFechamentoDetalhes] = useState<FechamentoMotorista | null>(null);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -465,14 +469,14 @@ const Historico: React.FC = () => {
                             <button
                               className="view-btn"
                               title="Visualizar detalhes"
-                              onClick={() => {/* TODO: Implementar visualização */}}
+                              onClick={() => setFreteDetalhes(frete)}
                             >
                               <Eye size={16} />
                             </button>
                             <button
                               className="reopen-btn"
                               title="Reabrir para correção"
-                              onClick={() => reabrirFrete(frete.frete_id!)}
+                              onClick={() => reabrirFrete(frete.id!)}
                             >
                               <RotateCcw size={16} />
                             </button>
@@ -531,21 +535,21 @@ const Historico: React.FC = () => {
                             <button
                               className="view-btn"
                               title="Visualizar detalhes"
-                              onClick={() => {/* TODO: Implementar visualização */}}
+                              onClick={() => setFechamentoDetalhes(fechamento)}
                             >
                               <Eye size={16} />
                             </button>
                             <button
                               className="pdf-btn"
                               title="Gerar PDF"
-                              onClick={() => {/* TODO: Implementar PDF */}}
+                              onClick={() => alert('Funcionalidade de PDF em desenvolvimento')}
                             >
                               <FileText size={16} />
                             </button>
                             <button
                               className="reopen-btn"
                               title="Reabrir para correção"
-                              onClick={() => reabrirFechamento(fechamento.fechamento_id!)}
+                              onClick={() => reabrirFechamento(fechamento.id!)}
                             >
                               <RotateCcw size={16} />
                             </button>
@@ -560,6 +564,217 @@ const Historico: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de Detalhes do Frete */}
+      {freteDetalhes && (
+        <div className="modal-overlay" onClick={() => setFreteDetalhes(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>📦 Detalhes do Frete Arquivado</h2>
+              <button className="modal-close" onClick={() => setFreteDetalhes(null)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="detalhes-grid">
+                <div className="detalhe-item">
+                  <label>Data de Emissão:</label>
+                  <span>{formatDisplayDate(freteDetalhes.data_emissao)}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Número Minuta:</label>
+                  <span>{freteDetalhes.numero_minuta || '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Número CB:</label>
+                  <span>{freteDetalhes.numero_cb || '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Pecuarista:</label>
+                  <span>{freteDetalhes.pecuarista || '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Cliente:</label>
+                  <span>{freteDetalhes.cliente || '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Origem:</label>
+                  <span>{freteDetalhes.origem}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Destino:</label>
+                  <span>{freteDetalhes.destino}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Faixa:</label>
+                  <span>{freteDetalhes.faixa || '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Total KM:</label>
+                  <span>{freteDetalhes.total_km ? `${freteDetalhes.total_km} km` : '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Valor do Frete:</label>
+                  <span className="valor-destaque">{formatCurrency(freteDetalhes.valor_frete)}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Situação:</label>
+                  <span className={`badge ${freteDetalhes.situacao?.toLowerCase()}`}>
+                    {freteDetalhes.situacao}
+                  </span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Tipo de Pagamento:</label>
+                  <span>{freteDetalhes.tipo_pagamento || '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Data de Pagamento:</label>
+                  <span>{freteDetalhes.data_pagamento ? formatDisplayDate(freteDetalhes.data_pagamento) : '-'}</span>
+                </div>
+                
+                <div className="detalhe-item full-width">
+                  <label>Observações:</label>
+                  <span>{freteDetalhes.observacoes || 'Sem observações'}</span>
+                </div>
+                
+                {freteDetalhes.arquivado_em && (
+                  <div className="detalhe-item">
+                    <label>Arquivado em:</label>
+                    <span>{new Date(freteDetalhes.arquivado_em).toLocaleString('pt-BR')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setFreteDetalhes(null)}>
+                Fechar
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  reabrirFrete(freteDetalhes.id!);
+                  setFreteDetalhes(null);
+                }}
+              >
+                <RotateCcw size={16} />
+                Reabrir Frete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes do Fechamento */}
+      {fechamentoDetalhes && (
+        <div className="modal-overlay" onClick={() => setFechamentoDetalhes(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>💰 Detalhes do Fechamento Arquivado</h2>
+              <button className="modal-close" onClick={() => setFechamentoDetalhes(null)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="detalhes-grid">
+                <div className="detalhe-item">
+                  <label>Motorista:</label>
+                  <span>{motoristas.find(m => m.id === fechamentoDetalhes.motorista_id)?.nome || '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Período:</label>
+                  <span>{fechamentoDetalhes.periodo}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Data do Fechamento:</label>
+                  <span>{fechamentoDetalhes.data_fechamento ? formatDisplayDate(fechamentoDetalhes.data_fechamento) : '-'}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Total de Fretes:</label>
+                  <span className="valor-destaque">{fechamentoDetalhes.total_fretes}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Valor Bruto:</label>
+                  <span className="valor-destaque">{formatCurrency(fechamentoDetalhes.valor_bruto)}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Comissão:</label>
+                  <span>{formatCurrency(fechamentoDetalhes.valor_comissao)}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Descontos:</label>
+                  <span className="valor-negativo">{formatCurrency(fechamentoDetalhes.descontos || 0)}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Bônus:</label>
+                  <span className="valor-positivo">{formatCurrency(fechamentoDetalhes.bonus || 0)}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Valor Líquido:</label>
+                  <span className="valor-destaque">{formatCurrency(fechamentoDetalhes.valor_liquido)}</span>
+                </div>
+                
+                <div className="detalhe-item">
+                  <label>Status:</label>
+                  <span className={`badge ${fechamentoDetalhes.status?.toLowerCase()}`}>
+                    {fechamentoDetalhes.status}
+                  </span>
+                </div>
+                
+                <div className="detalhe-item full-width">
+                  <label>Observações:</label>
+                  <span>{fechamentoDetalhes.observacoes || 'Sem observações'}</span>
+                </div>
+                
+                {fechamentoDetalhes.arquivado_em && (
+                  <div className="detalhe-item">
+                    <label>Arquivado em:</label>
+                    <span>{new Date(fechamentoDetalhes.arquivado_em).toLocaleString('pt-BR')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setFechamentoDetalhes(null)}>
+                Fechar
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  reabrirFechamento(fechamentoDetalhes.id!);
+                  setFechamentoDetalhes(null);
+                }}
+              >
+                <RotateCcw size={16} />
+                Reabrir Fechamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
