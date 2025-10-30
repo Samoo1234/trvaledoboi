@@ -8,6 +8,7 @@ import { freteCaminhaoService } from '../../services/freteCaminhaoService';
 import { freteMotoristaService } from '../../services/freteMotoristaService';
 import { formatDisplayDate } from '../../services/dateUtils';
 import { reboqueService, Reboque } from '../../services/reboqueService';
+import { arquivamentoAutomaticoService } from '../../services/arquivamentoAutomaticoService';
 import './ControleFrete.css';
 
 type CaminhaoSelecionado = {
@@ -75,6 +76,33 @@ const ControleFrete: React.FC = () => {
     loadData();
     setupScrollIndicators();
     loadReboques();
+  }, []);
+
+  // Executar arquivamento automático em background
+  useEffect(() => {
+    const executarArquivamentoAutomatico = async () => {
+      try {
+        const resultado = await arquivamentoAutomaticoService.verificarEExecutar();
+        
+        if (resultado.executado && resultado.quantidade > 0) {
+          // Mostrar notificação ao usuário
+          alert(`✅ Arquivamento automático executado!\n\n${resultado.quantidade} fretes antigos foram arquivados automaticamente.`);
+          
+          // Recarregar dados para atualizar a lista
+          loadData();
+        }
+      } catch (error) {
+        console.error('❌ Erro no arquivamento automático:', error);
+        // Não mostrar erro ao usuário para não atrapalhar a experiência
+      }
+    };
+
+    // Executar após 2 segundos (para não interferir no carregamento inicial)
+    const timer = setTimeout(() => {
+      executarArquivamentoAutomatico();
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const setupScrollIndicators = () => {
@@ -165,6 +193,35 @@ const ControleFrete: React.FC = () => {
     setMotoristasSelecionados([]);
     setEditingId(null);
     setShowForm(false);
+  };
+
+  // Função para gerenciar arquivamento automático
+  const handleGerenciarArquivamento = async () => {
+    const ultimo = arquivamentoAutomaticoService.getUltimoArquivamento();
+    
+    const mensagem = ultimo 
+      ? `📊 Último Arquivamento Automático:\n\n` +
+        `📅 Data: ${new Date(ultimo.data).toLocaleString('pt-BR')}\n` +
+        `📦 Período: ${ultimo.periodo}\n` +
+        `📁 Fretes arquivados: ${ultimo.quantidade}\n\n` +
+        `Deseja forçar o arquivamento agora?`
+      : `📊 Arquivamento Automático\n\n` +
+        `Nenhum arquivamento foi executado ainda.\n\n` +
+        `Deseja executar o arquivamento agora?`;
+
+    if (window.confirm(mensagem)) {
+      try {
+        setLoading(true);
+        const quantidade = await arquivamentoAutomaticoService.forcarArquivamento();
+        alert(`✅ Arquivamento concluído!\n\n${quantidade} fretes foram arquivados.`);
+        loadData(); // Recarregar dados
+      } catch (error) {
+        console.error('Erro ao arquivar:', error);
+        alert('❌ Erro ao executar arquivamento. Verifique o console para detalhes.');
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleEdit = async (frete: Frete) => {
@@ -915,6 +972,14 @@ const ControleFrete: React.FC = () => {
       <div className="page-header">
         <h1>Controle de Fretes</h1>
         <div className="header-actions">
+          <button 
+            className="btn-secondary"
+            onClick={handleGerenciarArquivamento}
+            title="Gerenciar arquivamento automático de fretes"
+          >
+            <Archive size={20} />
+            Arquivamento
+          </button>
           <button 
             className="btn-primary"
             onClick={() => setShowForm(true)}

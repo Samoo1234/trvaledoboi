@@ -19,8 +19,9 @@ export interface Frete {
   data_pagamento?: string | null;
   created_at?: string;
   updated_at?: string;
-  arquivado_em?: string; // Timestamp de arquivamento (usado na tabela de histórico)
-  arquivado_por?: string; // Usuário que arquivou (usado na tabela de histórico)
+  arquivado?: boolean; // Indica se o frete está arquivado
+  arquivado_em?: string; // Timestamp de arquivamento
+  arquivado_por?: string; // Usuário que arquivou
   // Dados relacionados (joins)
   caminhao?: {
     placa: string;
@@ -35,7 +36,7 @@ export interface Frete {
 }
 
 export const freteService = {
-  // Buscar todos os fretes com dados relacionados (apenas ativos)
+  // Buscar todos os fretes com dados relacionados (apenas ativos, não arquivados)
   async getAll(): Promise<Frete[]> {
     const { data, error } = await supabase
       .from('fretes')
@@ -48,6 +49,7 @@ export const freteService = {
           caminhoes(placa, tipo)
         )
       `)
+      .or('arquivado.is.null,arquivado.eq.false') // Buscar apenas não arquivados
       .order('data_emissao', { ascending: true });
     
     if (error) {
@@ -211,8 +213,9 @@ export const freteService = {
     buscarTexto?: string;
   }): Promise<Frete[]> {
     let query = supabase
-      .from('fretes_historico')
-      .select('*');
+      .from('fretes')
+      .select('*')
+      .eq('arquivado', true); // Buscar apenas fretes arquivados
 
     // Aplicar filtros
     if (filtros.dataInicio) {
@@ -234,7 +237,7 @@ export const freteService = {
       query = query.or(`numero_minuta.ilike.%${filtros.buscarTexto}%,numero_cb.ilike.%${filtros.buscarTexto}%,origem.ilike.%${filtros.buscarTexto}%,destino.ilike.%${filtros.buscarTexto}%`);
     }
 
-    const { data, error } = await query.order('data_emissao', { ascending: false });
+    const { data, error } = await query.order('arquivado_em', { ascending: false });
 
     if (error) {
       throw new Error(error.message);
@@ -243,90 +246,35 @@ export const freteService = {
     return data || [];
   },
 
-  // Arquivar um frete (mover para tabela de histórico)
+  // Arquivar um frete (marcar como arquivado, NÃO deletar)
   async arquivar(id: number): Promise<void> {
-    // Buscar o frete original
-    const { data: frete, error: fetchError } = await supabase
+    const { error } = await supabase
       .from('fretes')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) {
-      throw new Error(fetchError.message);
-    }
-
-    // Criar objeto para histórico sem o campo id original
-    const { id: originalId, ...freteParaHistorico } = frete;
-    
-    // Inserir na tabela de histórico
-    const { error: insertError } = await supabase
-      .from('fretes_historico')
-      .insert([{
-        ...freteParaHistorico,
-        frete_id: originalId,
-        arquivado_em: new Date().toISOString()
-      }]);
-
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
-
-    // Remover da tabela original
-    const { error: deleteError } = await supabase
-      .from('fretes')
-      .delete()
+      .update({
+        arquivado: true,
+        arquivado_em: new Date().toISOString(),
+        arquivado_por: null // Pode adicionar lógica de usuário aqui
+      })
       .eq('id', id);
 
-    if (deleteError) {
-      throw new Error(deleteError.message);
+    if (error) {
+      throw new Error(error.message);
     }
   },
 
-  // Reabrir um frete arquivado (mover de volta para tabela ativa)
+  // Reabrir um frete arquivado (desmarcar como arquivado)
   async reabrir(freteId: number): Promise<void> {
-    // Buscar o frete no histórico
-    const { data: freteHistorico, error: fetchError } = await supabase
-      .from('fretes_historico')
-      .select('*')
-      .eq('frete_id', freteId)
-      .order('arquivado_em', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (fetchError) {
-      throw new Error(fetchError.message);
-    }
-
-    // Remover campos específicos do histórico que não existem na tabela ativa
-    const { 
-      id: historicoId, 
-      frete_id, 
-      arquivado_em, 
-      arquivado_por, 
-      ...freteParaAtiva 
-    } = freteHistorico;
-
-    // Inserir de volta na tabela ativa com o ID original
-    const { error: insertError } = await supabase
+    const { error } = await supabase
       .from('fretes')
-      .insert([{
-        ...freteParaAtiva,
-        id: frete_id // Usar o ID original do frete
-      }]);
+      .update({
+        arquivado: false,
+        arquivado_em: null,
+        arquivado_por: null
+      })
+      .eq('id', freteId);
 
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
-
-    // Remover do histórico
-    const { error: deleteError } = await supabase
-      .from('fretes_historico')
-      .delete()
-      .eq('frete_id', freteId);
-
-    if (deleteError) {
-      throw new Error(deleteError.message);
+    if (error) {
+      throw new Error(error.message);
     }
   }
 }; 
