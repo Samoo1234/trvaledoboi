@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Truck, Filter, Calendar, FileText, Download, Archive, User, Snowflake } from 'lucide-react';
+import { Plus, Edit, Trash2, Truck, Filter, Calendar, FileText, Download, Archive, User } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 import { freteService, Frete } from '../../services/freteService';
 import { caminhaoService, Caminhao } from '../../services/caminhaoService';
@@ -37,7 +37,7 @@ const ControleFrete: React.FC = () => {
   const [filtroCliente, setFiltroCliente] = useState<string>('');
   
   // Estados para relatório de acerto
-  const [activeTab, setActiveTab] = useState<'fretes' | 'frigorifico' | 'acerto'>('fretes');
+  const [activeTab, setActiveTab] = useState<'fretes' | 'acerto'>('fretes');
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
   const [dataInicioAcerto, setDataInicioAcerto] = useState<string>('');
   const [dataFimAcerto, setDataFimAcerto] = useState<string>('');
@@ -532,16 +532,6 @@ const ControleFrete: React.FC = () => {
 
   // Aplicar filtros (simplificados)
   const fretesFiltrados = fretes.filter(frete => {
-    // FILTRO POR ABA: Excluir FRIGORÍFICO da aba "Fretes"
-    if (activeTab === 'fretes' && frete.situacao?.toUpperCase() === 'FRIGORÍFICO') {
-      return false;
-    }
-
-    // FILTRO POR ABA: Mostrar APENAS FRIGORÍFICO na aba "Frigorífico"
-    if (activeTab === 'frigorifico' && frete.situacao?.toUpperCase() !== 'FRIGORÍFICO') {
-      return false;
-    }
-
     if (filtroSituacao && frete.situacao !== filtroSituacao) {
       return false;
     }
@@ -553,7 +543,7 @@ const ControleFrete: React.FC = () => {
         const dataInicio = new Date(filtroDataInicio);
         if (dataFrete < dataInicio) return false;
       }
-
+      
       if (filtroDataFim) {
         const dataFim = new Date(filtroDataFim);
         if (dataFrete > dataFim) return false;
@@ -1011,13 +1001,6 @@ const ControleFrete: React.FC = () => {
             Controle de Fretes
           </button>
           <button 
-            className={`tab ${activeTab === 'frigorifico' ? 'active' : ''}`}
-            onClick={() => setActiveTab('frigorifico')}
-          >
-            <Snowflake size={16} />
-            Frigorífico
-          </button>
-          <button 
             className={`tab ${activeTab === 'acerto' ? 'active' : ''}`}
             onClick={() => setActiveTab('acerto')}
           >
@@ -1027,7 +1010,7 @@ const ControleFrete: React.FC = () => {
         </div>
       </div>
 
-      {(activeTab === 'fretes' || activeTab === 'frigorifico') && (
+      {activeTab === 'fretes' && (
         <>
           {/* Seção de Filtros */}
           <div className="filtros-container">
