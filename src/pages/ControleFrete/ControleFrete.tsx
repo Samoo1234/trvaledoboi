@@ -566,6 +566,244 @@ const ControleFrete: React.FC = () => {
     }));
   };
 
+  // Função para gerar PDF do Controle de Fretes
+  const gerarPDFControleFrentes = async () => {
+    if (fretesFiltrados.length === 0) {
+      alert('Nenhum frete para gerar o relatório');
+      return;
+    }
+
+    try {
+      const jsPDF = (await import('jspdf')).default;
+      const doc = new jsPDF('landscape', 'mm', 'a4');
+      const pageWidth = 297; // A4 paisagem
+      const pageHeight = 210;
+      
+      // Função para adicionar logo
+      const addLogo = async (x: number, y: number, width: number, height: number): Promise<void> => {
+        try {
+          const response = await fetch('/assets/images/logo.png');
+          if (response.ok) {
+            const blob = await response.blob();
+            const reader = new FileReader();
+            
+            return new Promise((resolve) => {
+              reader.onload = function(e) {
+                if (e.target?.result) {
+                  try {
+                    doc.addImage(e.target.result as string, 'PNG', x, y, width, height);
+                  } catch (error) {
+                    console.log('Erro ao adicionar logo no PDF:', error);
+                  }
+                }
+                resolve();
+              };
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch (error) {
+          console.log('Logo não encontrada, continuando sem logo:', error);
+        }
+      };
+
+      // Configurar fonte
+      doc.setFont('helvetica');
+      
+      // Adicionar logo
+      await addLogo(15, 8, 25, 25);
+      
+      // Cabeçalho da empresa
+      doc.setFontSize(18);
+      doc.setTextColor(139, 0, 0);
+      doc.text('VALE DO BOI', pageWidth / 2, 15, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(139, 0, 0);
+      doc.text('Transporte de Bovinos', pageWidth / 2, 22, { align: 'center' });
+      
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Relatório de Controle de Fretes', pageWidth / 2, 30, { align: 'center' });
+      
+      // Linha separadora
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(139, 0, 0);
+      doc.line(15, 35, pageWidth - 15, 35);
+      
+      // Informações do relatório
+      let yPos = 42;
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      
+      let infoText = `Data do Relatório: ${new Date().toLocaleDateString('pt-BR')}  |  `;
+      infoText += `Total de Fretes: ${fretesFiltrados.length}  |  `;
+      
+      if (filtroDataInicio && filtroDataFim) {
+        infoText += `Período: ${formatDisplayDate(filtroDataInicio)} a ${formatDisplayDate(filtroDataFim)}`;
+      } else if (filtroDataInicio) {
+        infoText += `A partir de: ${formatDisplayDate(filtroDataInicio)}`;
+      } else if (filtroDataFim) {
+        infoText += `Até: ${formatDisplayDate(filtroDataFim)}`;
+      }
+      
+      doc.text(infoText, pageWidth / 2, yPos, { align: 'center' });
+      
+      if (filtroCliente) {
+        yPos += 5;
+        doc.text(`Cliente: ${filtroCliente}`, pageWidth / 2, yPos, { align: 'center' });
+      }
+      
+      if (filtroSituacao) {
+        yPos += 5;
+        doc.text(`Situação: ${filtroSituacao}`, pageWidth / 2, yPos, { align: 'center' });
+      }
+      
+      // Função para desenhar tabela de fretes (mesmo padrão do relatório de acerto)
+      const drawFretesTable = (startY: number) => {
+        const headers = ['Sit.', 'Data', 'Min.', 'CB', 'Pecuarista', 'Cliente', 'Origem', 'Destino', 'Motorista', 'Caminhão', 'Conf.', 'Valor', 'T.Pag', 'D.Pag', 'Faixa', 'KM'];
+        const colWidths = [15, 18, 14, 12, 22, 22, 20, 20, 22, 18, 16, 20, 15, 18, 13, 12];
+        const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+        const startX = (pageWidth - totalWidth) / 2; // Centralizar
+        const rowHeight = 8;
+        let currentY = startY;
+        let pageNum = 1;
+        
+        // Função para desenhar cabeçalho
+        const drawHeader = () => {
+          doc.setFillColor(139, 0, 0);
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'bold');
+          
+          let currentX = startX;
+          headers.forEach((header, i) => {
+            // Preencher célula
+            doc.setFillColor(139, 0, 0);
+            doc.rect(currentX, currentY, colWidths[i], rowHeight, 'F');
+            
+            // Texto
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text(header, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+            currentX += colWidths[i];
+          });
+          
+          currentY += rowHeight;
+        };
+        
+        // Desenhar cabeçalho inicial
+        drawHeader();
+        
+        // Linhas de dados
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        
+        fretesFiltrados.forEach((frete, index) => {
+          // Verificar quebra de página
+          if (currentY + rowHeight > pageHeight - 25) {
+            // Rodapé
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Página ${pageNum}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+            
+            // Nova página
+            doc.addPage();
+            pageNum++;
+            currentY = 20;
+            
+            // Redesenhar cabeçalho
+            drawHeader();
+            
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+          }
+          
+          // Dados do frete
+          const caminhaoVinculo = vinculosCaminhoes[frete.id!]?.[0];
+          const motoristaVinculo = vinculosMotoristas[frete.id!]?.[0];
+          const caminhao = caminhaoVinculo ? caminhoes.find(c => c.id === caminhaoVinculo.caminhao_id) : null;
+          const motorista = motoristaVinculo ? motoristas.find(m => m.id === motoristaVinculo.motorista_id) : null;
+          
+          const rowData = [
+            frete.situacao || '-',
+            formatDate(frete.data_emissao),
+            frete.numero_minuta || '-',
+            frete.numero_cb || '-',
+            (frete.pecuarista || '-').substring(0, 15),
+            (frete.cliente || '-').substring(0, 15),
+            (frete.origem || '-').substring(0, 14),
+            (frete.destino || '-').substring(0, 14),
+            (motorista?.nome || '-').substring(0, 15),
+            caminhao?.placa || '-',
+            (caminhaoVinculo?.configuracao || '-').substring(0, 10),
+            formatCurrency(frete.valor_frete),
+            (frete.tipo_pagamento || '-').substring(0, 10),
+            frete.data_pagamento ? formatDate(frete.data_pagamento) : '-',
+            frete.faixa || '-',
+            frete.total_km ? `${frete.total_km}` : '-'
+          ];
+          
+          // Cor de fundo zebrado
+          const bgColor = index % 2 === 0 ? [255, 255, 255] : [245, 245, 245];
+          
+          let currentX = startX;
+          rowData.forEach((cell, i) => {
+            // Preencher célula com cor de fundo
+            doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+            doc.rect(currentX, currentY, colWidths[i], rowHeight, 'F');
+            
+            // Borda
+            doc.setDrawColor(200, 200, 200);
+            doc.rect(currentX, currentY, colWidths[i], rowHeight);
+            
+            // Texto
+            doc.setTextColor(0, 0, 0);
+            let align: 'left' | 'center' | 'right' = 'center';
+            if ([4, 5, 6, 7, 8].includes(i)) align = 'left'; // Nomes
+            if (i === 11) align = 'right'; // Valor
+            
+            const textX = align === 'center' ? currentX + colWidths[i] / 2 : 
+                         align === 'right' ? currentX + colWidths[i] - 2 : currentX + 2;
+            
+            doc.text(cell, textX, currentY + 6, { align });
+            currentX += colWidths[i];
+          });
+          
+          currentY += rowHeight;
+        });
+        
+        // Rodapé da última página
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Página ${pageNum}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        
+        return currentY;
+      };
+      
+      // Desenhar tabela
+      const tableEndY = drawFretesTable(yPos + 8);
+      
+      // Adicionar resumo financeiro
+      const totalGeral = fretesFiltrados.reduce((sum, f) => sum + f.valor_frete, 0);
+      const resumoY = tableEndY + 10;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(139, 0, 0);
+      doc.text(`TOTAL GERAL: ${formatCurrency(totalGeral)}`, pageWidth - 15, resumoY, { align: 'right' });
+      
+      // Salvar PDF
+      const dataAtual = new Date().toISOString().split('T')[0];
+      doc.save(`relatorio-fretes-${dataAtual}.pdf`);
+      
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Erro ao gerar PDF. Verifique o console para mais detalhes.');
+    }
+  };
+
   // Funções para relatório de acerto
 
   const filtrarFretesAcerto = () => {
@@ -1080,6 +1318,18 @@ const ControleFrete: React.FC = () => {
                   }}
                 >
                   Limpar Filtros
+                </button>
+              </div>
+              
+              <div className="filtro-group">
+                <button 
+                  type="button" 
+                  className="btn-pdf-fretes"
+                  onClick={gerarPDFControleFrentes}
+                  title="Gerar PDF dos fretes filtrados"
+                >
+                  <Download size={16} />
+                  Gerar PDF
                 </button>
               </div>
             </div>
