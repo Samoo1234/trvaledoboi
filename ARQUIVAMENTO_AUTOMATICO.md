@@ -9,8 +9,9 @@ O sistema agora possui **arquivamento automático** de fretes antigos, executado
 ### Regras de Arquivamento
 
 1. **Quando**: Após o dia 10 de cada mês (automaticamente)
-2. **O que**: Todos os fretes com `data_emissao` do **mês anterior ou anterior**
+2. **O que**: Apenas fretes **PAGOS** com `data_emissao` do **mês anterior ou anterior**
 3. **Frequência**: Uma vez por mês (evita duplicatas)
+4. **Condição**: `situacao = 'Pago'` (fretes pendentes continuam ativos)
 
 ### Exemplo Prático
 
@@ -19,9 +20,12 @@ Hoje: 15/11/2024
 ↓
 Sistema verifica: Já passamos do dia 10? ✅ Sim
 ↓
-Sistema arquiva: Todos os fretes até 31/10/2024
+Sistema busca: Fretes PAGOS até 31/10/2024
+  ✅ Frete #123 - Pago (R$ 5.000) → ARQUIVADO
+  ❌ Frete #124 - Pendente (R$ 3.000) → CONTINUA ATIVO
+  ✅ Frete #125 - Pago (R$ 2.500) → ARQUIVADO
 ↓
-Resultado: Fretes de outubro e meses anteriores vão para o histórico
+Resultado: Apenas fretes PAGOS de outubro e anteriores são arquivados
 ```
 
 ## 🔧 Configuração

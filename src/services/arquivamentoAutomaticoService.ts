@@ -93,26 +93,32 @@ export const arquivamentoAutomaticoService = {
 
   /**
    * Busca todos os fretes que devem ser arquivados
-   * (fretes com data_emissao até o último dia do mês anterior)
+   * (fretes PAGOS com data_emissao até o último dia do mês anterior)
    */
   async buscarFretesParaArquivar(): Promise<number[]> {
     try {
       const dataLimite = this.getDataLimiteArquivamento();
       
-      console.log(`🔍 Buscando fretes para arquivar (data_emissao <= ${dataLimite})...`);
+      console.log(`🔍 Buscando fretes PAGOS para arquivar (data_emissao <= ${dataLimite})...`);
 
       const { data, error } = await supabase
         .from('fretes')
-        .select('id')
+        .select('id, situacao')
         .lte('data_emissao', dataLimite)
+        .or('arquivado.is.null,arquivado.eq.false') // Apenas não arquivados
         .order('data_emissao', { ascending: true });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      const ids = (data || []).map(f => f.id).filter((id): id is number => typeof id === 'number');
-      console.log(`📦 Encontrados ${ids.length} fretes para arquivar`);
+      // Filtrar apenas fretes pagos (case-insensitive)
+      const fretesPagos = (data || []).filter(f => 
+        f.situacao?.toLowerCase() === 'pago'
+      );
+
+      const ids = fretesPagos.map(f => f.id).filter((id): id is number => typeof id === 'number');
+      console.log(`📦 Encontrados ${ids.length} fretes PAGOS para arquivar`);
       
       return ids;
     } catch (error) {
