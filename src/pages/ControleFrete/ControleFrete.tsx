@@ -661,7 +661,7 @@ const ControleFrete: React.FC = () => {
       // Função para desenhar tabela de fretes (mesmo padrão do relatório de acerto)
       const drawFretesTable = (startY: number) => {
         const headers = ['Sit.', 'Data', 'Min.', 'CB', 'Pecuarista', 'Cliente', 'Origem', 'Destino', 'Motorista', 'Caminhão', 'Conf.', 'Valor', 'T.Pag', 'D.Pag', 'Faixa', 'KM'];
-        const colWidths = [15, 18, 14, 12, 22, 22, 20, 20, 22, 18, 16, 20, 15, 18, 13, 12];
+        const colWidths = [14, 18, 14, 11, 22, 22, 25, 23, 21, 17, 15, 20, 14, 18, 12, 11];
         const totalWidth = colWidths.reduce((a, b) => a + b, 0);
         const startX = (pageWidth - totalWidth) / 2; // Centralizar
         const rowHeight = 8;
@@ -733,8 +733,8 @@ const ControleFrete: React.FC = () => {
             frete.numero_cb || '-',
             (frete.pecuarista || '-').substring(0, 15),
             (frete.cliente || '-').substring(0, 15),
-            (frete.origem || '-').substring(0, 14),
-            (frete.destino || '-').substring(0, 14),
+            (frete.origem || '-').substring(0, 18),
+            (frete.destino || '-').substring(0, 17),
             (motorista?.nome || '-').substring(0, 15),
             caminhao?.placa || '-',
             (caminhaoVinculo?.configuracao || '-').substring(0, 10),
