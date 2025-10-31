@@ -112,9 +112,10 @@ export const arquivamentoAutomaticoService = {
         throw new Error(error.message);
       }
 
-      // Filtrar apenas fretes pagos (case-insensitive)
+      // Filtrar apenas fretes pagos (case-insensitive) e EXCLUIR FRIGORÍFICO
       const fretesPagos = (data || []).filter(f => 
-        f.situacao?.toLowerCase() === 'pago'
+        f.situacao?.toLowerCase() === 'pago' && 
+        f.situacao?.toUpperCase() !== 'FRIGORÍFICO'
       );
 
       const ids = fretesPagos.map(f => f.id).filter((id): id is number => typeof id === 'number');
