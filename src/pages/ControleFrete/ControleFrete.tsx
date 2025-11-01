@@ -532,7 +532,7 @@ const ControleFrete: React.FC = () => {
 
   // Aplicar filtros (simplificados)
   const fretesFiltrados = fretes.filter(frete => {
-    if (filtroSituacao && frete.situacao !== filtroSituacao) {
+    if (filtroSituacao && frete.situacao?.toUpperCase() !== filtroSituacao.toUpperCase()) {
       return false;
     }
 
