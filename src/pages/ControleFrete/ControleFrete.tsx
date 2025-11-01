@@ -1326,6 +1326,7 @@ const ControleFrete: React.FC = () => {
                   <option value="">Todas as Situações</option>
                   <option value="Pendente">Pendente</option>
                   <option value="Pago">Pago</option>
+                  <option value="FRIGORÍFICO">Frigorífico</option>
                 </select>
               </div>
               
