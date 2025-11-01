@@ -661,7 +661,7 @@ const ControleFrete: React.FC = () => {
       // Função para desenhar tabela de fretes (mesmo padrão do relatório de acerto)
       const drawFretesTable = (startY: number) => {
         const headers = ['Sit.', 'Data', 'Min.', 'CB', 'Pecuarista', 'Cliente', 'Origem', 'Destino', 'Motorista', 'Caminhão', 'Conf.', 'Valor', 'T.Pag', 'D.Pag', 'Faixa', 'KM'];
-        const colWidths = [14, 18, 14, 11, 22, 22, 25, 23, 21, 17, 15, 20, 14, 18, 12, 11];
+        const colWidths = [14, 18, 14, 11, 20, 20, 25, 23, 24, 20, 16, 20, 14, 18, 12, 11];
         const totalWidth = colWidths.reduce((a, b) => a + b, 0);
         const startX = (pageWidth - totalWidth) / 2; // Centralizar
         const rowHeight = 8;
@@ -700,8 +700,33 @@ const ControleFrete: React.FC = () => {
         doc.setFontSize(6);
         
         fretesFiltrados.forEach((frete, index) => {
+          // Dados do frete - Preparar arrays de caminhões e motoristas
+          const vincCaminhoes = vinculosCaminhoes[frete.id!] || [];
+          const vincMotoristas = vinculosMotoristas[frete.id!] || [];
+          
+          // Arrays de placas, configurações e motoristas
+          const placasArray = vincCaminhoes
+            .map(v => caminhoes.find(c => c.id === v.caminhao_id)?.placa)
+            .filter(p => p);
+          
+          const configuracoesArray = vincCaminhoes
+            .map(v => v.configuracao)
+            .filter(c => c);
+          
+          const motoristasArray = vincMotoristas
+            .map(v => motoristas.find(m => m.id === v.motorista_id)?.nome)
+            .filter(n => n);
+          
+          // Calcular altura da linha baseado no maior número de itens
+          const maxItens = Math.max(
+            placasArray.length || 1,
+            motoristasArray.length || 1,
+            configuracoesArray.length || 1
+          );
+          const dynamicRowHeight = Math.max(rowHeight, maxItens * 5 + 3);
+          
           // Verificar quebra de página
-          if (currentY + rowHeight > pageHeight - 25) {
+          if (currentY + dynamicRowHeight > pageHeight - 25) {
             // Rodapé
             doc.setFontSize(8);
             doc.setTextColor(100, 100, 100);
@@ -720,24 +745,19 @@ const ControleFrete: React.FC = () => {
             doc.setFontSize(6);
           }
           
-          // Dados do frete
-          const caminhaoVinculo = vinculosCaminhoes[frete.id!]?.[0];
-          const motoristaVinculo = vinculosMotoristas[frete.id!]?.[0];
-          const caminhao = caminhaoVinculo ? caminhoes.find(c => c.id === caminhaoVinculo.caminhao_id) : null;
-          const motorista = motoristaVinculo ? motoristas.find(m => m.id === motoristaVinculo.motorista_id) : null;
-          
-          const rowData = [
+          // Dados simples (não múltiplos)
+          const rowDataSimple = [
             frete.situacao || '-',
             formatDate(frete.data_emissao),
             frete.numero_minuta || '-',
             frete.numero_cb || '-',
-            (frete.pecuarista || '-').substring(0, 15),
-            (frete.cliente || '-').substring(0, 15),
+            (frete.pecuarista || '-').substring(0, 14),
+            (frete.cliente || '-').substring(0, 14),
             (frete.origem || '-').substring(0, 18),
             (frete.destino || '-').substring(0, 17),
-            (motorista?.nome || '-').substring(0, 15),
-            caminhao?.placa || '-',
-            (caminhaoVinculo?.configuracao || '-').substring(0, 10),
+            '', // Motorista (será desenhado separadamente)
+            '', // Caminhão (será desenhado separadamente)
+            '', // Config (será desenhado separadamente)
             formatCurrency(frete.valor_frete),
             (frete.tipo_pagamento || '-').substring(0, 10),
             frete.data_pagamento ? formatDate(frete.data_pagamento) : '-',
@@ -749,29 +769,68 @@ const ControleFrete: React.FC = () => {
           const bgColor = index % 2 === 0 ? [255, 255, 255] : [245, 245, 245];
           
           let currentX = startX;
-          rowData.forEach((cell, i) => {
+          rowDataSimple.forEach((cell, i) => {
             // Preencher célula com cor de fundo
             doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
-            doc.rect(currentX, currentY, colWidths[i], rowHeight, 'F');
+            doc.rect(currentX, currentY, colWidths[i], dynamicRowHeight, 'F');
             
             // Borda
             doc.setDrawColor(200, 200, 200);
-            doc.rect(currentX, currentY, colWidths[i], rowHeight);
+            doc.rect(currentX, currentY, colWidths[i], dynamicRowHeight);
             
-            // Texto
-            doc.setTextColor(0, 0, 0);
-            let align: 'left' | 'center' | 'right' = 'center';
-            if ([4, 5, 6, 7, 8].includes(i)) align = 'left'; // Nomes
-            if (i === 11) align = 'right'; // Valor
+            // Texto para colunas simples
+            if (i !== 8 && i !== 9 && i !== 10) { // Não desenhar motorista, caminhão e config aqui
+              doc.setTextColor(0, 0, 0);
+              let align: 'left' | 'center' | 'right' = 'center';
+              if ([4, 5, 6, 7].includes(i)) align = 'left';
+              if (i === 11) align = 'right';
+              
+              const textX = align === 'center' ? currentX + colWidths[i] / 2 : 
+                           align === 'right' ? currentX + colWidths[i] - 2 : currentX + 2;
+              
+              doc.text(cell, textX, currentY + (dynamicRowHeight / 2) + 1, { align });
+            }
             
-            const textX = align === 'center' ? currentX + colWidths[i] / 2 : 
-                         align === 'right' ? currentX + colWidths[i] - 2 : currentX + 2;
-            
-            doc.text(cell, textX, currentY + 6, { align });
             currentX += colWidths[i];
           });
           
-          currentY += rowHeight;
+          // Desenhar motoristas (coluna 8)
+          const motoristaX = startX + colWidths.slice(0, 8).reduce((a, b) => a + b, 0);
+          let motoristaY = currentY + 4;
+          motoristasArray.forEach((nome, idx) => {
+            doc.setTextColor(0, 0, 0);
+            doc.text((nome || '-').substring(0, 18), motoristaX + colWidths[8] / 2, motoristaY, { align: 'center' });
+            motoristaY += 5;
+          });
+          if (motoristasArray.length === 0) {
+            doc.text('-', motoristaX + colWidths[8] / 2, currentY + (dynamicRowHeight / 2) + 1, { align: 'center' });
+          }
+          
+          // Desenhar caminhões (coluna 9)
+          const caminhaoX = startX + colWidths.slice(0, 9).reduce((a, b) => a + b, 0);
+          let caminhaoY = currentY + 4;
+          placasArray.forEach((placa, idx) => {
+            doc.setTextColor(0, 0, 0);
+            doc.text(placa || '-', caminhaoX + colWidths[9] / 2, caminhaoY, { align: 'center' });
+            caminhaoY += 5;
+          });
+          if (placasArray.length === 0) {
+            doc.text('-', caminhaoX + colWidths[9] / 2, currentY + (dynamicRowHeight / 2) + 1, { align: 'center' });
+          }
+          
+          // Desenhar configurações (coluna 10)
+          const configX = startX + colWidths.slice(0, 10).reduce((a, b) => a + b, 0);
+          let configY = currentY + 4;
+          configuracoesArray.forEach((config, idx) => {
+            doc.setTextColor(0, 0, 0);
+            doc.text((config || '-').substring(0, 12), configX + colWidths[10] / 2, configY, { align: 'center' });
+            configY += 5;
+          });
+          if (configuracoesArray.length === 0) {
+            doc.text('-', configX + colWidths[10] / 2, currentY + (dynamicRowHeight / 2) + 1, { align: 'center' });
+          }
+          
+          currentY += dynamicRowHeight;
         });
         
         // Rodapé da última página
