@@ -1228,4 +1228,110 @@
 }
 .motorista-card .btn-remove-small:hover {
   background: #b91c1c;
+}
+
+/* ===== BARRA DE SELEÇÃO PARA ARQUIVAMENTO ===== */
+.barra-selecao {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0ea5e9;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.barra-selecao-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #0c4a6e;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.barra-selecao-info svg {
+  color: #0ea5e9;
+  flex-shrink: 0;
+}
+
+.barra-selecao-acoes {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-cancelar-selecao {
+  padding: 0.6rem 1.2rem;
+  background: white;
+  color: #64748b;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancelar-selecao:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #475569;
+  transform: translateY(-1px);
+}
+
+.btn-arquivar-selecionados {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+.btn-arquivar-selecionados:hover {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+.btn-arquivar-selecionados:active {
+  transform: translateY(0);
+}
+
+/* Responsividade da barra */
+@media (max-width: 768px) {
+  .barra-selecao {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .barra-selecao-info {
+    justify-content: center;
+  }
+
+  .barra-selecao-acoes {
+    justify-content: center;
+  }
 } 

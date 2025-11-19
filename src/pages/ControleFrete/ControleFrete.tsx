@@ -8,7 +8,6 @@ import { freteCaminhaoService } from '../../services/freteCaminhaoService';
 import { freteMotoristaService } from '../../services/freteMotoristaService';
 import { formatDisplayDate } from '../../services/dateUtils';
 import { reboqueService, Reboque } from '../../services/reboqueService';
-import { arquivamentoAutomaticoService } from '../../services/arquivamentoAutomaticoService';
 import './ControleFrete.css';
 
 type CaminhaoSelecionado = {
@@ -71,38 +70,14 @@ const ControleFrete: React.FC = () => {
   const [vinculosCaminhoes, setVinculosCaminhoes] = useState<{ [freteId: number]: import('../../services/freteCaminhaoService').FreteCaminhao[] }>({});
   const [vinculosMotoristas, setVinculosMotoristas] = useState<{ [freteId: number]: import('../../services/freteMotoristaService').FreteMotorista[] }>({});
 
+  // Estados para seleção de fretes (arquivamento manual)
+  const [fretesSelecionados, setFretesSelecionados] = useState<number[]>([]);
+
   // Carregar dados iniciais
   useEffect(() => {
     loadData();
     setupScrollIndicators();
     loadReboques();
-  }, []);
-
-  // Executar arquivamento automático em background
-  useEffect(() => {
-    const executarArquivamentoAutomatico = async () => {
-      try {
-        const resultado = await arquivamentoAutomaticoService.verificarEExecutar();
-        
-        if (resultado.executado && resultado.quantidade > 0) {
-          // Mostrar notificação ao usuário
-          alert(`✅ Arquivamento automático executado!\n\n${resultado.quantidade} fretes antigos foram arquivados automaticamente.`);
-          
-          // Recarregar dados para atualizar a lista
-          loadData();
-        }
-      } catch (error) {
-        console.error('❌ Erro no arquivamento automático:', error);
-        // Não mostrar erro ao usuário para não atrapalhar a experiência
-      }
-    };
-
-    // Executar após 2 segundos (para não interferir no carregamento inicial)
-    const timer = setTimeout(() => {
-      executarArquivamentoAutomatico();
-    }, 2000);
-
-    return () => clearTimeout(timer);
   }, []);
 
   const setupScrollIndicators = () => {
@@ -195,32 +170,72 @@ const ControleFrete: React.FC = () => {
     setShowForm(false);
   };
 
-  // Função para gerenciar arquivamento automático
-  const handleGerenciarArquivamento = async () => {
-    const ultimo = arquivamentoAutomaticoService.getUltimoArquivamento();
-    
-    const mensagem = ultimo 
-      ? `📊 Último Arquivamento Automático:\n\n` +
-        `📅 Data: ${new Date(ultimo.data).toLocaleString('pt-BR')}\n` +
-        `📦 Período: ${ultimo.periodo}\n` +
-        `📁 Fretes arquivados: ${ultimo.quantidade}\n\n` +
-        `Deseja forçar o arquivamento agora?`
-      : `📊 Arquivamento Automático\n\n` +
-        `Nenhum arquivamento foi executado ainda.\n\n` +
-        `Deseja executar o arquivamento agora?`;
-
-    if (window.confirm(mensagem)) {
-      try {
-        setLoading(true);
-        const quantidade = await arquivamentoAutomaticoService.forcarArquivamento();
-        alert(`✅ Arquivamento concluído!\n\n${quantidade} fretes foram arquivados.`);
-        loadData(); // Recarregar dados
-      } catch (error) {
-        console.error('Erro ao arquivar:', error);
-        alert('❌ Erro ao executar arquivamento. Verifique o console para detalhes.');
-      } finally {
-        setLoading(false);
+  // Funções para seleção de fretes (arquivamento manual com checkboxes)
+  const toggleSelecionarFrete = (freteId: number) => {
+    setFretesSelecionados(prev => {
+      if (prev.includes(freteId)) {
+        return prev.filter(id => id !== freteId);
+      } else {
+        return [...prev, freteId];
       }
+    });
+  };
+
+  const toggleSelecionarTodos = () => {
+    if (fretesSelecionados.length === fretesFiltrados.length) {
+      // Se todos estão selecionados, desmarcar todos
+      setFretesSelecionados([]);
+    } else {
+      // Selecionar todos os IDs dos fretes filtrados
+      const todosIds = fretesFiltrados
+        .map(f => f.id)
+        .filter((id): id is number => typeof id === 'number');
+      setFretesSelecionados(todosIds);
+    }
+  };
+
+  const arquivarSelecionados = async () => {
+    if (fretesSelecionados.length === 0) {
+      alert('Nenhum frete selecionado para arquivar.');
+      return;
+    }
+
+    const confirmacao = window.confirm(
+      `Deseja arquivar ${fretesSelecionados.length} frete(s) selecionado(s)?\n\n` +
+      `Os fretes arquivados serão movidos para o histórico e poderão ser reabertos a qualquer momento.`
+    );
+
+    if (!confirmacao) return;
+
+    try {
+      setLoading(true);
+      let arquivados = 0;
+      let erros = 0;
+
+      for (const freteId of fretesSelecionados) {
+        try {
+          await freteService.arquivar(freteId);
+          arquivados++;
+        } catch (error) {
+          console.error(`Erro ao arquivar frete ${freteId}:`, error);
+          erros++;
+        }
+      }
+
+      alert(
+        `✅ Arquivamento concluído!\n\n` +
+        `📦 ${arquivados} frete(s) arquivado(s)\n` +
+        (erros > 0 ? `❌ ${erros} erro(s)` : '')
+      );
+
+      // Limpar seleção e recarregar dados
+      setFretesSelecionados([]);
+      loadData();
+    } catch (error) {
+      console.error('Erro ao arquivar fretes:', error);
+      alert('Erro ao arquivar fretes. Verifique o console para mais detalhes.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -449,21 +464,6 @@ const ControleFrete: React.FC = () => {
       } catch (error) {
         console.error('Erro ao excluir frete:', error);
         alert('Erro ao excluir frete.');
-      }
-    }
-  };
-
-  const handleArquivar = async (id: number) => {
-    if (window.confirm('Tem certeza que deseja arquivar este frete? Ele será movido para o histórico.')) {
-      try {
-        await freteCaminhaoService.deleteByFreteId(id);
-        await freteMotoristaService.deleteByFreteId(id);
-        await freteService.arquivar(id);
-        setFretes(fretes.filter(f => f.id !== id));
-        alert('Frete arquivado com sucesso!');
-      } catch (error) {
-        console.error('Erro ao arquivar frete:', error);
-        alert('Erro ao arquivar frete. Tente novamente.');
       }
     }
   };
@@ -1270,14 +1270,6 @@ const ControleFrete: React.FC = () => {
         <h1>Controle de Fretes</h1>
         <div className="header-actions">
           <button 
-            className="btn-secondary"
-            onClick={handleGerenciarArquivamento}
-            title="Gerenciar arquivamento automático de fretes"
-          >
-            <Archive size={20} />
-            Arquivamento
-          </button>
-          <button 
             className="btn-primary"
             onClick={() => setShowForm(true)}
           >
@@ -1406,6 +1398,36 @@ const ControleFrete: React.FC = () => {
                 {filtroDataFim && ` • Até: ${formatDisplayDate(filtroDataFim)}`}
                 {filtroCliente && ` • Cliente: ${filtroCliente}`}
               </p>
+            </div>
+          )}
+
+          {/* Barra de seleção para arquivamento */}
+          {fretesSelecionados.length > 0 && (
+            <div className="barra-selecao">
+              <div className="barra-selecao-info">
+                <Archive size={18} />
+                <span>
+                  <strong>{fretesSelecionados.length}</strong> frete{fretesSelecionados.length !== 1 ? 's' : ''} 
+                  {fretesSelecionados.length !== 1 ? ' selecionados' : ' selecionado'}
+                </span>
+              </div>
+              <div className="barra-selecao-acoes">
+                <button 
+                  className="btn-cancelar-selecao"
+                  onClick={() => setFretesSelecionados([])}
+                  title="Desmarcar todos"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="btn-arquivar-selecionados"
+                  onClick={arquivarSelecionados}
+                  title="Arquivar fretes selecionados"
+                >
+                  <Archive size={16} />
+                  Arquivar Selecionados
+                </button>
+              </div>
             </div>
           )}
 
@@ -1867,7 +1889,18 @@ const ControleFrete: React.FC = () => {
                   <th>Valores Detalhados</th>
                   <th>Tipo Pagamento</th>
                   <th>Data Pagamento</th>
-                  <th>Ações</th>
+                  <th>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input 
+                        type="checkbox"
+                        checked={fretesSelecionados.length === fretesFiltrados.length && fretesFiltrados.length > 0}
+                        onChange={toggleSelecionarTodos}
+                        title="Selecionar todos"
+                        style={{ cursor: 'pointer' }}
+                      />
+                      Ações
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1961,19 +1994,19 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
                       <td>
                         <div className="actions">
+                          <input 
+                            type="checkbox"
+                            checked={fretesSelecionados.includes(frete.id!)}
+                            onChange={() => frete.id && toggleSelecionarFrete(frete.id)}
+                            title="Selecionar para arquivar"
+                            style={{ cursor: 'pointer', marginRight: '8px' }}
+                          />
                           <button 
                             className="btn-edit" 
                             title="Editar"
                             onClick={() => handleEdit(frete)}
                           >
                             <Edit size={16} />
-                          </button>
-                          <button 
-                            className="btn-archive" 
-                            title="Arquivar"
-                            onClick={() => frete.id && handleArquivar(frete.id)}
-                          >
-                            <Archive size={16} />
                           </button>
                           <button 
                             className="btn-delete" 
