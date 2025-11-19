@@ -30,7 +30,6 @@ const ControleAbastecimento: React.FC = () => {
     caminhao_id: 0,
     motorista_id: 0,
     km_rodado: undefined,
-    numero_ticket: '',
     preco_por_litro: undefined,
     preco_total: undefined,
     tanque_cheio: true
@@ -86,7 +85,6 @@ const ControleAbastecimento: React.FC = () => {
       caminhao_id: abastecimento.caminhao_id,
       motorista_id: abastecimento.motorista_id,
       km_rodado: abastecimento.km_rodado,
-      numero_ticket: abastecimento.numero_ticket,
       preco_por_litro: abastecimento.preco_por_litro,
       preco_total: abastecimento.preco_total,
       tanque_cheio: abastecimento.tanque_cheio ?? false
@@ -168,7 +166,6 @@ const ControleAbastecimento: React.FC = () => {
       caminhao_id: 0,
       motorista_id: 0,
       km_rodado: undefined,
-      numero_ticket: '',
       preco_por_litro: undefined,
       preco_total: undefined,
       tanque_cheio: true
@@ -555,15 +552,6 @@ const ControleAbastecimento: React.FC = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Número do Ticket</label>
-                  <input
-                    type="text"
-                    value={formData.numero_ticket}
-                    onChange={(e) => setFormData({...formData, numero_ticket: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
                   <label>Preço por Litro (R$) *</label>
                   <input
                     type="number"
@@ -621,7 +609,6 @@ const ControleAbastecimento: React.FC = () => {
               <th>Caminhão</th>
               <th>Motorista</th>
               <th>KM</th>
-              <th>Ticket</th>
               <th>Valor</th>
               <th>Ações</th>
             </tr>
@@ -637,7 +624,6 @@ const ControleAbastecimento: React.FC = () => {
                 <td>{abastecimento.caminhao?.placa}</td>
                 <td>{abastecimento.motorista?.nome}</td>
                 <td>{abastecimento.km_rodado}</td>
-                <td>{abastecimento.numero_ticket}</td>
                 <td>{abastecimento.preco_total ? formatarMoeda(abastecimento.preco_total) : '-'}</td>
                 <td>
                   <div className="actions">
