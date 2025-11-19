@@ -31,6 +31,7 @@ const ControleAbastecimento: React.FC = () => {
     motorista_id: 0,
     km_rodado: undefined,
     numero_ticket: '',
+    preco_por_litro: undefined,
     preco_total: undefined,
     tanque_cheio: true
   });
@@ -86,6 +87,7 @@ const ControleAbastecimento: React.FC = () => {
       motorista_id: abastecimento.motorista_id,
       km_rodado: abastecimento.km_rodado,
       numero_ticket: abastecimento.numero_ticket,
+      preco_por_litro: abastecimento.preco_por_litro,
       preco_total: abastecimento.preco_total,
       tanque_cheio: abastecimento.tanque_cheio ?? false
     });
@@ -128,6 +130,34 @@ const ControleAbastecimento: React.FC = () => {
     });
   };
 
+  // Função para calcular preço total automaticamente
+  const calcularPrecoTotal = (quantidade: number | undefined, precoPorLitro: number | undefined): number | undefined => {
+    if (quantidade && precoPorLitro && quantidade > 0 && precoPorLitro > 0) {
+      return parseFloat((quantidade * precoPorLitro).toFixed(2));
+    }
+    return undefined;
+  };
+
+  // Handler para mudança de quantidade de litros
+  const handleQuantidadeChange = (quantidade: number | undefined) => {
+    const precoTotal = calcularPrecoTotal(quantidade, formData.preco_por_litro);
+    setFormData({
+      ...formData,
+      quantidade_litros: quantidade,
+      preco_total: precoTotal
+    });
+  };
+
+  // Handler para mudança de preço por litro
+  const handlePrecoPorLitroChange = (preco: number | undefined) => {
+    const precoTotal = calcularPrecoTotal(formData.quantidade_litros, preco);
+    setFormData({
+      ...formData,
+      preco_por_litro: preco,
+      preco_total: precoTotal
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       data_abastecimento: '',
@@ -139,6 +169,7 @@ const ControleAbastecimento: React.FC = () => {
       motorista_id: 0,
       km_rodado: undefined,
       numero_ticket: '',
+      preco_por_litro: undefined,
       preco_total: undefined,
       tanque_cheio: true
     });
@@ -466,8 +497,9 @@ const ControleAbastecimento: React.FC = () => {
                     type="number"
                     step="0.01"
                     value={formData.quantidade_litros || ''}
-                    onChange={(e) => setFormData({...formData, quantidade_litros: e.target.value ? parseFloat(e.target.value) : undefined})}
+                    onChange={(e) => handleQuantidadeChange(e.target.value ? parseFloat(e.target.value) : undefined)}
                     required
+                    placeholder="Ex: 100"
                   />
                 </div>
 
@@ -532,12 +564,24 @@ const ControleAbastecimento: React.FC = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Preço Total</label>
+                  <label>Preço por Litro (R$) *</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.preco_total || ''}
-                    onChange={(e) => setFormData({...formData, preco_total: e.target.value ? parseFloat(e.target.value) : undefined})}
+                    value={formData.preco_por_litro || ''}
+                    onChange={(e) => handlePrecoPorLitroChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    required
+                    placeholder="Ex: 6.50"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Preço Total (calculado)</label>
+                  <input
+                    type="text"
+                    value={formData.preco_total ? `R$ ${formData.preco_total.toFixed(2)}` : 'R$ 0,00'}
+                    readOnly
+                    style={{ backgroundColor: '#f0f9ff', fontWeight: 'bold', color: '#0369a1' }}
                   />
                 </div>
 

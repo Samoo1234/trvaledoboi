@@ -11,7 +11,8 @@ export interface Abastecimento {
   motorista_id: number;
   km_rodado?: number;
   numero_ticket?: string;
-  preco_total?: number;
+  preco_por_litro?: number; // Preço unitário (R$/L)
+  preco_total?: number; // Preço total calculado
   created_at?: string;
   updated_at?: string;
   tanque_cheio?: boolean;
