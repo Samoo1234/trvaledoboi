@@ -103,6 +103,31 @@ const ControleAbastecimento: React.FC = () => {
     }
   };
 
+  // Função para converter data em formato "Mês/Ano" em português
+  const formatarMesAno = (data: string): string => {
+    if (!data) return '';
+    
+    const date = new Date(data + 'T00:00:00'); // Adiciona horário para evitar problemas de timezone
+    const meses = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    
+    const mes = meses[date.getMonth()];
+    const ano = date.getFullYear();
+    
+    return `${mes}/${ano}`;
+  };
+
+  // Handler para mudança de data que auto-preenche o mês
+  const handleDataChange = (data: string) => {
+    setFormData({
+      ...formData, 
+      data_abastecimento: data,
+      mes: formatarMesAno(data)
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       data_abastecimento: '',
@@ -405,18 +430,19 @@ const ControleAbastecimento: React.FC = () => {
                   <input
                     type="date"
                     value={formData.data_abastecimento}
-                    onChange={(e) => setFormData({...formData, data_abastecimento: e.target.value})}
+                    onChange={(e) => handleDataChange(e.target.value)}
                     required
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Mês</label>
+                  <label>Mês (auto-preenchido)</label>
                   <input
                     type="text"
                     value={formData.mes}
                     onChange={(e) => setFormData({...formData, mes: e.target.value})}
                     placeholder="Ex: Janeiro/2024"
+                    style={{ backgroundColor: '#f0f9ff' }}
                   />
                 </div>
 
