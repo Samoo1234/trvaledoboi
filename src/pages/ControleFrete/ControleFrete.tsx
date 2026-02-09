@@ -29,12 +29,13 @@ const ControleFrete: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [filtroSituacao, setFiltroSituacao] = useState<string>('');
-  
+
   // Estados para os novos filtros
   const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
   const [filtroDataFim, setFiltroDataFim] = useState<string>('');
   const [filtroCliente, setFiltroCliente] = useState<string>('');
-  
+  const [filtroMotorista, setFiltroMotorista] = useState<string>('');
+
   // Estados para relatório de acerto
   const [activeTab, setActiveTab] = useState<'fretes' | 'acerto'>('fretes');
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
@@ -86,13 +87,13 @@ const ControleFrete: React.FC = () => {
 
     const updateScrollIndicators = () => {
       const { scrollLeft, scrollWidth, clientWidth } = tableContainer;
-      
+
       tableContainer.classList.remove('scrolled-left', 'scrolled-right');
-      
+
       if (scrollLeft > 10) {
         tableContainer.classList.add('scrolled-left');
       }
-      
+
       if (scrollLeft < scrollWidth - clientWidth - 10) {
         tableContainer.classList.add('scrolled-right');
       }
@@ -100,7 +101,7 @@ const ControleFrete: React.FC = () => {
 
     tableContainer.addEventListener('scroll', updateScrollIndicators);
     setTimeout(updateScrollIndicators, 100);
-    
+
     return () => {
       tableContainer.removeEventListener('scroll', updateScrollIndicators);
     };
@@ -256,7 +257,7 @@ const ControleFrete: React.FC = () => {
       tipo_pagamento: frete.tipo_pagamento || '',
       data_pagamento: frete.data_pagamento || ''
     });
-    
+
     // Carregar vínculos de caminhões e motoristas
     const caminhoesVinc = await freteCaminhaoService.getByFreteId(frete.id!);
     setCaminhoesSelecionados(caminhoesVinc.map(v => ({
@@ -269,14 +270,14 @@ const ControleFrete: React.FC = () => {
       motorista_id: v.motorista_id.toString(),
       caminhao_id: v.caminhao_id ? v.caminhao_id.toString() : (caminhoesVinc[0]?.caminhao_id || 0).toString()
     })));
-    
+
     setEditingId(typeof frete.id === 'number' ? frete.id : null);
     setShowForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       // Validações básicas
       if (caminhoesSelecionados.length === 0 || motoristasSelecionados.length === 0) {
@@ -325,13 +326,13 @@ const ControleFrete: React.FC = () => {
       // VALIDAÇÃO CRÍTICA: Verificar se há caminhões sem motorista
       const caminhoesComMotorista = new Set(motoristasSelecionados.map(m => m.caminhao_id));
       const caminhoesSemMotorista = caminhoesSelecionados.filter(c => !caminhoesComMotorista.has(c.caminhao_id));
-      
+
       if (caminhoesSemMotorista.length > 0) {
         const placasSemMotorista = caminhoesSemMotorista.map(c => {
           const caminhao = caminhoes.find(cam => cam.id === parseInt(c.caminhao_id));
           return caminhao?.placa || c.caminhao_id;
         });
-        
+
         alert(
           `ERRO: Os seguintes caminhões NÃO têm motorista associado:\n\n` +
           placasSemMotorista.join(', ') +
@@ -357,10 +358,10 @@ const ControleFrete: React.FC = () => {
       const somaCaminhoes = caminhoesSelecionados.reduce((sum, cam) => {
         return sum + (parseFloat(cam.valor_frete || '0'));
       }, 0);
-      
+
       const valorTotalFrete = parseFloat(formData.valor_frete);
       const diferenca = Math.abs(somaCaminhoes - valorTotalFrete);
-      
+
       if (diferenca > 0.01) { // Tolerância de 1 centavo para arredondamento
         alert(
           `ERRO: Inconsistência nos valores!\n\n` +
@@ -402,7 +403,7 @@ const ControleFrete: React.FC = () => {
       };
 
       let freteId = editingId;
-      
+
       if (editingId) {
         await freteService.update(editingId, freteData);
         // Remover vínculos antigos
@@ -422,10 +423,10 @@ const ControleFrete: React.FC = () => {
         else if (caminhao?.tipo === 'Carreta Baixa') configuracao = 'Carreta Baixa';
         else if (caminhao?.tipo === 'Carreta 2 Pisos') configuracao = 'Carreta 2 Pisos';
         else if (caminhao?.tipo === 'Truck' && caminhaoVinc.reboque_id) configuracao = 'Julieta';
-        
+
         // CORREÇÃO #3: Garantir que valor_frete nunca seja null - validado acima
         const valorFreteIndividual = parseFloat(caminhaoVinc.valor_frete!);
-        
+
         await freteCaminhaoService.create({
           frete_id: freteId!,
           caminhao_id: parseInt(caminhaoVinc.caminhao_id),
@@ -434,16 +435,16 @@ const ControleFrete: React.FC = () => {
           valor_frete: valorFreteIndividual
         });
       }
-      
+
       // Salvar vínculos de motoristas com caminhão específico
       for (const motorista of motoristasSelecionados) {
-        await freteMotoristaService.create({ 
-          frete_id: freteId!, 
+        await freteMotoristaService.create({
+          frete_id: freteId!,
           motorista_id: parseInt(motorista.motorista_id),
           caminhao_id: parseInt(motorista.caminhao_id)
         });
       }
-      
+
       alert(editingId ? 'Frete atualizado com sucesso!' : 'Frete cadastrado com sucesso!');
       await loadData();
       resetForm();
@@ -477,23 +478,23 @@ const ControleFrete: React.FC = () => {
         total: 0
       };
     }
-    
+
     const valoresIndividuais = vinculos.map(vinculo => {
       const configuracao = vinculo.configuracao;
       const reboqueId = vinculo.reboque_id;
-      
+
       const descricaoConfiguracao = configuracao === 'Truck'
         ? 'Truck'
         : `${configuracao}${reboqueId ? ` (${reboques.find(r => r.id === reboqueId)?.placa || ''})` : ''}`;
-      
+
       return {
         valor: vinculo.valor_frete || 0,
         descricao: descricaoConfiguracao
       };
     });
-    
+
     const total = valoresIndividuais.reduce((sum, item) => sum + item.valor, 0);
-    
+
     return {
       valoresIndividuais,
       total
@@ -538,12 +539,12 @@ const ControleFrete: React.FC = () => {
 
     if (filtroDataInicio || filtroDataFim) {
       const dataFrete = new Date(frete.data_emissao);
-      
+
       if (filtroDataInicio) {
         const dataInicio = new Date(filtroDataInicio);
         if (dataFrete < dataInicio) return false;
       }
-      
+
       if (filtroDataFim) {
         const dataFim = new Date(filtroDataFim);
         if (dataFrete > dataFim) return false;
@@ -554,12 +555,23 @@ const ControleFrete: React.FC = () => {
       return false;
     }
 
+    // Filtro por motorista
+    if (filtroMotorista) {
+      const vincMotoristas = vinculosMotoristas[frete.id!] || [];
+      const motoristaEncontrado = vincMotoristas.some(
+        v => v.motorista_id === parseInt(filtroMotorista)
+      );
+      if (!motoristaEncontrado) {
+        return false;
+      }
+    }
+
     return true;
   });
 
   const handleValorFreteChange = (value: string | undefined) => {
     const valor = value || '';
-    
+
     setFormData(prev => ({
       ...prev,
       valor_frete: valor
@@ -578,7 +590,7 @@ const ControleFrete: React.FC = () => {
       const doc = new jsPDF('landscape', 'mm', 'a4');
       const pageWidth = 297; // A4 paisagem
       const pageHeight = 210;
-      
+
       // Função para adicionar logo
       const addLogo = async (x: number, y: number, width: number, height: number): Promise<void> => {
         try {
@@ -586,9 +598,9 @@ const ControleFrete: React.FC = () => {
           if (response.ok) {
             const blob = await response.blob();
             const reader = new FileReader();
-            
+
             return new Promise((resolve) => {
-              reader.onload = function(e) {
+              reader.onload = function (e) {
                 if (e.target?.result) {
                   try {
                     doc.addImage(e.target.result as string, 'PNG', x, y, width, height);
@@ -608,36 +620,36 @@ const ControleFrete: React.FC = () => {
 
       // Configurar fonte
       doc.setFont('helvetica');
-      
+
       // Adicionar logo
       await addLogo(15, 8, 25, 25);
-      
+
       // Cabeçalho da empresa
       doc.setFontSize(18);
       doc.setTextColor(139, 0, 0);
       doc.text('VALE DO BOI', pageWidth / 2, 15, { align: 'center' });
-      
+
       doc.setFontSize(12);
       doc.setTextColor(139, 0, 0);
       doc.text('Transporte de Bovinos', pageWidth / 2, 22, { align: 'center' });
-      
+
       doc.setFontSize(14);
       doc.setTextColor(0, 0, 0);
       doc.text('Relatório de Controle de Fretes', pageWidth / 2, 30, { align: 'center' });
-      
+
       // Linha separadora
       doc.setLineWidth(0.5);
       doc.setDrawColor(139, 0, 0);
       doc.line(15, 35, pageWidth - 15, 35);
-      
+
       // Informações do relatório
       let yPos = 42;
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
-      
+
       let infoText = `Data do Relatório: ${new Date().toLocaleDateString('pt-BR')}  |  `;
       infoText += `Total de Fretes: ${fretesFiltrados.length}  |  `;
-      
+
       if (filtroDataInicio && filtroDataFim) {
         infoText += `Período: ${formatDisplayDate(filtroDataInicio)} a ${formatDisplayDate(filtroDataFim)}`;
       } else if (filtroDataInicio) {
@@ -645,19 +657,19 @@ const ControleFrete: React.FC = () => {
       } else if (filtroDataFim) {
         infoText += `Até: ${formatDisplayDate(filtroDataFim)}`;
       }
-      
+
       doc.text(infoText, pageWidth / 2, yPos, { align: 'center' });
-      
+
       if (filtroCliente) {
         yPos += 5;
         doc.text(`Cliente: ${filtroCliente}`, pageWidth / 2, yPos, { align: 'center' });
       }
-      
+
       if (filtroSituacao) {
         yPos += 5;
         doc.text(`Situação: ${filtroSituacao}`, pageWidth / 2, yPos, { align: 'center' });
       }
-      
+
       // Função para desenhar tabela de fretes (mesmo padrão do relatório de acerto)
       const drawFretesTable = (startY: number) => {
         const headers = ['Sit.', 'Data', 'Min.', 'CB', 'Pecuarista', 'Cliente', 'Origem', 'Destino', 'Motorista', 'Caminhão', 'Conf.', 'Valor', 'T.Pag', 'D.Pag', 'Faixa', 'KM'];
@@ -667,56 +679,56 @@ const ControleFrete: React.FC = () => {
         const rowHeight = 8;
         let currentY = startY;
         let pageNum = 1;
-        
+
         // Função para desenhar cabeçalho
         const drawHeader = () => {
           doc.setFillColor(139, 0, 0);
           doc.setTextColor(255, 255, 255);
           doc.setFontSize(7);
           doc.setFont('helvetica', 'bold');
-          
+
           let currentX = startX;
           headers.forEach((header, i) => {
             // Preencher célula
             doc.setFillColor(139, 0, 0);
             doc.rect(currentX, currentY, colWidths[i], rowHeight, 'F');
-            
+
             // Texto
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
-            doc.text(header, currentX + colWidths[i]/2, currentY + 6, { align: 'center' });
+            doc.text(header, currentX + colWidths[i] / 2, currentY + 6, { align: 'center' });
             currentX += colWidths[i];
           });
-          
+
           currentY += rowHeight;
         };
-        
+
         // Desenhar cabeçalho inicial
         drawHeader();
-        
+
         // Linhas de dados
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(6);
-        
+
         fretesFiltrados.forEach((frete, index) => {
           // Dados do frete - Preparar arrays de caminhões e motoristas
           const vincCaminhoes = vinculosCaminhoes[frete.id!] || [];
           const vincMotoristas = vinculosMotoristas[frete.id!] || [];
-          
+
           // Arrays de placas, configurações e motoristas
           const placasArray = vincCaminhoes
             .map(v => caminhoes.find(c => c.id === v.caminhao_id)?.placa)
             .filter(p => p);
-          
+
           const configuracoesArray = vincCaminhoes
             .map(v => v.configuracao)
             .filter(c => c);
-          
+
           const motoristasArray = vincMotoristas
             .map(v => motoristas.find(m => m.id === v.motorista_id)?.nome)
             .filter(n => n);
-          
+
           // Calcular altura da linha baseado no maior número de itens
           const maxItens = Math.max(
             placasArray.length || 1,
@@ -724,27 +736,27 @@ const ControleFrete: React.FC = () => {
             configuracoesArray.length || 1
           );
           const dynamicRowHeight = Math.max(rowHeight, maxItens * 5 + 3);
-          
+
           // Verificar quebra de página
           if (currentY + dynamicRowHeight > pageHeight - 25) {
             // Rodapé
             doc.setFontSize(8);
             doc.setTextColor(100, 100, 100);
             doc.text(`Página ${pageNum}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-            
+
             // Nova página
             doc.addPage();
             pageNum++;
             currentY = 20;
-            
+
             // Redesenhar cabeçalho
             drawHeader();
-            
+
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(6);
           }
-          
+
           // Dados simples (não múltiplos)
           const rowDataSimple = [
             frete.situacao || '-',
@@ -764,36 +776,36 @@ const ControleFrete: React.FC = () => {
             frete.faixa || '-',
             frete.total_km ? `${frete.total_km}` : '-'
           ];
-          
+
           // Cor de fundo zebrado
           const bgColor = index % 2 === 0 ? [255, 255, 255] : [245, 245, 245];
-          
+
           let currentX = startX;
           rowDataSimple.forEach((cell, i) => {
             // Preencher célula com cor de fundo
             doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
             doc.rect(currentX, currentY, colWidths[i], dynamicRowHeight, 'F');
-            
+
             // Borda
             doc.setDrawColor(200, 200, 200);
             doc.rect(currentX, currentY, colWidths[i], dynamicRowHeight);
-            
+
             // Texto para colunas simples
             if (i !== 8 && i !== 9 && i !== 10) { // Não desenhar motorista, caminhão e config aqui
               doc.setTextColor(0, 0, 0);
               let align: 'left' | 'center' | 'right' = 'center';
               if ([4, 5, 6, 7].includes(i)) align = 'left';
               if (i === 11) align = 'right';
-              
-              const textX = align === 'center' ? currentX + colWidths[i] / 2 : 
-                           align === 'right' ? currentX + colWidths[i] - 2 : currentX + 2;
-              
+
+              const textX = align === 'center' ? currentX + colWidths[i] / 2 :
+                align === 'right' ? currentX + colWidths[i] - 2 : currentX + 2;
+
               doc.text(cell, textX, currentY + (dynamicRowHeight / 2) + 1, { align });
             }
-            
+
             currentX += colWidths[i];
           });
-          
+
           // Desenhar motoristas (coluna 8)
           const motoristaX = startX + colWidths.slice(0, 8).reduce((a, b) => a + b, 0);
           let motoristaY = currentY + 4;
@@ -805,7 +817,7 @@ const ControleFrete: React.FC = () => {
           if (motoristasArray.length === 0) {
             doc.text('-', motoristaX + colWidths[8] / 2, currentY + (dynamicRowHeight / 2) + 1, { align: 'center' });
           }
-          
+
           // Desenhar caminhões (coluna 9)
           const caminhaoX = startX + colWidths.slice(0, 9).reduce((a, b) => a + b, 0);
           let caminhaoY = currentY + 4;
@@ -817,7 +829,7 @@ const ControleFrete: React.FC = () => {
           if (placasArray.length === 0) {
             doc.text('-', caminhaoX + colWidths[9] / 2, currentY + (dynamicRowHeight / 2) + 1, { align: 'center' });
           }
-          
+
           // Desenhar configurações (coluna 10)
           const configX = startX + colWidths.slice(0, 10).reduce((a, b) => a + b, 0);
           let configY = currentY + 4;
@@ -829,34 +841,34 @@ const ControleFrete: React.FC = () => {
           if (configuracoesArray.length === 0) {
             doc.text('-', configX + colWidths[10] / 2, currentY + (dynamicRowHeight / 2) + 1, { align: 'center' });
           }
-          
+
           currentY += dynamicRowHeight;
         });
-        
+
         // Rodapé da última página
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.text(`Página ${pageNum}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-        
+
         return currentY;
       };
-      
+
       // Desenhar tabela
       const tableEndY = drawFretesTable(yPos + 8);
-      
+
       // Adicionar resumo financeiro
       const totalGeral = fretesFiltrados.reduce((sum, f) => sum + f.valor_frete, 0);
       const resumoY = tableEndY + 10;
-      
+
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(139, 0, 0);
       doc.text(`TOTAL GERAL: ${formatCurrency(totalGeral)}`, pageWidth - 15, resumoY, { align: 'right' });
-      
+
       // Salvar PDF
       const dataAtual = new Date().toISOString().split('T')[0];
       doc.save(`relatorio-fretes-${dataAtual}.pdf`);
-      
+
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       alert('Erro ao gerar PDF. Verifique o console para mais detalhes.');
@@ -871,7 +883,7 @@ const ControleFrete: React.FC = () => {
       return;
     }
 
-    let fretesFiltrados = fretes.filter(f => 
+    let fretesFiltrados = fretes.filter(f =>
       f.cliente === clienteSelecionado
     );
 
@@ -897,10 +909,10 @@ const ControleFrete: React.FC = () => {
     try {
       const jsPDF = (await import('jspdf')).default;
       const doc = new jsPDF('portrait', 'mm', 'a4');
-      
+
       const pageWidth = 210;
       const pageHeight = 297;
-      
+
       // Função para adicionar logo
       const addLogo = async (x: number, y: number, width: number, height: number): Promise<void> => {
         try {
@@ -908,9 +920,9 @@ const ControleFrete: React.FC = () => {
           if (response.ok) {
             const blob = await response.blob();
             const reader = new FileReader();
-            
+
             return new Promise((resolve) => {
-              reader.onload = function(e) {
+              reader.onload = function (e) {
                 if (e.target?.result) {
                   try {
                     doc.addImage(e.target.result as string, 'PNG', x, y, width, height);
@@ -930,191 +942,191 @@ const ControleFrete: React.FC = () => {
 
       // Configurar fonte
       doc.setFont('helvetica');
-      
+
       // Adicionar logo
       await addLogo(20, 10, 30, 30);
-      
+
       // Cabeçalho da empresa
       doc.setFontSize(20);
       doc.setTextColor(139, 0, 0); // Cor vermelha
       doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
-      
+
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
       doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
-      
+
       doc.setFontSize(16);
       doc.setTextColor(0, 0, 0);
       doc.text('Relatório de Acerto de Frete', pageWidth / 2, 38, { align: 'center' });
-      
+
       // Linha separadora
       doc.setLineWidth(0.5);
       doc.setDrawColor(139, 0, 0);
       doc.line(20, 43, pageWidth - 20, 43);
-      
+
       // Informações do cliente
       let yPos = 58;
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
       doc.text('DADOS DO CLIENTE', 20, yPos);
-      
+
       yPos += 10;
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text(`Cliente: ${clienteSelecionado.toUpperCase()}`, 20, yPos);
       yPos += 8;
-      
+
       if (dataInicioAcerto && dataFimAcerto) {
         doc.text(`Período: ${formatDisplayDate(dataInicioAcerto)} a ${formatDisplayDate(dataFimAcerto)}`, 20, yPos);
         yPos += 8;
       }
-      
+
       doc.text(`Data do Relatório: ${new Date().toLocaleDateString('pt-BR')}`, 20, yPos);
       yPos += 8;
       doc.text(`Total de Fretes: ${fretesAcerto.length}`, 20, yPos);
-      
+
       // Resumo financeiro
       const total = fretesAcerto.reduce((sum, f) => sum + f.valor_frete, 0);
       yPos += 20;
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
       doc.text('RESUMO FINANCEIRO', 20, yPos);
-      
+
       yPos += 15;
       // Desenhar tabela de resumo
       doc.setFillColor(139, 0, 0);
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      
+
       // Cabeçalho do resumo
       doc.rect(20, yPos, 100, 10, 'F');
       doc.text('Descrição', 22, yPos + 7);
       doc.rect(120, yPos, 60, 10, 'F');
       doc.text('Valor', 150, yPos + 7, { align: 'center' });
-      
+
       yPos += 10;
-      
+
       // Dados do resumo
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      
+
       const resumoData = [
         ['Valor Total dos Fretes', formatCurrency(total)]
       ];
-      
+
       resumoData.forEach((row, index) => {
         const bgColor = index % 2 === 1 ? [245, 245, 245] : [255, 255, 255];
         doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
         doc.rect(20, yPos, 100, 8, 'F');
         doc.rect(120, yPos, 60, 8, 'F');
-        
+
         doc.setDrawColor(200, 200, 200);
         doc.rect(20, yPos, 100, 8);
         doc.rect(120, yPos, 60, 8);
-        
+
         doc.text(row[0], 22, yPos + 6);
         doc.setFont('helvetica', 'bold');
         doc.text(row[1], 178, yPos + 6, { align: 'right' });
         doc.setFont('helvetica', 'normal');
         yPos += 8;
       });
-      
+
       // (Detalhamento dos fretes será colocado após dados bancários)
-      
+
       // Função para desenhar tabela de fretes
-                  const drawFretesTable = (startY: number) => {
-              const headers = ['Data', 'Tipo Veículo', 'Origem', 'Destino', 'KM', 'Valor', 'Valores Detalhados'];
-              const colWidths = [21, 28, 31, 31, 15, 25, 38]; // Total: 189mm - aumentado mais 1mm cada coluna
-              const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+      const drawFretesTable = (startY: number) => {
+        const headers = ['Data', 'Tipo Veículo', 'Origem', 'Destino', 'KM', 'Valor', 'Valores Detalhados'];
+        const colWidths = [21, 28, 31, 31, 15, 25, 38]; // Total: 189mm - aumentado mais 1mm cada coluna
+        const totalWidth = colWidths.reduce((a, b) => a + b, 0);
         const startX = (pageWidth - totalWidth) / 2; // Centralizar na página
         console.log(`[ACERTO PDF DEBUG] Centralizando tabela: startX=${startX}, totalWidth=${totalWidth}`);
         let currentY = startY;
-        
+
         // Cabeçalho da tabela
         doc.setFillColor(139, 0, 0);
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        
+
         let currentX = startX;
         headers.forEach((header, i) => {
           // Garantir que a cor de fundo está sendo aplicada
           doc.setFillColor(139, 0, 0);
           doc.rect(currentX, currentY, colWidths[i], 12, 'F');
-          
+
           // Garantir que a cor do texto está branca
           doc.setTextColor(255, 255, 255);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
-          
-          doc.text(header, currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
+
+          doc.text(header, currentX + colWidths[i] / 2, currentY + 8, { align: 'center' });
           currentX += colWidths[i];
         });
-        
+
         currentY += 12;
-        
+
         // Dados dos fretes
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
-        
+
         fretesAcerto.forEach((frete, index) => {
           // Verificar quebra de página (com mais margem de segurança)
           if (currentY + 20 > pageHeight - 40) {
             doc.addPage();
             currentY = 20;
-            
+
             // Redesenhar cabeçalho na nova página
             doc.setFillColor(139, 0, 0);
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(9);
             doc.setFont('helvetica', 'bold');
-            
+
             currentX = startX;
             headers.forEach((header, i) => {
               // Garantir que a cor de fundo está sendo aplicada
               doc.setFillColor(139, 0, 0);
               doc.rect(currentX, currentY, colWidths[i], 12, 'F');
-              
+
               // Garantir que a cor do texto está branca
               doc.setTextColor(255, 255, 255);
               doc.setFont('helvetica', 'bold');
               doc.setFontSize(9);
-              
-              doc.text(header, currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
+
+              doc.text(header, currentX + colWidths[i] / 2, currentY + 8, { align: 'center' });
               currentX += colWidths[i];
             });
-            
+
             currentY += 12;
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(8);
           }
-          
+
           // Buscar todos os caminhões vinculados a este frete
           const vinculosCaminhao = vinculosCaminhoes[frete.id!];
-          
+
           // Preparar arrays para concatenar informações de todos os caminhões
           const descricoesConfiguracao: string[] = [];
-          
+
           if (vinculosCaminhao && vinculosCaminhao.length > 0) {
             vinculosCaminhao.forEach(vinculo => {
               const configuracao = vinculo.configuracao;
               const reboqueId = vinculo.reboque_id;
-              
+
               // Formatar configuração igual à tabela principal
-              const descricaoConfiguracao = configuracao === 'Truck' 
+              const descricaoConfiguracao = configuracao === 'Truck'
                 ? 'Truck'
                 : `${configuracao}${reboqueId ? ` (${reboques.find(r => r.id === reboqueId)?.placa || ''})` : ''}`;
-              
+
               descricoesConfiguracao.push(descricaoConfiguracao);
             });
           } else {
             // Fallback para dados diretos do frete
             if (frete.caminhao) {
-              const descricaoConfiguracao = frete.configuracao === 'Truck' 
+              const descricaoConfiguracao = frete.configuracao === 'Truck'
                 ? 'Truck'
                 : `${frete.configuracao || 'N/A'}`;
               descricoesConfiguracao.push(descricaoConfiguracao);
@@ -1122,27 +1134,27 @@ const ControleFrete: React.FC = () => {
               descricoesConfiguracao.push('N/A');
             }
           }
-          
+
           // Alternar cor de fundo
           if (index % 2 === 1) {
             doc.setFillColor(245, 245, 245);
             doc.rect(startX, currentY, totalWidth, 8, 'F');
           }
-          
+
           // Calcular valores por caminhão para o PDF
           const { valoresIndividuais, total } = calcularValoresPorCaminhao(frete.id!);
-          
+
           // Calcular altura necessária para acomodar múltiplas linhas
           const maxItems = Math.max(descricoesConfiguracao.length, valoresIndividuais.length);
           const lineHeight = 4;
           const cellHeight = Math.max(12, maxItems * lineHeight + (valoresIndividuais.length > 1 ? lineHeight : 0) + 4);
-          
+
           // Aplicar cor de fundo alternada
           if (index % 2 === 1) {
             doc.setFillColor(245, 245, 245);
             doc.rect(startX, currentY, totalWidth, cellHeight, 'F');
           }
-          
+
           const rowData = [
             formatDisplayDate(frete.data_emissao).substring(0, 5),
             '', // Será preenchido manualmente
@@ -1152,63 +1164,63 @@ const ControleFrete: React.FC = () => {
             formatCurrency(frete.valor_frete),
             '' // Será preenchido manualmente
           ];
-          
+
           currentX = startX;
           rowData.forEach((data, i) => {
             // Desenhar borda da célula
             doc.setDrawColor(200, 200, 200);
             doc.rect(currentX, currentY, colWidths[i], cellHeight);
-            
+
             // Tratamento especial para colunas de descrição e valores detalhados
             if (i === 1) { // Coluna de descrição
               if (descricoesConfiguracao.length > 0) {
                 descricoesConfiguracao.forEach((descricao, index) => {
                   const yPos = currentY + 4 + (index * lineHeight);
-                  doc.text(descricao.substring(0, 15), currentX + colWidths[i]/2, yPos, { align: 'center' });
+                  doc.text(descricao.substring(0, 15), currentX + colWidths[i] / 2, yPos, { align: 'center' });
                 });
               } else {
-                doc.text('N/A', currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
+                doc.text('N/A', currentX + colWidths[i] / 2, currentY + 8, { align: 'center' });
               }
             } else if (i === 6) { // Coluna de valores detalhados
               if (valoresIndividuais.length > 0) {
                 valoresIndividuais.forEach((item, index) => {
                   const yPos = currentY + 4 + (index * lineHeight);
                   const texto = `${formatCurrency(item.valor)} (${item.descricao.substring(0, 10)})`;
-                  doc.text(texto, currentX + colWidths[i]/2, yPos, { align: 'center' });
+                  doc.text(texto, currentX + colWidths[i] / 2, yPos, { align: 'center' });
                 });
                 if (valoresIndividuais.length > 1) {
                   const yPos = currentY + 4 + (valoresIndividuais.length * lineHeight);
-                  doc.text(`Total: ${formatCurrency(total)}`, currentX + colWidths[i]/2, yPos, { align: 'center' });
+                  doc.text(`Total: ${formatCurrency(total)}`, currentX + colWidths[i] / 2, yPos, { align: 'center' });
                 }
               } else {
-                doc.text('N/A', currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
+                doc.text('N/A', currentX + colWidths[i] / 2, currentY + 8, { align: 'center' });
               }
             } else {
               // Texto normal para outras colunas
-              doc.text(data, currentX + colWidths[i]/2, currentY + 8, { align: 'center' });
+              doc.text(data, currentX + colWidths[i] / 2, currentY + 8, { align: 'center' });
             }
-            
+
             currentX += colWidths[i];
           });
-          
+
           currentY += cellHeight;
         });
-        
+
         return currentY;
       };
-      
+
       // Dados bancários logo após o resumo financeiro
       yPos += 20;
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
       doc.text('DADOS BANCÁRIOS', 20, yPos);
-      
+
       yPos += 15;
       doc.setFillColor(245, 245, 245);
       doc.rect(20, yPos, 120, 35, 'F');
       doc.setDrawColor(139, 0, 0);
       doc.rect(20, yPos, 120, 35);
-      
+
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
@@ -1216,7 +1228,7 @@ const ControleFrete: React.FC = () => {
       doc.text('AGÊNCIA: 4349  CONTA CORRENTE: 141.105-5', 25, yPos + 16);
       doc.text('PIX-CNPJ: 27.244.973/0001-22', 25, yPos + 24);
       doc.text('VALE DO BOI CARNES LTDA', 25, yPos + 32);
-      
+
       // Verificar se há espaço suficiente na página
       if (yPos + 120 > pageHeight - 40) {
         doc.addPage();
@@ -1224,15 +1236,15 @@ const ControleFrete: React.FC = () => {
       } else {
         yPos += 25;
       }
-      
+
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
       doc.text('DETALHAMENTO DOS FRETES', 20, yPos);
-      
+
       yPos += 15;
-      
+
       drawFretesTable(yPos);
-      
+
       // Rodapé
       const rodapeY = pageHeight - 15;
       doc.setFontSize(8);
@@ -1244,7 +1256,7 @@ const ControleFrete: React.FC = () => {
       const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
       const nomeArquivo = `acerto_frete_${clienteSelecionado.replace(/\s+/g, '_')}_${dataAtual}.pdf`;
       doc.save(nomeArquivo);
-      
+
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       alert('Erro ao gerar PDF. Tente novamente.');
@@ -1269,7 +1281,7 @@ const ControleFrete: React.FC = () => {
       <div className="page-header">
         <h1>Controle de Fretes</h1>
         <div className="header-actions">
-          <button 
+          <button
             className="btn-primary"
             onClick={() => setShowForm(true)}
           >
@@ -1282,14 +1294,14 @@ const ControleFrete: React.FC = () => {
       {/* Abas de navegação */}
       <div className="tabs-container">
         <div className="tabs">
-          <button 
+          <button
             className={`tab ${activeTab === 'fretes' ? 'active' : ''}`}
             onClick={() => setActiveTab('fretes')}
           >
             <Truck size={16} />
             Controle de Fretes
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'acerto' ? 'active' : ''}`}
             onClick={() => setActiveTab('acerto')}
           >
@@ -1321,7 +1333,7 @@ const ControleFrete: React.FC = () => {
                   <option value="FRIGORÍFICO">Frigorífico</option>
                 </select>
               </div>
-              
+
               <div className="filtro-group">
                 <label>Data Início</label>
                 <input
@@ -1331,7 +1343,7 @@ const ControleFrete: React.FC = () => {
                   className="filtro-input"
                 />
               </div>
-              
+
               <div className="filtro-group">
                 <label>Data Fim</label>
                 <input
@@ -1341,7 +1353,7 @@ const ControleFrete: React.FC = () => {
                   className="filtro-input"
                 />
               </div>
-              
+
               <div className="filtro-group">
                 <label>Cliente</label>
                 <select
@@ -1357,25 +1369,42 @@ const ControleFrete: React.FC = () => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="filtro-group">
-                <button 
-                  type="button" 
+                <label>Motorista</label>
+                <select
+                  value={filtroMotorista}
+                  onChange={(e) => setFiltroMotorista(e.target.value)}
+                  className="filtro-select"
+                >
+                  <option value="">Todos os Motoristas</option>
+                  {motoristas.map((motorista) => (
+                    <option key={motorista.id} value={motorista.id}>
+                      {motorista.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="filtro-group">
+                <button
+                  type="button"
                   className="btn-clear-filters"
                   onClick={() => {
                     setFiltroSituacao('');
                     setFiltroDataInicio('');
                     setFiltroDataFim('');
                     setFiltroCliente('');
+                    setFiltroMotorista('');
                   }}
                 >
                   Limpar Filtros
                 </button>
               </div>
-              
+
               <div className="filtro-group">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-pdf-fretes"
                   onClick={gerarPDFControleFrentes}
                   title="Gerar PDF dos fretes filtrados"
@@ -1388,15 +1417,16 @@ const ControleFrete: React.FC = () => {
           </div>
 
           {/* Resumo dos filtros */}
-          {(filtroSituacao || filtroDataInicio || filtroDataFim || filtroCliente) && (
+          {(filtroSituacao || filtroDataInicio || filtroDataFim || filtroCliente || filtroMotorista) && (
             <div className="filtros-resumo">
               <p>
-                <strong>{fretesFiltrados.length}</strong> frete{fretesFiltrados.length !== 1 ? 's' : ''} 
+                <strong>{fretesFiltrados.length}</strong> frete{fretesFiltrados.length !== 1 ? 's' : ''}
                 {fretesFiltrados.length !== 1 ? ' encontrados' : ' encontrado'}
                 {filtroSituacao && ` • Situação: ${filtroSituacao}`}
                 {filtroDataInicio && ` • De: ${formatDisplayDate(filtroDataInicio)}`}
                 {filtroDataFim && ` • Até: ${formatDisplayDate(filtroDataFim)}`}
                 {filtroCliente && ` • Cliente: ${filtroCliente}`}
+                {filtroMotorista && ` • Motorista: ${motoristas.find(m => m.id === parseInt(filtroMotorista))?.nome || ''}`}
               </p>
             </div>
           )}
@@ -1407,19 +1437,19 @@ const ControleFrete: React.FC = () => {
               <div className="barra-selecao-info">
                 <Archive size={18} />
                 <span>
-                  <strong>{fretesSelecionados.length}</strong> frete{fretesSelecionados.length !== 1 ? 's' : ''} 
+                  <strong>{fretesSelecionados.length}</strong> frete{fretesSelecionados.length !== 1 ? 's' : ''}
                   {fretesSelecionados.length !== 1 ? ' selecionados' : ' selecionado'}
                 </span>
               </div>
               <div className="barra-selecao-acoes">
-                <button 
+                <button
                   className="btn-cancelar-selecao"
                   onClick={() => setFretesSelecionados([])}
                   title="Desmarcar todos"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   className="btn-arquivar-selecionados"
                   onClick={arquivarSelecionados}
                   title="Arquivar fretes selecionados"
@@ -1448,7 +1478,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="date"
                           value={formData.data_emissao}
-                          onChange={(e) => setFormData({...formData, data_emissao: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, data_emissao: e.target.value })}
                           required
                         />
                       </div>
@@ -1457,7 +1487,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="text"
                           value={formData.pecuarista}
-                          onChange={(e) => setFormData({...formData, pecuarista: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, pecuarista: e.target.value })}
                           required
                           placeholder="Nome do pecuarista"
                         />
@@ -1467,7 +1497,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="text"
                           value={formData.cliente}
-                          onChange={(e) => setFormData({...formData, cliente: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
                           placeholder="Nome do cliente final"
                         />
                       </div>
@@ -1478,7 +1508,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="text"
                           value={formData.origem}
-                          onChange={(e) => setFormData({...formData, origem: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
                           required
                           placeholder="Local de origem"
                         />
@@ -1488,7 +1518,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="text"
                           value={formData.destino}
-                          onChange={(e) => setFormData({...formData, destino: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, destino: e.target.value })}
                           required
                           placeholder="Local de destino"
                         />
@@ -1498,7 +1528,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="number"
                           value={formData.total_km}
-                          onChange={(e) => setFormData({...formData, total_km: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, total_km: e.target.value })}
                           placeholder="Quilometragem total"
                         />
                       </div>
@@ -1509,7 +1539,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="text"
                           value={formData.numero_minuta}
-                          onChange={(e) => setFormData({...formData, numero_minuta: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, numero_minuta: e.target.value })}
                           placeholder="Número da Minuta"
                         />
                       </div>
@@ -1518,7 +1548,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="text"
                           value={formData.numero_cb}
-                          onChange={(e) => setFormData({...formData, numero_cb: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, numero_cb: e.target.value })}
                           placeholder="Número do CB"
                         />
                       </div>
@@ -1527,7 +1557,7 @@ const ControleFrete: React.FC = () => {
                         <input
                           type="text"
                           value={formData.faixa}
-                          onChange={(e) => setFormData({...formData, faixa: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, faixa: e.target.value })}
                           placeholder="Faixa do frete"
                         />
                       </div>
@@ -1573,7 +1603,7 @@ const ControleFrete: React.FC = () => {
                             {/* Configuração específica para cada tipo de caminhão */}
                             {(() => {
                               const caminhao = caminhoes.find(c => c.id === parseInt(item.caminhao_id));
-                              
+
                               if (caminhao?.tipo === 'Truck') {
                                 // Para Truck: opção de usar como Truck ou Julieta
                                 return (
@@ -1607,7 +1637,7 @@ const ControleFrete: React.FC = () => {
                                         Usar como Julieta (com reboque)
                                       </label>
                                     </div>
-                                    
+
                                     {/* Campo de reboque se escolher Julieta */}
                                     {item.reboque_id !== undefined && (
                                       <div style={{ marginTop: 8 }}>
@@ -1658,7 +1688,7 @@ const ControleFrete: React.FC = () => {
                               }
                               return null;
                             })()}
-                            
+
                             {/* Campo de valor individual para cada caminhão */}
                             <div style={{ marginTop: 8 }}>
                               <label style={{ fontWeight: 500, fontSize: '0.9rem', marginBottom: 4, display: 'block' }}>Valor do Frete (R$):</label>
@@ -1704,7 +1734,7 @@ const ControleFrete: React.FC = () => {
                           </button>
                         </div>
                       </div>
-                      
+
                       <div className="dynamic-field-group">
                         <h4>👨‍💼 Motoristas *</h4>
                         {motoristasSelecionados.map((motorista, idx) => (
@@ -1719,7 +1749,7 @@ const ControleFrete: React.FC = () => {
                             >
                               <Trash2 size={18} />
                             </button>
-                            
+
                             {/* Select do motorista */}
                             <select
                               value={motorista.motorista_id}
@@ -1738,7 +1768,7 @@ const ControleFrete: React.FC = () => {
                                 </option>
                               ))}
                             </select>
-                            
+
                             {/* Select do caminhão para este motorista */}
                             <select
                               value={motorista.caminhao_id}
@@ -1797,7 +1827,7 @@ const ControleFrete: React.FC = () => {
                         <label>Situação *</label>
                         <select
                           value={formData.situacao}
-                          onChange={(e) => setFormData({...formData, situacao: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, situacao: e.target.value })}
                           required
                         >
                           <option value="Pendente">Pendente</option>
@@ -1805,14 +1835,14 @@ const ControleFrete: React.FC = () => {
                           <option value="Pago">Pago</option>
                         </select>
                       </div>
-                      
+
                       {formData.situacao === 'Pago' && (
                         <>
                           <div className="form-group">
                             <label>Tipo de Pagamento *</label>
                             <select
                               value={formData.tipo_pagamento}
-                              onChange={(e) => setFormData({...formData, tipo_pagamento: e.target.value})}
+                              onChange={(e) => setFormData({ ...formData, tipo_pagamento: e.target.value })}
                               required
                             >
                               <option value="">Selecione o tipo</option>
@@ -1827,7 +1857,7 @@ const ControleFrete: React.FC = () => {
                             <input
                               type="date"
                               value={formData.data_pagamento}
-                              onChange={(e) => setFormData({...formData, data_pagamento: e.target.value})}
+                              onChange={(e) => setFormData({ ...formData, data_pagamento: e.target.value })}
                               required
                             />
                           </div>
@@ -1844,7 +1874,7 @@ const ControleFrete: React.FC = () => {
                         <label>Observações</label>
                         <textarea
                           value={formData.observacoes}
-                          onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                           placeholder="Observações adicionais sobre o frete"
                           rows={3}
                         />
@@ -1891,7 +1921,7 @@ const ControleFrete: React.FC = () => {
                   <th>Data Pagamento</th>
                   <th>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input 
+                      <input
                         type="checkbox"
                         checked={fretesSelecionados.length === fretesFiltrados.length && fretesFiltrados.length > 0}
                         onChange={toggleSelecionarTodos}
@@ -1994,22 +2024,22 @@ const ControleFrete: React.FC = () => {
                       <td>{frete.situacao === 'Pago' ? (frete.data_pagamento ? formatDate(frete.data_pagamento) : '-') : '-'}</td>
                       <td>
                         <div className="actions">
-                          <input 
+                          <input
                             type="checkbox"
                             checked={fretesSelecionados.includes(frete.id!)}
                             onChange={() => frete.id && toggleSelecionarFrete(frete.id)}
                             title="Selecionar para arquivar"
                             style={{ cursor: 'pointer', marginRight: '8px' }}
                           />
-                          <button 
-                            className="btn-edit" 
+                          <button
+                            className="btn-edit"
                             title="Editar"
                             onClick={() => handleEdit(frete)}
                           >
                             <Edit size={16} />
                           </button>
-                          <button 
-                            className="btn-delete" 
+                          <button
+                            className="btn-delete"
                             title="Excluir"
                             onClick={() => frete.id && handleDelete(frete.id)}
                           >
@@ -2067,8 +2097,8 @@ const ControleFrete: React.FC = () => {
               </div>
               <div className="filter-group">
                 <div className="acerto-actions">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-acerto"
                     onClick={filtrarFretesAcerto}
                   >
@@ -2076,8 +2106,8 @@ const ControleFrete: React.FC = () => {
                     Filtrar Fretes
                   </button>
                   {fretesAcerto.length > 0 && (
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="btn-pdf"
                       onClick={gerarPDFAcerto}
                     >
@@ -2130,29 +2160,29 @@ const ControleFrete: React.FC = () => {
                   {fretesAcerto.map((frete) => {
                     // Buscar todos os caminhões vinculados a este frete
                     const vinculosCaminhao = vinculosCaminhoes[frete.id!];
-                    
+
                     // Preparar arrays para concatenar informações de todos os caminhões
                     const descricoesConfiguracao: string[] = [];
                     const placasCaminhoes: string[] = [];
-                    
+
                     if (vinculosCaminhao && vinculosCaminhao.length > 0) {
                       vinculosCaminhao.forEach(vinculo => {
                         const caminhao = caminhoes.find(c => c.id === vinculo.caminhao_id);
                         const configuracao = vinculo.configuracao;
                         const reboqueId = vinculo.reboque_id;
-                        
+
                         // Formatar configuração igual à tabela principal
-                        const descricaoConfiguracao = configuracao === 'Truck' 
+                        const descricaoConfiguracao = configuracao === 'Truck'
                           ? 'Truck'
                           : `${configuracao}${reboqueId ? ` (${reboques.find(r => r.id === reboqueId)?.placa || ''})` : ''}`;
-                        
+
                         descricoesConfiguracao.push(descricaoConfiguracao);
                         placasCaminhoes.push(caminhao?.placa || 'N/A');
                       });
                     } else {
                       // Fallback para dados diretos do frete
                       if (frete.caminhao) {
-                        const descricaoConfiguracao = frete.configuracao === 'Truck' 
+                        const descricaoConfiguracao = frete.configuracao === 'Truck'
                           ? 'Truck'
                           : `${frete.configuracao || 'N/A'}`;
                         descricoesConfiguracao.push(descricaoConfiguracao);
@@ -2162,7 +2192,7 @@ const ControleFrete: React.FC = () => {
                         placasCaminhoes.push('N/A');
                       }
                     }
-                    
+
                     return (
                       <tr key={frete.id}>
                         <td>{formatDate(frete.data_emissao)}</td>
