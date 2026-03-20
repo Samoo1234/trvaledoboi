@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, Truck, Trash2, User } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 import { Caminhao } from '../../../services/caminhaoService';
 import { Motorista } from '../../../services/motoristaService';
 import { Reboque } from '../../../services/reboqueService';
+import { supabase } from '../../../services/supabaseClient';
+import { Cliente } from '../../../types/cliente';
 
 type CaminhaoSelecionado = {
   caminhao_id: string;
@@ -47,6 +49,29 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
   handleSubmit,
   resetForm
 }) => {
+  const [clientesDisponiveis, setClientesDisponiveis] = useState<Cliente[]>([]);
+
+  useEffect(() => {
+    const fetchClientes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clientes')
+          .select('razao_social, municipio, uf')
+          .eq('situacao', 'Ativo');
+        
+        if (error) throw error;
+        
+        if (data) {
+          setClientesDisponiveis(data as Cliente[]);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar clientes para autocomplete:', error);
+      }
+    };
+
+    fetchClientes();
+  }, []);
+
   return (
     <div className="form-modal">
       <div className="form-modal-content">
@@ -54,6 +79,13 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
           <FileText size={20} />
           {editingId ? 'Editar Frete' : 'Novo Frete'}
         </h2>
+
+        <datalist id="clientes-list">
+          {clientesDisponiveis.map((c, i) => (
+            <option key={i} value={c.razao_social} />
+          ))}
+        </datalist>
+
         <form onSubmit={handleSubmit}>
           {/* Dados Básicos */}
           <div className="form-section">
@@ -85,6 +117,7 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
                   value={formData.cliente}
                   onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
                   placeholder="Nome do cliente final"
+                  list="clientes-list"
                 />
               </div>
             </div>

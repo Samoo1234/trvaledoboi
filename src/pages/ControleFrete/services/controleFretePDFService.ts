@@ -99,7 +99,7 @@ class ControleFretePDFService {
   async gerarPDFControleFrentes(data: PDFDataControle) {
     const {
       fretesFiltrados, filtroDataInicio, filtroDataFim, filtroCliente, filtroSituacao,
-      caminhoes, motoristas, reboques, vinculosCaminhoes, vinculosMotoristas
+      caminhoes, motoristas, vinculosCaminhoes, vinculosMotoristas
     } = data;
 
     if (fretesFiltrados.length === 0) {
@@ -346,7 +346,7 @@ class ControleFretePDFService {
   async gerarPDFAcerto(data: PDFDataAcerto) {
     const { 
       fretesAcerto, clienteSelecionado, dataInicioAcerto, dataFimAcerto,
-      caminhoes, reboques, vinculosCaminhoes
+      reboques, vinculosCaminhoes
     } = data;
 
     if (fretesAcerto.length === 0) {
@@ -546,7 +546,7 @@ class ControleFretePDFService {
           const valDetalhesLines: string[] = [];
           if (valoresIndividuais.length > 0) {
             valoresIndividuais.forEach(item => {
-              const texto = `${this.formatCurrency(item.valor)} (${item.descricao})`;
+              const texto = `${this.formatCurrency(item.valor)}`;
               valDetalhesLines.push(...doc.splitTextToSize(texto, colWidths[6] - 2));
             });
             if (valoresIndividuais.length > 1) {
