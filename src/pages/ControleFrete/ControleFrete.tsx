@@ -26,6 +26,17 @@ type MotoristaSelecionado = {
   caminhao_id: string;
 };
 
+const getPrimeiroDiaMes = () => {
+  const data = new Date();
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-01`;
+};
+
+const getUltimoDiaMes = () => {
+  const data = new Date();
+  const ultimoDia = new Date(data.getFullYear(), data.getMonth() + 1, 0);
+  return `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth() + 1).padStart(2, '0')}-${String(ultimoDia.getDate()).padStart(2, '0')}`;
+};
+
 const ControleFrete: React.FC = () => {
   const [fretes, setFretes] = useState<Frete[]>([]);
   const [caminhoes, setCaminhoes] = useState<Caminhao[]>([]);
@@ -37,8 +48,8 @@ const ControleFrete: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   
   const [filtroSituacao, setFiltroSituacao] = useState<string>('');
-  const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
-  const [filtroDataFim, setFiltroDataFim] = useState<string>('');
+  const [filtroDataInicio, setFiltroDataInicio] = useState<string>(getPrimeiroDiaMes());
+  const [filtroDataFim, setFiltroDataFim] = useState<string>(getUltimoDiaMes());
   const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroMotorista, setFiltroMotorista] = useState<string>('');
 
@@ -332,14 +343,38 @@ const ControleFrete: React.FC = () => {
 
   const fretesFiltrados = fretes.filter(frete => {
     if (filtroSituacao && frete.situacao?.toUpperCase() !== filtroSituacao.toUpperCase()) return false;
-    if (filtroDataInicio && new Date(frete.data_emissao) < new Date(filtroDataInicio)) return false;
-    if (filtroDataFim && new Date(frete.data_emissao) > new Date(filtroDataFim)) return false;
+    
+    // Tratamento robusto para as datas, ignorando fuso horário
+    if (filtroDataInicio || filtroDataFim) {
+      if (frete.data_emissao) {
+        const [yFrete, mFrete, dFrete] = frete.data_emissao.split('T')[0].split('-').map(Number);
+        const dataFreteCalc = new Date(yFrete, mFrete - 1, dFrete).getTime();
+
+        if (filtroDataInicio) {
+          const [yIni, mIni, dIni] = filtroDataInicio.split('-').map(Number);
+          if (dataFreteCalc < new Date(yIni, mIni - 1, dIni).getTime()) return false;
+        }
+        
+        if (filtroDataFim) {
+          const [yFim, mFim, dFim] = filtroDataFim.split('-').map(Number);
+          if (dataFreteCalc > new Date(yFim, mFim - 1, dFim).getTime()) return false;
+        }
+      } else {
+        return false; // se não tiver data, não mostra no filtro por período
+      }
+    }
+    
     if (filtroCliente && frete.cliente !== filtroCliente) return false;
     if (filtroMotorista) {
       const vincs = vinculosMotoristas[frete.id!] || [];
       if (!vincs.some(v => v.motorista_id === parseInt(filtroMotorista))) return false;
     }
     return true;
+  }).sort((a, b) => {
+    // Ordenar de forma Ascendente (do mais antigo para o mais novo) no frontend
+    const dateA = new Date(a.data_emissao).getTime();
+    const dateB = new Date(b.data_emissao).getTime();
+    return dateA - dateB;
   });
 
   const handleValorFreteChange = (value: string | undefined) => {
@@ -433,8 +468,11 @@ const ControleFrete: React.FC = () => {
             filtroMotorista={filtroMotorista} setFiltroMotorista={setFiltroMotorista}
             clientesUnicos={getClientesUnicos()} motoristas={motoristas}
             onClearFilters={() => {
-              setFiltroSituacao(''); setFiltroDataInicio(''); setFiltroDataFim('');
-              setFiltroCliente(''); setFiltroMotorista('');
+              setFiltroSituacao(''); 
+              setFiltroDataInicio(getPrimeiroDiaMes()); 
+              setFiltroDataFim(getUltimoDiaMes());
+              setFiltroCliente(''); 
+              setFiltroMotorista('');
             }}
             onGeneratePDF={handleGerarPDFControle}
             fretesFiltrados={fretesFiltrados}

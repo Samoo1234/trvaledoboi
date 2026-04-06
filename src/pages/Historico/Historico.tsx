@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Archive, Search, RotateCcw, Eye, FileText, DollarSign, Filter, X } from 'lucide-react';
+import { Archive, FileText, DollarSign } from 'lucide-react';
 import { freteService, Frete } from '../../services/freteService';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { motoristaService, Motorista } from '../../services/motoristaService';
-import { formatDisplayDate } from '../../services/dateUtils';
+
 import './Historico.css';
+import HistoricoFilters from './components/HistoricoFilters';
+import HistoricoTable from './components/HistoricoTable';
+import HistoricoModals from './components/HistoricoModals';
 
 const Historico: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'fretes' | 'fechamentos'>('fretes');
@@ -226,7 +229,6 @@ const Historico: React.FC = () => {
         </p>
       </div>
 
-      {/* Abas */}
       <div className="tabs-container">
         <button
           className={`tab-button ${activeTab === 'fretes' ? 'active' : ''}`}
@@ -244,38 +246,25 @@ const Historico: React.FC = () => {
         </button>
       </div>
 
-      {/* Controles de Filtro */}
-      <div className="filter-controls">
-        <button
-          className="filter-toggle"
-          onClick={() => setMostrandoFiltros(!mostrandoFiltros)}
-        >
-          <Filter size={20} />
-          {mostrandoFiltros ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-          {filtrosAtivos && <span className="filtros-ativos-badge">!</span>}
-        </button>
-        <div className="search-actions">
-          <button className="search-btn" onClick={executarBusca} disabled={loading}>
-            <Search size={20} />
-            {loading ? 'Buscando...' : 'Buscar'}
-          </button>
-          <button className="clear-btn" onClick={limparFiltros} disabled={loading}>
-            <X size={20} />
-            {filtrosAtivos ? 'Limpar e Ver Todos' : 'Ver Todos'}
-          </button>
-          <button 
-            className="reload-btn" 
-            onClick={carregarTodosRegistros} 
-            disabled={loading}
-            title="Carregar todos os registros"
-          >
-            <RotateCcw size={20} />
-            Todos
-          </button>
-        </div>
-      </div>
+      <HistoricoFilters
+        activeTab={activeTab}
+        mostrandoFiltros={mostrandoFiltros}
+        setMostrandoFiltros={setMostrandoFiltros}
+        filtrosAtivos={filtrosAtivos}
+        executarBusca={executarBusca}
+        limparFiltros={limparFiltros}
+        carregarTodosRegistros={carregarTodosRegistros}
+        loading={loading}
+        filtrosFrete={filtrosFrete}
+        handleFiltroFreteChange={handleFiltroFreteChange}
+        filtrosFechamento={filtrosFechamento}
+        handleFiltroFechamentoChange={handleFiltroFechamentoChange}
+        motoristas={motoristas}
+        getClientesUnicos={getClientesUnicos}
+        getTiposPagamento={getTiposPagamento}
+        getTiposMotorista={getTiposMotorista}
+      />
 
-      {/* Aviso quando há filtros ativos mas sem resultados */}
       {filtrosAtivos && (
         <div className="filtros-info">
           <div className="filtros-warning">
@@ -291,490 +280,27 @@ const Historico: React.FC = () => {
         </div>
       )}
 
-      {/* Filtros Expandidos */}
-      {mostrandoFiltros && (
-        <div className="filters-expanded">
-          {activeTab === 'fretes' ? (
-            // Filtros para Fretes
-            <div className="filters-grid">
-              <div className="filter-group">
-                <label>Data Início:</label>
-                <input
-                  type="date"
-                  value={filtrosFrete.dataInicio}
-                  onChange={(e) => handleFiltroFreteChange('dataInicio', e.target.value)}
-                />
-              </div>
-              <div className="filter-group">
-                <label>Data Fim:</label>
-                <input
-                  type="date"
-                  value={filtrosFrete.dataFim}
-                  onChange={(e) => handleFiltroFreteChange('dataFim', e.target.value)}
-                />
-              </div>
-              <div className="filter-group">
-                <label>Motorista:</label>
-                <select
-                  value={filtrosFrete.motorista}
-                  onChange={(e) => handleFiltroFreteChange('motorista', e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {motoristas.map(m => (
-                    <option key={m.id} value={m.id?.toString()}>{m.nome}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Cliente:</label>
-                <select
-                  value={filtrosFrete.cliente}
-                  onChange={(e) => handleFiltroFreteChange('cliente', e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {getClientesUnicos().map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Tipo Pagamento:</label>
-                <select
-                  value={filtrosFrete.tipoPagamento}
-                  onChange={(e) => handleFiltroFreteChange('tipoPagamento', e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {getTiposPagamento().map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Buscar Texto:</label>
-                <input
-                  type="text"
-                  placeholder="Número, origem, destino..."
-                  value={filtrosFrete.buscarTexto}
-                  onChange={(e) => handleFiltroFreteChange('buscarTexto', e.target.value)}
-                />
-              </div>
-            </div>
-          ) : (
-            // Filtros para Fechamentos
-            <div className="filters-grid">
-              <div className="filter-group">
-                <label>Data Início:</label>
-                <input
-                  type="date"
-                  value={filtrosFechamento.dataInicio}
-                  onChange={(e) => handleFiltroFechamentoChange('dataInicio', e.target.value)}
-                />
-              </div>
-              <div className="filter-group">
-                <label>Data Fim:</label>
-                <input
-                  type="date"
-                  value={filtrosFechamento.dataFim}
-                  onChange={(e) => handleFiltroFechamentoChange('dataFim', e.target.value)}
-                />
-              </div>
-              <div className="filter-group">
-                <label>Motorista:</label>
-                <select
-                  value={filtrosFechamento.motorista}
-                  onChange={(e) => handleFiltroFechamentoChange('motorista', e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {motoristas.map(m => (
-                    <option key={m.id} value={m.id?.toString()}>{m.nome}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Tipo Motorista:</label>
-                <select
-                  value={filtrosFechamento.tipoMotorista}
-                  onChange={(e) => handleFiltroFechamentoChange('tipoMotorista', e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {getTiposMotorista().map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Período:</label>
-                <input
-                  type="text"
-                  placeholder="MM/YYYY"
-                  value={filtrosFechamento.periodo}
-                  onChange={(e) => handleFiltroFechamentoChange('periodo', e.target.value)}
-                />
-              </div>
-              <div className="filter-group">
-                <label>Buscar Texto:</label>
-                <input
-                  type="text"
-                  placeholder="Nome, observações..."
-                  value={filtrosFechamento.buscarTexto}
-                  onChange={(e) => handleFiltroFechamentoChange('buscarTexto', e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      <HistoricoTable
+        activeTab={activeTab}
+        fretesArquivados={fretesArquivados}
+        fechamentosArquivados={fechamentosArquivados}
+        formatCurrency={formatCurrency}
+        setFreteDetalhes={setFreteDetalhes}
+        setFechamentoDetalhes={setFechamentoDetalhes}
+        reabrirFrete={reabrirFrete}
+        reabrirFechamento={reabrirFechamento}
+      />
 
-      {/* Conteúdo das Abas */}
-      <div className="tab-content">
-        {activeTab === 'fretes' ? (
-          <div className="fretes-arquivados">
-            <div className="results-header">
-              <h3>Fretes Arquivados ({fretesArquivados.length})</h3>
-            </div>
-            
-            {fretesArquivados.length === 0 ? (
-              <div className="no-results">
-                <Archive size={48} />
-                <p>Nenhum frete arquivado encontrado</p>
-                <span>Use os filtros acima para buscar registros</span>
-              </div>
-            ) : (
-              <div className="table-container">
-                <table className="results-table">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Motorista</th>
-                      <th>Cliente</th>
-                      <th>Origem → Destino</th>
-                      <th>Valor</th>
-                      <th>Pago em</th>
-                      <th>Tipo Pagamento</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fretesArquivados.map(frete => (
-                      <tr key={frete.id}>
-                        <td>{formatDisplayDate(frete.data_emissao)}</td>
-                        <td>{frete.motorista?.nome}</td>
-                        <td>{frete.cliente || '-'}</td>
-                        <td>{frete.origem} → {frete.destino}</td>
-                        <td className="valor">{formatCurrency(frete.valor_frete)}</td>
-                        <td>{frete.data_pagamento ? formatDisplayDate(frete.data_pagamento) : '-'}</td>
-                        <td>{frete.tipo_pagamento || '-'}</td>
-                        <td>
-                          <div className="action-buttons">
-                            <button
-                              className="view-btn"
-                              title="Visualizar detalhes"
-                              onClick={() => setFreteDetalhes(frete)}
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              className="reopen-btn"
-                              title="Reabrir para correção"
-                              onClick={() => reabrirFrete(frete.id!)}
-                            >
-                              <RotateCcw size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="fechamentos-arquivados">
-            <div className="results-header">
-              <h3>Fechamentos Arquivados ({fechamentosArquivados.length})</h3>
-            </div>
-            
-            {fechamentosArquivados.length === 0 ? (
-              <div className="no-results">
-                <Archive size={48} />
-                <p>Nenhum fechamento arquivado encontrado</p>
-                <span>Use os filtros acima para buscar registros</span>
-              </div>
-            ) : (
-              <div className="table-container">
-                <table className="results-table">
-                  <thead>
-                    <tr>
-                      <th>Período</th>
-                      <th>Motorista</th>
-                      <th>Tipo</th>
-                      <th>Total Fretes</th>
-                      <th>Valor Bruto</th>
-                      <th>Valor Líquido</th>
-                      <th>Data Fechamento</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fechamentosArquivados.map(fechamento => (
-                      <tr key={fechamento.id}>
-                        <td>{fechamento.periodo}</td>
-                        <td>{fechamento.motorista?.nome}</td>
-                        <td>
-                          <span className={`tipo-badge ${fechamento.motorista?.tipo_motorista?.toLowerCase()}`}>
-                            {fechamento.motorista?.tipo_motorista}
-                          </span>
-                        </td>
-                        <td>{fechamento.total_fretes}</td>
-                        <td className="valor">{formatCurrency(fechamento.valor_bruto)}</td>
-                        <td className="valor">{formatCurrency(fechamento.valor_liquido)}</td>
-                        <td>{fechamento.data_fechamento ? formatDisplayDate(fechamento.data_fechamento) : '-'}</td>
-                        <td>
-                          <div className="action-buttons">
-                            <button
-                              className="view-btn"
-                              title="Visualizar detalhes"
-                              onClick={() => setFechamentoDetalhes(fechamento)}
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              className="pdf-btn"
-                              title="Gerar PDF"
-                              onClick={() => alert('Funcionalidade de PDF em desenvolvimento')}
-                            >
-                              <FileText size={16} />
-                            </button>
-                            <button
-                              className="reopen-btn"
-                              title="Reabrir para correção"
-                              onClick={() => reabrirFechamento(fechamento.id!)}
-                            >
-                              <RotateCcw size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Modal de Detalhes do Frete */}
-      {freteDetalhes && (
-        <div className="modal-overlay" onClick={() => setFreteDetalhes(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>📦 Detalhes do Frete Arquivado</h2>
-              <button className="modal-close" onClick={() => setFreteDetalhes(null)}>
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="detalhes-grid">
-                <div className="detalhe-item">
-                  <label>Data de Emissão:</label>
-                  <span>{formatDisplayDate(freteDetalhes.data_emissao)}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Número Minuta:</label>
-                  <span>{freteDetalhes.numero_minuta || '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Número CB:</label>
-                  <span>{freteDetalhes.numero_cb || '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Pecuarista:</label>
-                  <span>{freteDetalhes.pecuarista || '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Cliente:</label>
-                  <span>{freteDetalhes.cliente || '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Origem:</label>
-                  <span>{freteDetalhes.origem}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Destino:</label>
-                  <span>{freteDetalhes.destino}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Faixa:</label>
-                  <span>{freteDetalhes.faixa || '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Total KM:</label>
-                  <span>{freteDetalhes.total_km ? `${freteDetalhes.total_km} km` : '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Valor do Frete:</label>
-                  <span className="valor-destaque">{formatCurrency(freteDetalhes.valor_frete)}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Situação:</label>
-                  <span className={`badge ${freteDetalhes.situacao?.toLowerCase()}`}>
-                    {freteDetalhes.situacao}
-                  </span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Tipo de Pagamento:</label>
-                  <span>{freteDetalhes.tipo_pagamento || '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Data de Pagamento:</label>
-                  <span>{freteDetalhes.data_pagamento ? formatDisplayDate(freteDetalhes.data_pagamento) : '-'}</span>
-                </div>
-                
-                <div className="detalhe-item full-width">
-                  <label>Observações:</label>
-                  <span>{freteDetalhes.observacoes || 'Sem observações'}</span>
-                </div>
-                
-                {freteDetalhes.arquivado_em && (
-                  <div className="detalhe-item">
-                    <label>Arquivado em:</label>
-                    <span>{new Date(freteDetalhes.arquivado_em).toLocaleString('pt-BR')}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setFreteDetalhes(null)}>
-                Fechar
-              </button>
-              <button 
-                className="btn-primary" 
-                onClick={() => {
-                  reabrirFrete(freteDetalhes.id!);
-                  setFreteDetalhes(null);
-                }}
-              >
-                <RotateCcw size={16} />
-                Reabrir Frete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Detalhes do Fechamento */}
-      {fechamentoDetalhes && (
-        <div className="modal-overlay" onClick={() => setFechamentoDetalhes(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>💰 Detalhes do Fechamento Arquivado</h2>
-              <button className="modal-close" onClick={() => setFechamentoDetalhes(null)}>
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="detalhes-grid">
-                <div className="detalhe-item">
-                  <label>Motorista:</label>
-                  <span>{motoristas.find(m => m.id === fechamentoDetalhes.motorista_id)?.nome || '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Período:</label>
-                  <span>{fechamentoDetalhes.periodo}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Data do Fechamento:</label>
-                  <span>{fechamentoDetalhes.data_fechamento ? formatDisplayDate(fechamentoDetalhes.data_fechamento) : '-'}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Total de Fretes:</label>
-                  <span className="valor-destaque">{fechamentoDetalhes.total_fretes}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Valor Bruto:</label>
-                  <span className="valor-destaque">{formatCurrency(fechamentoDetalhes.valor_bruto)}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Comissão:</label>
-                  <span>{formatCurrency(fechamentoDetalhes.valor_comissao)}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Descontos:</label>
-                  <span className="valor-negativo">{formatCurrency(fechamentoDetalhes.descontos || 0)}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Bônus:</label>
-                  <span className="valor-positivo">{formatCurrency(fechamentoDetalhes.bonus || 0)}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Valor Líquido:</label>
-                  <span className="valor-destaque">{formatCurrency(fechamentoDetalhes.valor_liquido)}</span>
-                </div>
-                
-                <div className="detalhe-item">
-                  <label>Status:</label>
-                  <span className={`badge ${fechamentoDetalhes.status?.toLowerCase()}`}>
-                    {fechamentoDetalhes.status}
-                  </span>
-                </div>
-                
-                <div className="detalhe-item full-width">
-                  <label>Observações:</label>
-                  <span>{fechamentoDetalhes.observacoes || 'Sem observações'}</span>
-                </div>
-                
-                {fechamentoDetalhes.arquivado_em && (
-                  <div className="detalhe-item">
-                    <label>Arquivado em:</label>
-                    <span>{new Date(fechamentoDetalhes.arquivado_em).toLocaleString('pt-BR')}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setFechamentoDetalhes(null)}>
-                Fechar
-              </button>
-              <button 
-                className="btn-primary" 
-                onClick={() => {
-                  reabrirFechamento(fechamentoDetalhes.id!);
-                  setFechamentoDetalhes(null);
-                }}
-              >
-                <RotateCcw size={16} />
-                Reabrir Fechamento
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <HistoricoModals
+        freteDetalhes={freteDetalhes}
+        setFreteDetalhes={setFreteDetalhes}
+        fechamentoDetalhes={fechamentoDetalhes}
+        setFechamentoDetalhes={setFechamentoDetalhes}
+        motoristas={motoristas}
+        formatCurrency={formatCurrency}
+        reabrirFrete={reabrirFrete}
+        reabrirFechamento={reabrirFechamento}
+      />
     </div>
   );
 };
