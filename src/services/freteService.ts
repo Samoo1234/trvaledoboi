@@ -50,7 +50,7 @@ export const freteService = {
         )
       `)
       .or('arquivado.is.null,arquivado.eq.false') // Buscar apenas não arquivados
-      .order('data_emissao', { ascending: false }); // Mais recentes primeiro
+      .order('data_emissao', { ascending: true }); // Mais antigos primeiro (ascendente)
     
     if (error) {
       throw new Error(error.message);
