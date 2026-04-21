@@ -1,6 +1,5 @@
 import React from 'react';
 import { Filter, Download } from 'lucide-react';
-import { formatDisplayDate } from '../../../services/dateUtils';
 import { Frete } from '../../../services/freteService';
 import { Caminhao } from '../../../services/caminhaoService';
 import { Reboque } from '../../../services/reboqueService';
