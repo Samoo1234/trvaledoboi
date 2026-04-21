@@ -175,9 +175,7 @@ const CadastroCaminhoes: React.FC = () => {
                   >
                     <option value="Toco">Toco</option>
                     <option value="Truck">Truck</option>
-                    <option value="Carreta Baixa">Carreta Baixa</option>
-                    <option value="Julieta">Julieta</option>
-                    <option value="Carreta 2 Pisos">Carreta 2 Pisos</option>
+                    <option value="Cavalo Mecânico">Cavalo Mecânico</option>
                   </select>
                 </div>
               </div>

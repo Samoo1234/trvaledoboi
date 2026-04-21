@@ -72,14 +72,16 @@ const CadastroReboques: React.FC = () => {
             </div>
             <div className="form-group">
               <label>Tipo de conjunto</label>
-              <input
-                type="text"
-                placeholder="Ex: JULIETA"
+              <select
                 value={conjunto}
                 onChange={e => setConjunto(e.target.value)}
-                maxLength={30}
                 required
-              />
+              >
+                <option value="">Selecione o tipo</option>
+                <option value="Julieta">Julieta</option>
+                <option value="Carreta Baixa">Carreta Baixa</option>
+                <option value="Carreta 2 Pisos">Carreta 2 Pisos</option>
+              </select>
             </div>
             <div className="form-group" style={{ alignSelf: 'flex-end' }}>
               <button type="submit" className="btn-primary">Cadastrar</button>
