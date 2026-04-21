@@ -291,11 +291,16 @@ const ControleFrete: React.FC = () => {
 
       for (const caminhaoVinc of caminhoesSelecionados) {
         const caminhao = caminhoes.find(c => c.id === parseInt(caminhaoVinc.caminhao_id));
-        let configuracao: 'Truck' | 'Julieta' | 'Carreta Baixa' | 'Carreta 2 Pisos' = 'Truck';
-        if (caminhao?.tipo === 'Julieta') configuracao = 'Julieta';
-        else if (caminhao?.tipo === 'Carreta Baixa') configuracao = 'Carreta Baixa';
-        else if (caminhao?.tipo === 'Carreta 2 Pisos') configuracao = 'Carreta 2 Pisos';
-        else if (caminhao?.tipo === 'Truck' && caminhaoVinc.reboque_id) configuracao = 'Julieta';
+        let configuracao: 'Toco' | 'Truck' | 'Julieta' | 'Carreta Baixa' | 'Carreta 2 Pisos' = 'Truck';
+        if (caminhao?.tipo === 'Toco') {
+          configuracao = 'Toco';
+        } else if (caminhaoVinc.reboque_id) {
+          // Se tem reboque, configuração = tipo do reboque
+          const reboque = reboques.find(r => r.id === parseInt(caminhaoVinc.reboque_id!));
+          configuracao = (reboque?.conjunto as typeof configuracao) || 'Truck';
+        } else {
+          configuracao = 'Truck';
+        }
 
         await freteCaminhaoService.create({
           frete_id: freteId!,

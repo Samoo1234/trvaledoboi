@@ -249,7 +249,7 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
                                     setCaminhoesSelecionados(novos);
                                   }}
                                 />
-                                Usar como Julieta (com reboque)
+                                Usar com reboque
                               </label>
                             </div>
                             {item.reboque_id !== undefined && (
@@ -275,10 +275,10 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
                             )}
                           </div>
                         );
-                      } else if (caminhao?.tipo === 'Julieta' || caminhao?.tipo === 'Carreta Baixa' || caminhao?.tipo === '2 Pisos') {
+                      } else if (caminhao?.tipo === 'Cavalo Mecânico') {
                         return (
                           <div style={{ marginBottom: 4 }}>
-                            <label style={{ fontWeight: 500, fontSize: '0.95rem', marginBottom: 2, display: 'block' }}>Reboque</label>
+                            <label style={{ fontWeight: 500, fontSize: '0.95rem', marginBottom: 2, display: 'block' }}>Reboque *</label>
                             <select
                               value={item.reboque_id || ''}
                               onChange={e => {
