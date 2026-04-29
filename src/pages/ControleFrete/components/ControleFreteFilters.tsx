@@ -15,7 +15,7 @@ interface ControleFreteFiltersProps {
   setFiltroCliente: (v: string) => void;
   filtroMotorista: string;
   setFiltroMotorista: (v: string) => void;
-  clientesUnicos: string[];
+  clientesCadastro: { id: number; razao_social: string }[];
   motoristas: Motorista[];
   onClearFilters: () => void;
   onGeneratePDF: () => void;
@@ -33,7 +33,7 @@ export const ControleFreteFilters: React.FC<ControleFreteFiltersProps> = ({
   setFiltroCliente,
   filtroMotorista,
   setFiltroMotorista,
-  clientesUnicos,
+  clientesCadastro,
   motoristas,
   onClearFilters,
   onGeneratePDF,
@@ -86,9 +86,9 @@ export const ControleFreteFilters: React.FC<ControleFreteFiltersProps> = ({
               className="filtro-select"
             >
               <option value="">Todos os Clientes</option>
-              {clientesUnicos.map((cliente) => (
-                <option key={cliente} value={cliente}>
-                  {cliente}
+              {clientesCadastro.map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.razao_social}
                 </option>
               ))}
             </select>
@@ -142,7 +142,7 @@ export const ControleFreteFilters: React.FC<ControleFreteFiltersProps> = ({
             {filtroSituacao && ` • Situação: ${filtroSituacao}`}
             {filtroDataInicio && ` • De: ${formatDisplayDate(filtroDataInicio)}`}
             {filtroDataFim && ` • Até: ${formatDisplayDate(filtroDataFim)}`}
-            {filtroCliente && ` • Cliente: ${filtroCliente}`}
+            {filtroCliente && ` • Cliente: ${clientesCadastro.find(c => c.id === parseInt(filtroCliente))?.razao_social || filtroCliente}`}
             {filtroMotorista && ` • Motorista: ${motoristas.find(m => m.id === parseInt(filtroMotorista))?.nome || ''}`}
           </p>
         </div>

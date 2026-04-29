@@ -14,7 +14,7 @@ interface ControleFreteAcertoProps {
   dataFimAcerto: string;
   setDataFimAcerto: (v: string) => void;
   fretesAcerto: Frete[];
-  clientesUnicos: string[];
+  clientesCadastro: { id: number; razao_social: string }[];
   vinculosCaminhoes: { [freteId: number]: FreteCaminhao[] };
   caminhoes: Caminhao[];
   reboques: Reboque[];
@@ -30,7 +30,7 @@ export const ControleFreteAcerto: React.FC<ControleFreteAcertoProps> = ({
   dataFimAcerto,
   setDataFimAcerto,
   fretesAcerto,
-  clientesUnicos,
+  clientesCadastro,
   vinculosCaminhoes,
   caminhoes,
   reboques,
@@ -52,9 +52,9 @@ export const ControleFreteAcerto: React.FC<ControleFreteAcertoProps> = ({
               onChange={(e) => setClienteSelecionado(e.target.value)}
             >
               <option value="">Selecione um cliente</option>
-              {clientesUnicos.map((cliente) => (
-                <option key={cliente} value={cliente}>
-                  {cliente}
+              {clientesCadastro.map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.razao_social}
                 </option>
               ))}
             </select>
@@ -104,7 +104,7 @@ export const ControleFreteAcerto: React.FC<ControleFreteAcertoProps> = ({
         <div className="acerto-summary">
           <div className="count">
             {fretesAcerto.length} frete{fretesAcerto.length > 1 ? 's' : ''} encontrado{fretesAcerto.length > 1 ? 's' : ''}
-            {clienteSelecionado && ` para ${clienteSelecionado}`}
+            {clienteSelecionado && ` para ${clientesCadastro.find(c => c.id === parseInt(clienteSelecionado))?.razao_social || clienteSelecionado}`}
           </div>
           <div className="total">
             Total: {formatCurrency(fretesAcerto.reduce((sum, f) => {
@@ -239,7 +239,7 @@ export const ControleFreteAcerto: React.FC<ControleFreteAcertoProps> = ({
 
       {clienteSelecionado && fretesAcerto.length === 0 && (
         <div className="empty-state">
-          <p>Nenhum frete encontrado para o cliente "{clienteSelecionado}" no período selecionado.</p>
+          <p>Nenhum frete encontrado para o cliente "{clientesCadastro.find(c => c.id === parseInt(clienteSelecionado))?.razao_social || clienteSelecionado}" no período selecionado.</p>
         </div>
       )}
 

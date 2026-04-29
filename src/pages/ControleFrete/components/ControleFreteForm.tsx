@@ -50,14 +50,17 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
   resetForm
 }) => {
   const [clientesDisponiveis, setClientesDisponiveis] = useState<Cliente[]>([]);
+  const [clienteSearch, setClienteSearch] = useState('');
+  const [showClienteDropdown, setShowClienteDropdown] = useState(false);
 
   useEffect(() => {
     const fetchClientes = async () => {
       try {
         const { data, error } = await supabase
           .from('clientes')
-          .select('razao_social, municipio, uf')
-          .eq('situacao', 'Ativo');
+          .select('id, razao_social, cpf_cnpj, municipio, uf')
+          .eq('situacao', 'Ativo')
+          .order('razao_social');
         
         if (error) throw error;
         
@@ -71,6 +74,26 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
 
     fetchClientes();
   }, []);
+
+  // Atualizar o campo de busca quando formData.cliente muda (ex: ao editar)
+  useEffect(() => {
+    if (formData.cliente_id) {
+      const clienteEncontrado = clientesDisponiveis.find(c => c.id === formData.cliente_id);
+      if (clienteEncontrado) {
+        setClienteSearch(clienteEncontrado.razao_social);
+      }
+    } else if (formData.cliente) {
+      setClienteSearch(formData.cliente);
+    } else {
+      setClienteSearch('');
+    }
+  }, [formData.cliente_id, formData.cliente, clientesDisponiveis]);
+
+  const clientesFiltrados = clientesDisponiveis.filter(c =>
+    c.razao_social.toLowerCase().includes(clienteSearch.toLowerCase()) ||
+    (c.municipio && c.municipio.toLowerCase().includes(clienteSearch.toLowerCase())) ||
+    (c.cpf_cnpj && c.cpf_cnpj.includes(clienteSearch))
+  );
 
   return (
     <div className="form-modal">
@@ -110,15 +133,71 @@ export const ControleFreteForm: React.FC<ControleFreteFormProps> = ({
                   placeholder="Nome do pecuarista"
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ position: 'relative' }}>
                 <label>Cliente</label>
                 <input
                   type="text"
-                  value={formData.cliente}
-                  onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
-                  placeholder="Nome do cliente final"
-                  list="clientes-list"
+                  value={clienteSearch}
+                  onChange={(e) => {
+                    setClienteSearch(e.target.value);
+                    setShowClienteDropdown(true);
+                    // Se o texto mudar, limpar o vínculo por ID
+                    if (formData.cliente_id) {
+                      setFormData({ ...formData, cliente_id: null, cliente: e.target.value });
+                    } else {
+                      setFormData({ ...formData, cliente: e.target.value });
+                    }
+                  }}
+                  onFocus={() => setShowClienteDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowClienteDropdown(false), 200)}
+                  placeholder="🔍 Buscar cliente..."
+                  autoComplete="off"
                 />
+                {showClienteDropdown && clienteSearch && clientesFiltrados.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    background: '#fff',
+                    border: '1px solid #ddd',
+                    borderRadius: '0 0 6px 6px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 1000
+                  }}>
+                    {clientesFiltrados.map(c => (
+                      <div
+                        key={c.id}
+                        onMouseDown={() => {
+                          setFormData({
+                            ...formData,
+                            cliente_id: c.id!,
+                            cliente: c.razao_social
+                          });
+                          setClienteSearch(c.razao_social);
+                          setShowClienteDropdown(false);
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f0f0f0',
+                          fontSize: '0.9rem',
+                          transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f7ff')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+                      >
+                        <div style={{ fontWeight: 500 }}>{c.razao_social}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                          {c.municipio && c.uf ? `${c.municipio}/${c.uf}` : ''}
+                          {c.cpf_cnpj ? ` • ${c.cpf_cnpj}` : ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="form-row">

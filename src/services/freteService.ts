@@ -9,7 +9,8 @@ export interface Frete {
   destino: string;
   numero_minuta?: string;
   numero_cb?: string;
-  cliente?: string;
+  cliente?: string; // Campo texto (legado, mantido para compatibilidade)
+  cliente_id?: number | null; // FK para tabela clientes (novo)
   observacoes?: string;
   faixa?: string;
   total_km?: number;
@@ -32,7 +33,14 @@ export interface Frete {
   };
   // Dados de configuração do caminhão no frete
   configuracao?: string;
-
+  // Dados do cliente (join com tabela clientes)
+  clienteData?: {
+    id: number;
+    razao_social: string;
+    cpf_cnpj: string;
+    municipio?: string;
+    uf?: string;
+  };
 }
 
 export const freteService = {
@@ -47,6 +55,13 @@ export const freteService = {
           configuracao,
           reboque_id,
           caminhoes(placa, tipo)
+        ),
+        clientes(
+          id,
+          razao_social,
+          cpf_cnpj,
+          municipio,
+          uf
         )
       `)
       .or('arquivado.is.null,arquivado.eq.false') // Buscar apenas não arquivados
@@ -56,17 +71,25 @@ export const freteService = {
       throw new Error(error.message);
     }
     
-    // Processar os dados para incluir informações de caminhão
+    // Processar os dados para incluir informações de caminhão e cliente
     const fretesProcessados = data?.map(frete => {
       const caminhaoInfo = frete.frete_caminhao?.[0]?.caminhoes;
       const configuracao = frete.frete_caminhao?.[0]?.configuracao;
+      const clienteInfo = frete.clientes;
       return {
         ...frete,
         caminhao: caminhaoInfo ? {
           placa: caminhaoInfo.placa,
           tipo: caminhaoInfo.tipo
         } : undefined,
-        configuracao: configuracao
+        configuracao: configuracao,
+        clienteData: clienteInfo ? {
+          id: clienteInfo.id,
+          razao_social: clienteInfo.razao_social,
+          cpf_cnpj: clienteInfo.cpf_cnpj,
+          municipio: clienteInfo.municipio,
+          uf: clienteInfo.uf
+        } : undefined
       };
     }) || [];
     
@@ -228,7 +251,13 @@ export const freteService = {
       query = query.eq('motorista_id', parseInt(filtros.motorista));
     }
     if (filtros.cliente) {
-      query = query.eq('cliente', filtros.cliente);
+      // Suportar filtro por cliente_id (novo) ou pelo nome (legado)
+      const clienteIdParsed = parseInt(filtros.cliente);
+      if (!isNaN(clienteIdParsed)) {
+        query = query.eq('cliente_id', clienteIdParsed);
+      } else {
+        query = query.eq('cliente', filtros.cliente);
+      }
     }
     if (filtros.tipoPagamento) {
       query = query.eq('tipo_pagamento', filtros.tipoPagamento);

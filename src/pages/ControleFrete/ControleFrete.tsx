@@ -6,6 +6,8 @@ import { motoristaService, Motorista } from '../../services/motoristaService';
 import { freteCaminhaoService, FreteCaminhao } from '../../services/freteCaminhaoService';
 import { freteMotoristaService, FreteMotorista } from '../../services/freteMotoristaService';
 import { reboqueService, Reboque } from '../../services/reboqueService';
+import { supabase } from '../../services/supabaseClient';
+import { Cliente } from '../../types/cliente';
 
 import { ControleFreteFilters } from './components/ControleFreteFilters';
 import { ControleFreteTable } from './components/ControleFreteTable';
@@ -58,6 +60,7 @@ const ControleFrete: React.FC = () => {
   const [dataInicioAcerto, setDataInicioAcerto] = useState<string>('');
   const [dataFimAcerto, setDataFimAcerto] = useState<string>('');
   const [fretesAcerto, setFretesAcerto] = useState<Frete[]>([]);
+  const [clientesCadastro, setClientesCadastro] = useState<Cliente[]>([]);
 
   const [formData, setFormData] = useState({
     data_emissao: '',
@@ -67,6 +70,7 @@ const ControleFrete: React.FC = () => {
     numero_minuta: '',
     numero_cb: '',
     cliente: '',
+    cliente_id: null as number | null,
     observacoes: '',
     faixa: '',
     total_km: '',
@@ -86,7 +90,22 @@ const ControleFrete: React.FC = () => {
   useEffect(() => {
     loadData();
     loadReboques();
+    loadClientesCadastro();
   }, []);
+
+  const loadClientesCadastro = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('id, razao_social, cpf_cnpj, municipio, uf')
+        .eq('situacao', 'Ativo')
+        .order('razao_social');
+      if (error) throw error;
+      setClientesCadastro(data as Cliente[] || []);
+    } catch {
+      setClientesCadastro([]);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -137,6 +156,7 @@ const ControleFrete: React.FC = () => {
       numero_minuta: '',
       numero_cb: '',
       cliente: '',
+      cliente_id: null,
       observacoes: '',
       faixa: '',
       total_km: '',
@@ -192,6 +212,7 @@ const ControleFrete: React.FC = () => {
       numero_minuta: frete.numero_minuta || '',
       numero_cb: frete.numero_cb || '',
       cliente: frete.cliente || '',
+      cliente_id: frete.cliente_id || null,
       observacoes: frete.observacoes || '',
       faixa: frete.faixa || '',
       total_km: frete.total_km?.toString() || '',
@@ -269,6 +290,7 @@ const ControleFrete: React.FC = () => {
         numero_minuta: formData.numero_minuta || undefined,
         numero_cb: formData.numero_cb || undefined,
         cliente: formData.cliente || undefined,
+        cliente_id: formData.cliente_id || undefined,
         observacoes: formData.observacoes || undefined,
         faixa: formData.faixa || undefined,
         total_km: formData.total_km ? parseInt(formData.total_km) : undefined,
@@ -341,9 +363,9 @@ const ControleFrete: React.FC = () => {
     }
   };
 
-  const getClientesUnicos = () => {
-    const cls = fretes.map(f => f.cliente).filter((c): c is string => Boolean(c && c.trim()));
-    return Array.from(new Set(cls)).sort();
+  // Buscar clientes do cadastro para filtros (agora da tabela clientes, não dos fretes)
+  const getClientesParaFiltro = (): { id: number; razao_social: string }[] => {
+    return clientesCadastro.map(c => ({ id: c.id!, razao_social: c.razao_social }));
   };
 
   const fretesFiltrados = fretes.filter(frete => {
@@ -369,7 +391,21 @@ const ControleFrete: React.FC = () => {
       }
     }
     
-    if (filtroCliente && frete.cliente !== filtroCliente) return false;
+    if (filtroCliente) {
+      // filtroCliente agora armazena o ID do cliente (como string)
+      const clienteIdFiltro = parseInt(filtroCliente);
+      if (!isNaN(clienteIdFiltro)) {
+        // Filtrar por cliente_id (novo sistema)
+        if (frete.cliente_id !== clienteIdFiltro) {
+          // Fallback: se frete não tem cliente_id, verificar pelo nome legado
+          const clienteCadastro = clientesCadastro.find(c => c.id === clienteIdFiltro);
+          if (!clienteCadastro || frete.cliente !== clienteCadastro.razao_social) return false;
+        }
+      } else {
+        // Filtro legado por string
+        if (frete.cliente !== filtroCliente) return false;
+      }
+    }
     if (filtroMotorista) {
       const vincs = vinculosMotoristas[frete.id!] || [];
       if (!vincs.some(v => v.motorista_id === parseInt(filtroMotorista))) return false;
@@ -406,7 +442,16 @@ const ControleFrete: React.FC = () => {
       alert('Selecione um cliente');
       return;
     }
-    let filtrados = fretes.filter(f => f.cliente === clienteSelecionado);
+    const clienteIdAcerto = parseInt(clienteSelecionado);
+    let filtrados = fretes.filter(f => {
+      if (!isNaN(clienteIdAcerto)) {
+        // Filtrar por cliente_id ou pelo nome legado
+        if (f.cliente_id === clienteIdAcerto) return true;
+        const clienteCadastro = clientesCadastro.find(c => c.id === clienteIdAcerto);
+        return clienteCadastro && f.cliente === clienteCadastro.razao_social;
+      }
+      return f.cliente === clienteSelecionado;
+    });
     if (dataInicioAcerto && dataFimAcerto) {
       filtrados = filtrados.filter(f => {
         const d = new Date(f.data_emissao);
@@ -471,7 +516,7 @@ const ControleFrete: React.FC = () => {
             filtroDataFim={filtroDataFim} setFiltroDataFim={setFiltroDataFim}
             filtroCliente={filtroCliente} setFiltroCliente={setFiltroCliente}
             filtroMotorista={filtroMotorista} setFiltroMotorista={setFiltroMotorista}
-            clientesUnicos={getClientesUnicos()} motoristas={motoristas}
+            clientesCadastro={getClientesParaFiltro()} motoristas={motoristas}
             onClearFilters={() => {
               setFiltroSituacao(''); 
               setFiltroDataInicio(getPrimeiroDiaMes()); 
@@ -534,7 +579,7 @@ const ControleFrete: React.FC = () => {
           clienteSelecionado={clienteSelecionado} setClienteSelecionado={setClienteSelecionado}
           dataInicioAcerto={dataInicioAcerto} setDataInicioAcerto={setDataInicioAcerto}
           dataFimAcerto={dataFimAcerto} setDataFimAcerto={setDataFimAcerto}
-          fretesAcerto={fretesAcerto} clientesUnicos={getClientesUnicos()}
+          fretesAcerto={fretesAcerto} clientesCadastro={getClientesParaFiltro()}
           vinculosCaminhoes={vinculosCaminhoes} caminhoes={caminhoes} reboques={reboques}
           onFiltrar={filtrarFretesAcerto}
           onGerarPDF={handleGerarPDFAcerto}
