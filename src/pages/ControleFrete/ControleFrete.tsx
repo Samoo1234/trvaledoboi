@@ -423,11 +423,15 @@ const ControleFrete: React.FC = () => {
   };
 
   const handleGerarPDFControle = async () => {
+    // Resolver o nome do cliente a partir do ID para exibição no relatório
+    const nomeClienteFiltro = filtroCliente
+      ? clientesCadastro.find(c => c.id === parseInt(filtroCliente))?.razao_social || filtroCliente
+      : '';
     await controleFretePDFService.gerarPDFControleFrentes({
       fretesFiltrados,
       filtroDataInicio,
       filtroDataFim,
-      filtroCliente,
+      filtroCliente: nomeClienteFiltro,
       filtroSituacao,
       caminhoes,
       motoristas,
@@ -462,9 +466,13 @@ const ControleFrete: React.FC = () => {
   };
 
   const handleGerarPDFAcerto = async () => {
+    // Resolver o nome do cliente a partir do ID para exibição no relatório
+    const nomeClienteAcerto = clienteSelecionado
+      ? clientesCadastro.find(c => c.id === parseInt(clienteSelecionado))?.razao_social || clienteSelecionado
+      : '';
     await controleFretePDFService.gerarPDFAcerto({
       fretesAcerto,
-      clienteSelecionado,
+      clienteSelecionado: nomeClienteAcerto,
       dataInicioAcerto,
       dataFimAcerto,
       caminhoes,

@@ -63,7 +63,7 @@ const HistoricoModals: React.FC<HistoricoModalsProps> = ({
                 
                 <div className="detalhe-item">
                   <label>Cliente:</label>
-                  <span>{freteDetalhes.cliente || '-'}</span>
+                  <span>{freteDetalhes.clienteData?.razao_social || freteDetalhes.cliente || '-'}</span>
                 </div>
                 
                 <div className="detalhe-item">

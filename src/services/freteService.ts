@@ -237,7 +237,16 @@ export const freteService = {
   }): Promise<Frete[]> {
     let query = supabase
       .from('fretes')
-      .select('*')
+      .select(`
+        *,
+        clientes(
+          id,
+          razao_social,
+          cpf_cnpj,
+          municipio,
+          uf
+        )
+      `)
       .eq('arquivado', true); // Buscar apenas fretes arquivados
 
     // Aplicar filtros
@@ -272,7 +281,22 @@ export const freteService = {
       throw new Error(error.message);
     }
 
-    return data || [];
+    // Processar dados para incluir informações do cliente
+    const fretesProcessados = data?.map(frete => {
+      const clienteInfo = frete.clientes;
+      return {
+        ...frete,
+        clienteData: clienteInfo ? {
+          id: clienteInfo.id,
+          razao_social: clienteInfo.razao_social,
+          cpf_cnpj: clienteInfo.cpf_cnpj,
+          municipio: clienteInfo.municipio,
+          uf: clienteInfo.uf
+        } : undefined
+      };
+    }) || [];
+
+    return fretesProcessados;
   },
 
   // Arquivar um frete (marcar como arquivado, NÃO deletar)

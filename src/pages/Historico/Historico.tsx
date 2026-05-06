@@ -195,7 +195,9 @@ const Historico: React.FC = () => {
   };
 
   const getClientesUnicos = (): string[] => {
-    const clientes = fretesArquivados.map(f => f.cliente).filter(Boolean) as string[];
+    const clientes = fretesArquivados
+      .map(f => f.clienteData?.razao_social || f.cliente)
+      .filter(Boolean) as string[];
     return Array.from(new Set(clientes)).sort();
   };
 

@@ -97,7 +97,7 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
                 <td>{frete.destino}</td>
                 <td>{frete.numero_minuta || '-'}</td>
                 <td>{frete.numero_cb || '-'}</td>
-                <td>{frete.cliente || '-'}</td>
+                <td>{frete.clienteData?.razao_social || frete.cliente || '-'}</td>
                 <td>
                   {vinculosCaminhoes[frete.id!] && vinculosCaminhoes[frete.id!].length > 0 ? (
                     <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>

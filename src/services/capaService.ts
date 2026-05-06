@@ -36,7 +36,12 @@ export class CapaService {
         origem,
         destino,
         cliente,
-        valor_frete
+        cliente_id,
+        valor_frete,
+        clientes(
+          id,
+          razao_social
+        )
       `)
       .eq('data_emissao', dataEmbarque)
       .order('origem', { ascending: true });
@@ -123,6 +128,8 @@ export class CapaService {
     fretes.forEach(frete => {
       const motoristas = motoristasPorFrete[frete.id] || [];
       const caminhoes = caminhoesPorFrete[frete.id] || [];
+      // Resolver nome do cliente a partir do join com tabela clientes
+      const clienteNome = (frete as any).clientes?.razao_social || frete.cliente || '-';
 
       // Se não há motoristas ou caminhões, criar um registro com N/A
       if (motoristas.length === 0 && caminhoes.length === 0) {
@@ -131,7 +138,7 @@ export class CapaService {
           data_emissao: frete.data_emissao,
           origem: frete.origem,
           destino: frete.destino,
-          cliente: frete.cliente,
+          cliente: clienteNome,
           motorista: 'N/A',
           caminhao_placa: 'N/A',
           caminhao_tipo: 'N/A',
@@ -148,7 +155,7 @@ export class CapaService {
             data_emissao: frete.data_emissao,
             origem: frete.origem,
             destino: frete.destino,
-            cliente: frete.cliente,
+            cliente: clienteNome,
             motorista: motorista,
             caminhao_placa: 'N/A',
             caminhao_tipo: 'N/A',
@@ -166,7 +173,7 @@ export class CapaService {
             data_emissao: frete.data_emissao,
             origem: frete.origem,
             destino: frete.destino,
-            cliente: frete.cliente,
+            cliente: clienteNome,
             motorista: 'N/A',
             caminhao_placa: caminhao.placa,
             caminhao_tipo: caminhao.tipo,
@@ -189,7 +196,7 @@ export class CapaService {
           data_emissao: frete.data_emissao,
           origem: frete.origem,
           destino: frete.destino,
-          cliente: frete.cliente,
+          cliente: clienteNome,
           motorista: motorista,
           caminhao_placa: caminhao ? caminhao.placa : 'N/A',
           caminhao_tipo: caminhao ? caminhao.tipo : 'N/A',

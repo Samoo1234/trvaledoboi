@@ -164,7 +164,7 @@ export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
           frete.numero_minuta || '-',
           frete.numero_cb || '-',
           (frete.pecuarista || '-').substring(0, 14),
-          (frete.cliente || '-').substring(0, 14),
+          ((frete as any).clienteData?.razao_social || frete.cliente || '-').substring(0, 14),
           (frete.origem || '-').substring(0, 18),
           (frete.destino || '-').substring(0, 17),
           '', 

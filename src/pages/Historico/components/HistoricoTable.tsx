@@ -59,7 +59,7 @@ const HistoricoTable: React.FC<HistoricoTableProps> = ({
                     <tr key={frete.id}>
                       <td>{formatDisplayDate(frete.data_emissao)}</td>
                       <td>{frete.motorista?.nome}</td>
-                      <td>{frete.cliente || '-'}</td>
+                      <td>{frete.clienteData?.razao_social || frete.cliente || '-'}</td>
                       <td>{frete.origem} → {frete.destino}</td>
                       <td className="valor">{formatCurrency(frete.valor_frete)}</td>
                       <td>{frete.data_pagamento ? formatDisplayDate(frete.data_pagamento) : '-'}</td>
