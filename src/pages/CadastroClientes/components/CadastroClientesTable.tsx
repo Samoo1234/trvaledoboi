@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Building, Phone, Mail, MapPin, Calendar, Eye, EyeOff, Edit } from 'lucide-react';
+import { User, Building, Phone, Mail, MapPin, Calendar, Eye, EyeOff, Edit, Trash2 } from 'lucide-react';
 import { CadastroClientesTableProps } from '../utils';
 
 const CadastroClientesTable: React.FC<CadastroClientesTableProps> = ({
@@ -10,6 +10,7 @@ const CadastroClientesTable: React.FC<CadastroClientesTableProps> = ({
   alterarOrdenacao,
   abrirModal,
   alterarSituacao,
+  excluirCliente,
   filtro,
   filtroTipo,
   filtroSituacao,
@@ -199,6 +200,14 @@ const CadastroClientesTable: React.FC<CadastroClientesTableProps> = ({
                           aria-label={`${cliente.situacao === 'Ativo' ? 'Desativar' : 'Ativar'} cliente ${cliente.razao_social}`}
                         >
                           {cliente.situacao === 'Ativo' ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                        <button
+                          className="btn-excluir"
+                          onClick={() => excluirCliente(cliente)}
+                          title="Excluir cliente"
+                          aria-label={`Excluir cliente ${cliente.razao_social}`}
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>

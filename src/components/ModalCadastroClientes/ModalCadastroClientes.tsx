@@ -31,9 +31,12 @@ const ModalCadastroClientes: React.FC<ModalCadastroClientesProps> = ({
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
   const [modalFazendasAberto, setModalFazendasAberto] = useState(false);
+  const [editando, setEditando] = useState(false);
 
-  // Busca automática ao digitar CPF/CNPJ
+  // Busca automática ao digitar CPF/CNPJ — desabilitada no modo edição
   useEffect(() => {
+    if (editando) return; // Não buscar automaticamente ao editar
+    
     if (buscaCpf.length >= 11) { // CPF mínimo
       const timeoutId = setTimeout(() => {
         buscarCliente(buscaCpf);
@@ -43,13 +46,17 @@ const ModalCadastroClientes: React.FC<ModalCadastroClientesProps> = ({
     } else {
       setClienteEncontrado(null);
     }
-  }, [buscaCpf]);
+  }, [buscaCpf, editando]);
 
-  // Preencher formulário se cliente inicial for fornecido
+  // Preencher formulário se cliente inicial for fornecido (modo edição)
   useEffect(() => {
     if (clienteInicial) {
+      setEditando(true);
       setCliente(clienteInicial);
       setBuscaCpf(clienteInicial.cpf_cnpj);
+      setClienteEncontrado(clienteInicial);
+    } else {
+      setEditando(false);
     }
   }, [clienteInicial]);
 
@@ -175,6 +182,7 @@ const ModalCadastroClientes: React.FC<ModalCadastroClientesProps> = ({
     setClienteEncontrado(null);
     setMensagem(null);
     setModalFazendasAberto(false);
+    setEditando(false);
   };
 
   const abrirModalFazendas = () => {

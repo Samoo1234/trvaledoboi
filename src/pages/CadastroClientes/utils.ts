@@ -31,6 +31,7 @@ export interface CadastroClientesTableProps {
   alterarOrdenacao: (novaOrdenacao: 'nome' | 'data' | 'situacao') => void;
   abrirModal: (cliente?: Cliente) => void;
   alterarSituacao: (cliente: Cliente) => void;
+  excluirCliente: (cliente: Cliente) => void;
   filtro: string;
   filtroTipo: 'todos' | 'fisica' | 'juridica';
   filtroSituacao: 'todos' | 'ativo' | 'inativo';

@@ -91,6 +91,32 @@ const CadastroClientes: React.FC = () => {
     }
   }, []);
 
+  const excluirCliente = useCallback(async (cliente: Cliente) => {
+    const confirmacao = window.confirm(
+      `Tem certeza que deseja excluir o cliente "${cliente.razao_social}"?\n\nEssa ação não pode ser desfeita.`
+    );
+
+    if (!confirmacao) return;
+
+    try {
+      setErro(null);
+
+      const { error } = await supabase
+        .from('clientes')
+        .delete()
+        .eq('id', cliente.id);
+
+      if (error) throw error;
+
+      // Remover do estado local
+      setClientes(prev => prev.filter(c => c.id !== cliente.id));
+    } catch (error) {
+      const mensagemErro = error instanceof Error ? error.message : 'Erro ao excluir cliente';
+      setErro(mensagemErro);
+      console.error('Erro ao excluir cliente:', error);
+    }
+  }, []);
+
   // Estatísticas dos clientes
   const estatisticas = useMemo(() => {
     const total = clientes.length;
@@ -248,6 +274,7 @@ const CadastroClientes: React.FC = () => {
           alterarOrdenacao={alterarOrdenacao}
           abrirModal={abrirModal}
           alterarSituacao={alterarSituacao}
+          excluirCliente={excluirCliente}
           filtro={filtro}
           filtroTipo={filtroTipo}
           filtroSituacao={filtroSituacao}
