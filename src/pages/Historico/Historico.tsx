@@ -3,6 +3,7 @@ import { Archive, FileText, DollarSign } from 'lucide-react';
 import { freteService, Frete } from '../../services/freteService';
 import { fechamentoService, FechamentoMotorista } from '../../services/fechamentoService';
 import { motoristaService, Motorista } from '../../services/motoristaService';
+import { controleFretePDFService } from '../ControleFrete/services/controleFretePDFService';
 
 import './Historico.css';
 import HistoricoFilters from './components/HistoricoFilters';
@@ -187,6 +188,26 @@ const Historico: React.FC = () => {
     }
   };
 
+  const handleGerarReciboFrete = async (frete: Frete) => {
+    try {
+      setLoading(true);
+      let clienteNome = 'Cliente não identificado';
+      let clienteCpfCnpj = undefined;
+      if (frete.clienteData) {
+        clienteNome = frete.clienteData.razao_social;
+        clienteCpfCnpj = frete.clienteData.cpf_cnpj;
+      } else if (frete.cliente) {
+        clienteNome = frete.cliente;
+      }
+      await controleFretePDFService.gerarPDFReciboConsolidado(clienteNome, clienteCpfCnpj, [frete]);
+    } catch (error) {
+      console.error('Erro ao gerar recibo:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao gerar recibo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -291,6 +312,7 @@ const Historico: React.FC = () => {
         setFechamentoDetalhes={setFechamentoDetalhes}
         reabrirFrete={reabrirFrete}
         reabrirFechamento={reabrirFechamento}
+        handleGerarReciboFrete={handleGerarReciboFrete}
       />
 
       <HistoricoModals

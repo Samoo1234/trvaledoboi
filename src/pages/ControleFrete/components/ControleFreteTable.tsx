@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, FileText } from 'lucide-react';
 import { Frete } from '../../../services/freteService';
 import { Caminhao } from '../../../services/caminhaoService';
 import { Motorista } from '../../../services/motoristaService';
@@ -21,6 +21,7 @@ interface ControleFreteTableProps {
   toggleSelecionarFrete: (id: number) => void;
   handleEdit: (frete: Frete) => void;
   handleDelete: (id: number) => void;
+  handleGerarRecibo: (frete: Frete) => void;
 }
 
 export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
@@ -35,7 +36,8 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
   toggleSelecionarTodos,
   toggleSelecionarFrete,
   handleEdit,
-  handleDelete
+  handleDelete,
+  handleGerarRecibo
 }) => {
   return (
     <div className="table-container">
@@ -181,6 +183,16 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
                     >
                       <Edit size={16} />
                     </button>
+                    {frete.situacao === 'Pago' && (
+                      <button
+                        className="btn-edit"
+                        title="Gerar Recibo"
+                        onClick={() => handleGerarRecibo(frete)}
+                        style={{ color: '#8b0000', borderColor: '#ebcccc' }}
+                      >
+                        <FileText size={16} />
+                      </button>
+                    )}
                     <button
                       className="btn-delete"
                       title="Excluir"

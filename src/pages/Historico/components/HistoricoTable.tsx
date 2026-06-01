@@ -13,6 +13,7 @@ interface HistoricoTableProps {
   setFechamentoDetalhes: (fechamento: FechamentoMotorista | null) => void;
   reabrirFrete: (id: number) => void;
   reabrirFechamento: (id: number) => void;
+  handleGerarReciboFrete: (frete: Frete) => void;
 }
 
 const HistoricoTable: React.FC<HistoricoTableProps> = ({
@@ -23,7 +24,8 @@ const HistoricoTable: React.FC<HistoricoTableProps> = ({
   setFreteDetalhes,
   setFechamentoDetalhes,
   reabrirFrete,
-  reabrirFechamento
+  reabrirFechamento,
+  handleGerarReciboFrete
 }) => {
   return (
     <div className="tab-content">
@@ -73,6 +75,16 @@ const HistoricoTable: React.FC<HistoricoTableProps> = ({
                           >
                             <Eye size={16} />
                           </button>
+                          {frete.situacao === 'Pago' && (
+                            <button
+                              className="view-btn"
+                              title="Gerar Recibo"
+                              onClick={() => handleGerarReciboFrete(frete)}
+                              style={{ color: '#8b0000', borderColor: '#ebcccc' }}
+                            >
+                              <FileText size={16} />
+                            </button>
+                          )}
                           <button
                             className="reopen-btn"
                             title="Reabrir para correção"

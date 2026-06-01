@@ -13,6 +13,7 @@ import { ControleFreteFilters } from './components/ControleFreteFilters';
 import { ControleFreteTable } from './components/ControleFreteTable';
 import { ControleFreteForm } from './components/ControleFreteForm';
 import { ControleFreteAcerto } from './components/ControleFreteAcerto';
+import { ControleFreteRecibo } from './components/ControleFreteRecibo';
 import { controleFretePDFService } from './services/controleFretePDFService';
 
 import './ControleFrete.css';
@@ -55,7 +56,7 @@ const ControleFrete: React.FC = () => {
   const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroMotorista, setFiltroMotorista] = useState<string>('');
 
-  const [activeTab, setActiveTab] = useState<'fretes' | 'acerto'>('fretes');
+  const [activeTab, setActiveTab] = useState<'fretes' | 'acerto' | 'recibo'>('fretes');
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
   const [dataInicioAcerto, setDataInicioAcerto] = useState<string>('');
   const [dataFimAcerto, setDataFimAcerto] = useState<string>('');
@@ -364,8 +365,8 @@ const ControleFrete: React.FC = () => {
   };
 
   // Buscar clientes do cadastro para filtros (agora da tabela clientes, não dos fretes)
-  const getClientesParaFiltro = (): { id: number; razao_social: string }[] => {
-    return clientesCadastro.map(c => ({ id: c.id!, razao_social: c.razao_social }));
+  const getClientesParaFiltro = (): { id: number; razao_social: string; cpf_cnpj?: string }[] => {
+    return clientesCadastro.map(c => ({ id: c.id!, razao_social: c.razao_social, cpf_cnpj: c.cpf_cnpj }));
   };
 
   const fretesFiltrados = fretes.filter(frete => {
@@ -481,6 +482,46 @@ const ControleFrete: React.FC = () => {
     });
   };
 
+  const handleGerarReciboConsolidado = async (clienteNome: string, clienteCpfCnpj: string | undefined, fretesSelecionados: Frete[]) => {
+    try {
+      setLoading(true);
+      await controleFretePDFService.gerarPDFReciboConsolidado(clienteNome, clienteCpfCnpj, fretesSelecionados);
+    } catch (error) {
+      console.error('Erro ao gerar recibo:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao gerar recibo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGerarReciboIndividual = async (frete: Frete) => {
+    try {
+      setLoading(true);
+      let clienteNome = 'Cliente não identificado';
+      let clienteCpfCnpj = undefined;
+      
+      if (frete.clienteData) {
+        clienteNome = frete.clienteData.razao_social;
+        clienteCpfCnpj = frete.clienteData.cpf_cnpj;
+      } else if (frete.cliente_id) {
+        const cli = clientesCadastro.find(c => c.id === frete.cliente_id);
+        if (cli) {
+          clienteNome = cli.razao_social;
+          clienteCpfCnpj = cli.cpf_cnpj;
+        }
+      } else if (frete.cliente) {
+        clienteNome = frete.cliente;
+      }
+      
+      await controleFretePDFService.gerarPDFReciboConsolidado(clienteNome, clienteCpfCnpj, [frete]);
+    } catch (error) {
+      console.error('Erro ao gerar recibo:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao gerar recibo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="controle-frete">
@@ -512,6 +553,9 @@ const ControleFrete: React.FC = () => {
           </button>
           <button className={`tab ${activeTab === 'acerto' ? 'active' : ''}`} onClick={() => setActiveTab('acerto')}>
             <FileText size={16} /> Relatório de Acerto
+          </button>
+          <button className={`tab ${activeTab === 'recibo' ? 'active' : ''}`} onClick={() => setActiveTab('recibo')}>
+            <FileText size={16} style={{ transform: 'rotate(180deg)' }} /> Gerar Recibo
           </button>
         </div>
       </div>
@@ -578,6 +622,7 @@ const ControleFrete: React.FC = () => {
             toggleSelecionarFrete={toggleSelecionarFrete} 
             handleEdit={handleEdit} 
             handleDelete={handleDelete}
+            handleGerarRecibo={handleGerarReciboIndividual}
           />
         </>
       )}
@@ -591,6 +636,14 @@ const ControleFrete: React.FC = () => {
           vinculosCaminhoes={vinculosCaminhoes} caminhoes={caminhoes} reboques={reboques}
           onFiltrar={filtrarFretesAcerto}
           onGerarPDF={handleGerarPDFAcerto}
+        />
+      )}
+
+      {activeTab === 'recibo' && (
+        <ControleFreteRecibo
+          fretes={fretes}
+          clientesCadastro={getClientesParaFiltro()}
+          onGerarRecibo={handleGerarReciboConsolidado}
         />
       )}
     </div>
