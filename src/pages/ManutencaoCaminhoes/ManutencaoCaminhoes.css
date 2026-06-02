@@ -196,50 +196,173 @@
   background: #f1f3f4;
 }
 
-/* Modal de formulário */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+/* Modal de formulário Premium Scoped */
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.form-group-full {
+@keyframes slideUpModal {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.manutencao-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.65); /* Modern slate overlay */
+  backdrop-filter: blur(8px); /* Premium blur effect */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 20px 20px 20px 270px; /* Compensa a sidebar lateral no desktop */
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeInOverlay 0.25s ease-out;
+}
+
+.manutencao-modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+              0 0 0 1px rgba(139, 0, 0, 0.05); /* Sombra elegante */
+  overflow: hidden;
+  animation: slideUpModal 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.manutencao-modal-header {
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, var(--primary-red) 0%, #a00000 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.manutencao-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: -0.025em;
+  color: white !important; /* Ensure override */
+}
+
+.manutencao-modal-close {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.manutencao-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.manutencao-modal-form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.manutencao-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  padding: 1.5rem;
+  overflow-y: auto; /* Permite scroll no conteúdo interno se a tela for pequena */
+  overflow-x: hidden; /* Evita qualquer scroll horizontal interno */
+  max-height: calc(90vh - 140px); /* Garante que cabe com o header e actions */
+}
+
+.manutencao-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%; /* Ocupa toda a largura da coluna do grid */
+}
+
+.manutencao-form-group-full {
   grid-column: 1 / -1;
 }
 
-.form-group {
+.manutencao-form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4b5563;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
 }
 
-.form-group label {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
+.manutencao-form-group input,
+.manutencao-form-group select,
+.manutencao-form-group textarea {
+  width: 100%; /* Ocupa 100% do grupo do formulário */
+  max-width: 100%; /* Evita transbordamento horizontal */
+  box-sizing: border-box; /* Inclui padding e borda no cálculo da largura */
+  padding: 0.75rem 0.875rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit; /* Evita fontes monospace em textarea */
+  color: #1f2937;
+  background-color: #f9fafb;
+  transition: all 0.2s ease-in-out;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.2s;
+.manutencao-form-group input:hover,
+.manutencao-form-group select:hover,
+.manutencao-form-group textarea:hover {
+  border-color: #cbd5e1;
+  background-color: #f3f4f6;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.manutencao-form-group input:focus,
+.manutencao-form-group select:focus,
+.manutencao-form-group textarea:focus {
   outline: none;
   border-color: var(--primary-red);
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.15);
 }
 
-.form-group textarea {
+.manutencao-form-group textarea {
   resize: vertical;
   min-height: 80px;
+}
+
+.manutencao-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 1.25rem 1.5rem;
+  background-color: #f9fafb;
+  border-top: 1px solid #f3f4f6;
 }
 
 /* Responsividade */
@@ -252,6 +375,10 @@
     grid-column: 1 / -1;
     justify-content: center;
     min-width: auto;
+  }
+
+  .manutencao-modal-overlay {
+    padding-left: 20px; /* Remove compensação da sidebar no tablet */
   }
 }
 
@@ -275,8 +402,19 @@
     grid-template-columns: 1fr;
   }
   
-  .form-grid {
+  .manutencao-modal-overlay {
+    padding: 10px;
+  }
+
+  .manutencao-modal-content {
+    max-height: 95vh;
+  }
+
+  .manutencao-form-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    max-height: calc(95vh - 130px);
   }
   
   .tabs {

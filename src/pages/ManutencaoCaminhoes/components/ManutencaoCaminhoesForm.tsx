@@ -1,6 +1,7 @@
 import React from 'react';
 import { Caminhao } from '../../../services/caminhaoService';
 import { ManutencaoCreateData } from '../../../services/manutencaoService';
+import { Wrench, X } from 'lucide-react';
 
 interface ManutencaoCaminhoesFormProps {
   showForm: boolean;
@@ -24,15 +25,25 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
   if (!showForm) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>{editingId ? 'Editar Manutenção' : 'Nova Manutenção'}</h3>
-          <button type="button" className="modal-close" onClick={resetForm}>×</button>
+    <div 
+      className="manutencao-modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) resetForm();
+      }}
+    >
+      <div className="manutencao-modal-content">
+        <div className="manutencao-modal-header">
+          <h3>
+            <Wrench size={20} />
+            {editingId ? 'Editar Manutenção' : 'Nova Manutenção'}
+          </h3>
+          <button type="button" className="manutencao-modal-close" onClick={resetForm} aria-label="Fechar">
+            <X size={18} />
+          </button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <div className="form-group">
+        <form onSubmit={handleSubmit} className="manutencao-modal-form">
+          <div className="manutencao-form-grid">
+            <div className="manutencao-form-group">
               <label>Caminhão *</label>
               <select
                 value={formData.caminhao_id}
@@ -48,7 +59,7 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="manutencao-form-group">
               <label>Data da Manutenção *</label>
               <input
                 type="date"
@@ -58,7 +69,7 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
               />
             </div>
 
-            <div className="form-group">
+            <div className="manutencao-form-group">
               <label>Tipo de Manutenção *</label>
               <select
                 value={formData.tipo_manutencao}
@@ -71,19 +82,19 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="manutencao-form-group">
               <label>Valor do Serviço *</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                value={formData.valor_servico}
+                value={formData.valor_servico || ''}
                 onChange={(e) => setFormData({...formData, valor_servico: parseFloat(e.target.value) || 0})}
                 required
               />
             </div>
 
-            <div className="form-group form-group-full">
+            <div className="manutencao-form-group manutencao-form-group-full">
               <label>Descrição do Serviço *</label>
               <textarea
                 value={formData.descricao_servico}
@@ -93,7 +104,7 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
               />
             </div>
 
-            <div className="form-group">
+            <div className="manutencao-form-group">
               <label>Oficina/Responsável</label>
               <input
                 type="text"
@@ -103,7 +114,7 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
               />
             </div>
 
-            <div className="form-group">
+            <div className="manutencao-form-group">
               <label>KM do Caminhão</label>
               <input
                 type="number"
@@ -114,7 +125,7 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
               />
             </div>
 
-            <div className="form-group form-group-full">
+            <div className="manutencao-form-group manutencao-form-group-full">
               <label>Observações</label>
               <textarea
                 value={formData.observacoes}
@@ -124,7 +135,7 @@ export const ManutencaoCaminhoesForm: React.FC<ManutencaoCaminhoesFormProps> = (
             </div>
           </div>
 
-          <div className="form-actions">
+          <div className="manutencao-form-actions">
             <button type="button" className="btn-cancel" onClick={resetForm}>
               Cancelar
             </button>
