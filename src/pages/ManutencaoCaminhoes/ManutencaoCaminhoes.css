@@ -455,4 +455,931 @@
   background: #f8f9fa;
   transform: translateY(-1px);
   transition: all 0.2s;
-} 
+}
+
+/* Toggle de Modo de Visualização */
+.view-mode-toggle {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-right: 12px;
+}
+
+.toggle-btn {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toggle-btn:hover {
+  color: #1e293b;
+}
+
+.toggle-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Dashboard de Prontuários */
+.prontuario-dashboard {
+  animation: fadeInOverlay 0.3s ease-out;
+}
+
+.prontuario-intro {
+  background: #f8fafc;
+  border-left: 4px solid var(--primary-red);
+  padding: 1rem 1.25rem;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1.5rem;
+  color: #475569;
+  font-size: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.prontuario-intro p {
+  margin: 0;
+}
+
+/* Grid de Cards de Caminhões */
+.truck-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.truck-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.truck-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.truck-card.selected {
+  border-color: var(--primary-red);
+  box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.15);
+}
+
+/* Cores de borda por status de saúde */
+.truck-card.health-ok {
+  border-top: 4px solid #22c55e;
+}
+
+.truck-card.health-warning {
+  border-top: 4px solid #eab308;
+}
+
+.truck-card.health-danger {
+  border-top: 4px solid #ef4444;
+}
+
+/* Card Header */
+.truck-card .card-header {
+  display: flex;
+  justify-content: justify;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.truck-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.truck-avatar {
+  background: #f1f5f9;
+  color: #475569;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.truck-card:hover .truck-avatar {
+  background: #f8fafc;
+  color: var(--primary-red);
+}
+
+.truck-plate {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.025em;
+}
+
+.truck-model {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-badge.ativo {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.inativo {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.status-badge.manutenção {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+/* Card Body & Metrics */
+.truck-card .card-body {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.metric-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Health indicators group */
+.health-indicators-summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.indicator-pill-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.indicator-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.indicator-pill.oleo-ok,
+.indicator-pill.freios-ok,
+.indicator-pill.pneus-ok {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.indicator-pill.oleo-warning,
+.indicator-pill.freios-warning,
+.indicator-pill.pneus-warning {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.indicator-pill.oleo-danger,
+.indicator-pill.freios-danger,
+.indicator-pill.pneus-danger {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+/* Card Footer */
+.truck-card .card-footer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.health-status-message {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.health-icon.icon-ok {
+  color: #22c55e;
+}
+
+.health-icon.icon-warning {
+  color: #eab308;
+}
+
+.health-icon.icon-danger {
+  color: #ef4444;
+}
+
+.pulse-icon {
+  color: #cbd5e1;
+}
+
+.truck-card:hover .pulse-icon {
+  color: var(--primary-red);
+  animation: pulseAnim 1.5s infinite;
+}
+
+@keyframes pulseAnim {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Ficha Clínica Detalhada */
+.ficha-clinica-container {
+  animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ficha-header {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1rem;
+  transition: color 0.2s;
+}
+
+.btn-back:hover {
+  color: var(--primary-red);
+}
+
+.truck-profile-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.profile-badge h2 {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #0f172a;
+}
+
+.profile-badge span {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.profile-metrics {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.metric-box {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.metric-box .box-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.metric-box .box-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.metric-box .box-value.health-ok {
+  color: #22c55e;
+}
+
+.metric-box .box-value.health-warning {
+  color: #d97706;
+}
+
+.metric-box .box-value.health-danger {
+  color: #ef4444;
+}
+
+.total-spent-val {
+  color: var(--primary-red) !important;
+}
+
+/* Ficha Grid */
+.ficha-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.ficha-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.health-diagnostics-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.health-diagnostics-card h3 {
+  margin: 0 0 1.25rem 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-indicator-item {
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid transparent;
+}
+
+.health-indicator-item:last-child {
+  margin-bottom: 0;
+}
+
+.health-indicator-item.health-indicator-ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.health-indicator-item.health-indicator-warning {
+  background: #fef9c3;
+  border-color: #fef08a;
+}
+
+.health-indicator-item.health-indicator-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.indicator-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.indicator-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.health-indicator-ok .indicator-title { color: #166534; }
+.health-indicator-warning .indicator-title { color: #854d0e; }
+.health-indicator-danger .indicator-title { color: #991b1b; }
+
+.indicator-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.health-indicator-ok .indicator-badge { color: #22c55e; }
+.health-indicator-warning .indicator-badge { color: #d97706; }
+.health-indicator-danger .indicator-badge { color: #ef4444; }
+
+.indicator-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0.75rem;
+}
+
+.indicator-bar {
+  background: rgba(226, 232, 240, 0.8);
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.indicator-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.health-indicator-ok .indicator-bar-fill { background: #22c55e; }
+.health-indicator-warning .indicator-bar-fill { background: #eab308; }
+.health-indicator-danger .indicator-bar-fill { background: #ef4444; }
+
+.bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.indicator-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(100, 116, 139, 0.15);
+}
+
+.indicator-footer .meta-text {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.btn-quick-action {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.btn-quick-action:hover {
+  background: var(--primary-red);
+  color: #ffffff;
+  border-color: var(--primary-red);
+}
+
+/* Tabs da Ficha Clínica */
+.ficha-tabs-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.ficha-tabs-navigation {
+  display: flex;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ficha-tab-btn {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.ficha-tab-btn:hover {
+  color: #0f172a;
+  background: rgba(241, 245, 249, 0.5);
+}
+
+.ficha-tab-btn.active {
+  color: var(--primary-red);
+  border-bottom-color: var(--primary-red);
+  background: #ffffff;
+}
+
+.ficha-tab-content {
+  padding: 1.5rem;
+  min-height: 350px;
+}
+
+/* Linha do Tempo do Prontuário */
+.prontuario-timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 1.5rem;
+  padding-left: 20px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-line {
+  position: absolute;
+  left: -10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+.timeline-badge {
+  position: absolute;
+  left: -20px;
+  top: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 2px solid #ddd;
+  z-index: 1;
+}
+
+.timeline-badge-preventiva {
+  background: #f0fdf4;
+  color: #22c55e;
+}
+
+.timeline-badge-corretiva {
+  background: #fef9c3;
+  color: #eab308;
+}
+
+.timeline-badge-emergencial {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.timeline-content {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.timeline-content:hover {
+  background: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border-color: #cbd5e1;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-main-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timeline-date {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeline-type-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.timeline-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.timeline-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.timeline-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.timeline-btn.btn-delete:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.timeline-body {
+  margin-bottom: 0.75rem;
+}
+
+.timeline-desc {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.timeline-obs {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  background: #ffffff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 2px solid #cbd5e1;
+}
+
+.timeline-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.footer-meta {
+  display: flex;
+  gap: 12px;
+}
+
+.meta-item {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeline-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-red);
+}
+
+/* Estatísticas do Prontuário */
+.prontuario-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.stats-header h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.stats-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.summary-stat-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.summary-stat-box .stat-num {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.summary-stat-box .stat-desc {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.summary-stat-box.text-green .stat-num { color: #22c55e; }
+.summary-stat-box.text-orange .stat-num { color: #d97706; }
+.summary-stat-box.text-red .stat-num { color: #ef4444; }
+
+.stats-comparison {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.comparison-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.comparison-row:last-child {
+  border-bottom: none;
+}
+
+.comparison-row span {
+  color: #64748b;
+}
+
+.comparison-row strong {
+  color: #0f172a;
+}
+
+/* Abastecimentos Recentes do Prontuário */
+.prontuario-abastecimentos {
+  display: flex;
+  flex-direction: column;
+}
+
+.consumption-summary {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.consumption-avatar {
+  background: #bbf7d0;
+  color: #166534;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.consumption-summary h5 {
+  margin: 0 0 2px 0;
+  font-size: 12px;
+  color: #166534;
+  font-weight: 700;
+}
+
+.consumption-value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+/* Responsividade do Prontuário */
+@media (max-width: 1024px) {
+  .ficha-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-metrics {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .truck-profile-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .profile-metrics {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .metric-box {
+    width: 100%;
+  }
+
+  .stats-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+ 

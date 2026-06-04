@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Wrench } from 'lucide-react';
 import { manutencaoService, Manutencao, ManutencaoCreateData } from '../../services/manutencaoService';
 import { caminhaoService, Caminhao } from '../../services/caminhaoService';
+import { abastecimentoService, Abastecimento } from '../../services/abastecimentoService';
 import { getCurrentDate } from '../../services/dateUtils';
 import { gerarPeriodos } from './utils';
 import { ManutencaoCaminhoesFilters } from './components/ManutencaoCaminhoesFilters';
@@ -9,6 +10,9 @@ import { ManutencaoCaminhoesStats } from './components/ManutencaoCaminhoesStats'
 import { ManutencaoCaminhoesTable } from './components/ManutencaoCaminhoesTable';
 import { ManutencaoCaminhoesRelatorios } from './components/ManutencaoCaminhoesRelatorios';
 import { ManutencaoCaminhoesForm } from './components/ManutencaoCaminhoesForm';
+import { ManutencaoCaminhoesCards } from './components/ManutencaoCaminhoesCards';
+import { FichaClinicaCaminhao } from './components/FichaClinicaCaminhao';
+import { obterKmAtual } from './prontuarioUtils';
 import './ManutencaoCaminhoes.css';
 
 interface RelatorioManutencaoPorTipo {
@@ -31,10 +35,14 @@ interface RelatorioConsolidado {
 
 const ManutencaoCaminhoes: React.FC = () => {
   const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
+  const [todasManutencoes, setTodasManutencoes] = useState<Manutencao[]>([]);
   const [caminhoes, setCaminhoes] = useState<Caminhao[]>([]);
+  const [abastecimentos, setAbastecimentos] = useState<Abastecimento[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedCaminhaoId, setSelectedCaminhaoId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'prontuario' | 'lista_geral'>('prontuario');
   const [filtros, setFiltros] = useState({
     periodo: (() => {
       const now = new Date();
@@ -59,9 +67,19 @@ const ManutencaoCaminhoes: React.FC = () => {
   const loadManutencoes = useCallback(async () => {
     try {
       setLoading(true);
-      let data = filtros.periodo ? await manutencaoService.getByPeriodo(filtros.periodo) : await manutencaoService.getAll();
-      if (filtros.caminhaoId) data = data.filter(m => m.caminhao_id === parseInt(filtros.caminhaoId));
-      if (filtros.tipoManutencao) data = data.filter(m => m.tipo_manutencao === filtros.tipoManutencao);
+      const allData = await manutencaoService.getAll();
+      setTodasManutencoes(allData);
+      
+      let data = [...allData];
+      if (filtros.periodo) {
+        data = data.filter(m => m.periodo === filtros.periodo);
+      }
+      if (filtros.caminhaoId) {
+        data = data.filter(m => m.caminhao_id === parseInt(filtros.caminhaoId));
+      }
+      if (filtros.tipoManutencao) {
+        data = data.filter(m => m.tipo_manutencao === filtros.tipoManutencao);
+      }
       setManutencoes(data);
     } catch (error) {
       console.error('Erro ao carregar manutenções:', error);
@@ -80,9 +98,18 @@ const ManutencaoCaminhoes: React.FC = () => {
     }
   }, []);
 
+  const loadAbastecimentos = useCallback(async () => {
+    try {
+      const data = await abastecimentoService.getAll();
+      setAbastecimentos(data);
+    } catch (error) {
+      console.error('Erro ao carregar abastecimentos:', error);
+    }
+  }, []);
+
   useEffect(() => {
-    Promise.all([loadManutencoes(), loadCaminhoes()]);
-  }, [loadManutencoes, loadCaminhoes]);
+    Promise.all([loadManutencoes(), loadCaminhoes(), loadAbastecimentos()]);
+  }, [loadManutencoes, loadCaminhoes, loadAbastecimentos]);
 
   const resetForm = () => {
     setFormData({
@@ -117,12 +144,12 @@ const ManutencaoCaminhoes: React.FC = () => {
       }
 
       if (editingId) {
-        const updated = await manutencaoService.update(editingId, formData);
-        setManutencoes(manutencoes.map(m => m.id === editingId ? updated : m));
+        await manutencaoService.update(editingId, formData);
+        await loadManutencoes();
         alert('Manutenção atualizada com sucesso!');
       } else {
-        const novo = await manutencaoService.create(formData);
-        setManutencoes([novo, ...manutencoes]);
+        await manutencaoService.create(formData);
+        await loadManutencoes();
         alert('Manutenção registrada com sucesso!');
       }
       resetForm();
@@ -136,12 +163,38 @@ const ManutencaoCaminhoes: React.FC = () => {
     if (!window.confirm(`Excluir manutenção "${descricao}"?`)) return;
     try {
       await manutencaoService.delete(id);
-      setManutencoes(manutencoes.filter(m => m.id !== id));
+      await loadManutencoes();
       alert('Manutenção excluída com sucesso!');
     } catch (error) {
       console.error('Erro ao excluir manutenção:', error);
       alert('Erro ao excluir manutenção.');
     }
+  };
+
+  const handleQuickAction = (tipo: 'oleo' | 'freio' | 'pneus') => {
+    if (!selectedCaminhaoId) return;
+    
+    const kmAtual = obterKmAtual(selectedCaminhaoId, todasManutencoes, abastecimentos);
+    let desc = '';
+    if (tipo === 'oleo') {
+      desc = 'Troca de Óleo e Filtros';
+    } else if (tipo === 'freio') {
+      desc = 'Revisão e Manutenção do Sistema de Freios (Pastilhas/Lonas)';
+    } else if (tipo === 'pneus') {
+      desc = 'Alinhamento, Balanceamento e Rodízio de Pneus';
+    }
+
+    setFormData({
+      caminhao_id: selectedCaminhaoId,
+      data_manutencao: getCurrentDate(),
+      tipo_manutencao: 'Preventiva',
+      descricao_servico: desc,
+      valor_servico: 0,
+      oficina_responsavel: '',
+      km_caminhao: kmAtual > 0 ? kmAtual : undefined,
+      observacoes: 'Registrado via ação rápida no prontuário de saúde.'
+    });
+    setShowForm(true);
   };
 
   const gerarRelatorioConsolidado = async () => {
@@ -184,6 +237,22 @@ const ManutencaoCaminhoes: React.FC = () => {
           Manutenção de Caminhões
         </h1>
         <div className="header-actions">
+          {activeTab === 'lista' && (
+            <div className="view-mode-toggle">
+              <button 
+                className={`toggle-btn ${viewMode === 'prontuario' ? 'active' : ''}`}
+                onClick={() => { setViewMode('prontuario'); setSelectedCaminhaoId(null); }}
+              >
+                🏥 Prontuário
+              </button>
+              <button 
+                className={`toggle-btn ${viewMode === 'lista_geral' ? 'active' : ''}`}
+                onClick={() => setViewMode('lista_geral')}
+              >
+                📋 Histórico Geral
+              </button>
+            </div>
+          )}
           <div className="tabs">
             <button 
               className={`tab ${activeTab === 'lista' ? 'active' : ''}`}
@@ -202,25 +271,52 @@ const ManutencaoCaminhoes: React.FC = () => {
       </div>
 
       {activeTab === 'lista' && (
-        <>
-          <ManutencaoCaminhoesFilters
-            filtros={filtros}
-            setFiltros={setFiltros}
-            caminhoes={caminhoes}
-            setShowForm={setShowForm}
-            gerarRelatorioConsolidado={gerarRelatorioConsolidado}
-          />
-          <ManutencaoCaminhoesStats
-            totalManutencoes={totalManutencoes}
-            valorTotal={valorTotal}
-            mediaValor={mediaValor}
-          />
-          <ManutencaoCaminhoesTable
-            manutencoes={manutencoes}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-          />
-        </>
+        viewMode === 'prontuario' ? (
+          selectedCaminhaoId !== null ? (
+            <FichaClinicaCaminhao
+              caminhao={caminhoes.find(c => c.id === selectedCaminhaoId)!}
+              manutencoes={todasManutencoes}
+              abastecimentos={abastecimentos}
+              onClose={() => setSelectedCaminhaoId(null)}
+              onQuickAction={handleQuickAction}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+            />
+          ) : (
+            <div className="prontuario-dashboard">
+              <div className="prontuario-intro">
+                <p>Selecione um caminhão abaixo para visualizar seu prontuário clínico detalhado de saúde e histórico de revisões.</p>
+              </div>
+              <ManutencaoCaminhoesCards
+                caminhoes={caminhoes}
+                manutencoes={todasManutencoes}
+                abastecimentos={abastecimentos}
+                onSelectCaminhao={setSelectedCaminhaoId}
+                selectedCaminhaoId={selectedCaminhaoId}
+              />
+            </div>
+          )
+        ) : (
+          <>
+            <ManutencaoCaminhoesFilters
+              filtros={filtros}
+              setFiltros={setFiltros}
+              caminhoes={caminhoes}
+              setShowForm={setShowForm}
+              gerarRelatorioConsolidado={gerarRelatorioConsolidado}
+            />
+            <ManutencaoCaminhoesStats
+              totalManutencoes={totalManutencoes}
+              valorTotal={valorTotal}
+              mediaValor={mediaValor}
+            />
+            <ManutencaoCaminhoesTable
+              manutencoes={manutencoes}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+            />
+          </>
+        )
       )}
 
       {activeTab === 'relatorios' && (
