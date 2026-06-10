@@ -249,21 +249,25 @@ export class CapaService {
     await this.addLogo(doc, 15, 5, 20, 20);
 
     // Cabeçalho da empresa - fontes menores
-    doc.setFontSize(14);
-    doc.setTextColor(139, 0, 0); // Cor vermelha
-    doc.text('VALE DO BOI', pageWidth / 2, 12, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 18, { align: 'center' });
-
     doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text('CAPA DE TRANSPORTE', pageWidth / 2, 26, { align: 'center' });
+    doc.setTextColor(139, 0, 0); // Cor vermelha
+    doc.text('VALE DO BOI TRANSPORTE', pageWidth / 2, 11, { align: 'center' });
 
     doc.setFontSize(9);
     doc.setTextColor(139, 0, 0);
-    doc.text(`Data de Embarque: ${formatDisplayDate(dataEmbarque)}`, pageWidth / 2, 32, { align: 'center' });
+    doc.text('Transporte de Bovinos', pageWidth / 2, 16, { align: 'center' });
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', pageWidth / 2, 20, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('CAPA DE TRANSPORTE', pageWidth / 2, 26, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setTextColor(139, 0, 0);
+    doc.text(`Data de Embarque: ${formatDisplayDate(dataEmbarque)}`, pageWidth / 2, 31, { align: 'center' });
 
     // Linha separadora
     doc.setLineWidth(0.3);
@@ -362,15 +366,21 @@ export class CapaService {
     // Cabeçalho da empresa
     doc.setFontSize(18);
     doc.setTextColor(139, 0, 0); // Cor vermelha
-    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 50, 18);
 
     doc.setFontSize(12);
-    doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 50, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 50, 30);
 
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('CAPA DE TRANSPORTE', pageWidth / 2, 38, { align: 'center' });
+    doc.text('CAPA DE TRANSPORTE', pageWidth / 2, 39, { align: 'center' });
 
     doc.setFontSize(11);
     doc.setTextColor(139, 0, 0);
@@ -473,15 +483,21 @@ export class CapaService {
     // Cabeçalho da empresa
     doc.setFontSize(18);
     doc.setTextColor(139, 0, 0); // Cor vermelha
-    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 50, 18);
 
     doc.setFontSize(12);
-    doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 50, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 50, 30);
 
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('CAPA DE TRANSPORTE - AGRUPADO', pageWidth / 2, 38, { align: 'center' });
+    doc.text('CAPA DE TRANSPORTE - AGRUPADO', pageWidth / 2, 39, { align: 'center' });
 
     doc.setFontSize(11);
     doc.setTextColor(139, 0, 0);

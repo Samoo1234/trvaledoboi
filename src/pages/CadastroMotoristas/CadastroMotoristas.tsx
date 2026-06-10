@@ -227,36 +227,85 @@ const CadastroMotoristas: React.FC = () => {
     return telefone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
   };
 
-  const generatePDFReport = () => {
+  const generatePDFReport = async () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    
-    // Configurações
-    const margin = 20;
-    const lineHeight = 7;
-    let yPosition = margin;
-    
-    // Cabeçalho do relatório
+
+    // Helper para adicionar logo
+    const addLogo = async (pdfDoc: any, x: number, y: number, w: number, h: number): Promise<void> => {
+      try {
+        const response = await fetch('/assets/images/logo.png');
+        if (response.ok) {
+          const blob = await response.blob();
+          const reader = new FileReader();
+          return new Promise((resolve) => {
+            reader.onload = function (e) {
+              if (e.target?.result) {
+                try {
+                  pdfDoc.addImage(e.target.result as string, 'PNG', x, y, w, h);
+                } catch (error) {
+                  console.log('Erro ao adicionar logo no PDF:', error);
+                }
+              }
+              resolve();
+            };
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (error) {
+        console.log('Logo não encontrada, continuando sem logo:', error);
+      }
+    };
+
+    await addLogo(doc, 20, 10, 25, 25);
+
+    // Cabeçalho da empresa
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('Relatório de Motoristas', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
-    
+    doc.setTextColor(139, 0, 0); // Cor vermelha
+    doc.text('VALE DO BOI TRANSPORTE', 55, 18);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 55, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 55, 30);
+
+    // Título do Relatório
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Relatório de Motoristas', pageWidth / 2, 39, { align: 'center' });
+
+    // Linha separadora
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(139, 0, 0);
+    doc.line(20, 44, pageWidth - 20, 44);
+
     // Data de geração
     const dataAtual = new Date().toLocaleDateString('pt-BR');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Gerado em: ${dataAtual}`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
-    
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Gerado em: ${dataAtual}`, pageWidth / 2, 51, { align: 'center' });
+
+    // Configurações da tabela
+    const margin = 20;
+    const lineHeight = 7;
+    let yPosition = 62;
+
     // Cabeçalho da tabela
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    
+    doc.setTextColor(0, 0, 0);
+
     const colWidths = [60, 40, 40, 40]; // Larguras das colunas
     const headers = ['Nome', 'CPF', 'Telefone', 'Tipo'];
-    
+
     // Desenhar cabeçalho da tabela
     let xPosition = margin;
     headers.forEach((header, index) => {
@@ -265,8 +314,7 @@ const CadastroMotoristas: React.FC = () => {
       xPosition += colWidths[index];
     });
     yPosition += lineHeight + 2;
-    
-    // Dados dos motoristas
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     

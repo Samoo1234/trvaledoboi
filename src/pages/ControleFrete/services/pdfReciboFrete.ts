@@ -121,19 +121,20 @@ export async function gerarPDFReciboConsolidado(
 
   // Nome da Empresa - Alinhado à esquerda para evitar colisão com a caixa de destaque do recibo
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(15);
   doc.setTextColor(139, 0, 0); // Vermelho Vale do Boi
-  doc.text('VALE DO BOI', 50, 23, { align: 'left' });
+  doc.text('VALE DO BOI TRANSPORTE', 50, 23, { align: 'left' });
 
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
-  doc.text('Transporte de Bovinos', 50, 29, { align: 'left' });
+  doc.text('Transporte de Bovinos', 50, 28, { align: 'left' });
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
-  doc.text('Barra do Garças - MT | E-mail: financeiro@valedoboi.com.br', 50, 35, { align: 'left' });
+  doc.text('Rua XV de novembro, 1016 - Centro - CEP 78600-000', 50, 34, { align: 'left' });
+  doc.text('Barra do Garças - MT | CNPJ: 27.244.973/0001-22', 50, 39, { align: 'left' });
 
   // Linha separadora vermelha
   doc.setLineWidth(0.6);

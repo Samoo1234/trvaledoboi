@@ -37,21 +37,27 @@ export const gerarPDFAcerto = async (data: PDFDataAcerto) => {
 
     await addLogo(doc, 20, 10, 30, 30);
 
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setTextColor(139, 0, 0);
-    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 55, 18);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 55, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 55, 30);
 
     doc.setFontSize(14);
-    doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
-
-    doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text('Relatório de Acerto de Frete', pageWidth / 2, 38, { align: 'center' });
+    doc.text('Relatório de Acerto de Frete', pageWidth / 2, 39, { align: 'center' });
 
     doc.setLineWidth(0.5);
     doc.setDrawColor(139, 0, 0);
-    doc.line(20, 43, pageWidth - 20, 43);
+    doc.line(20, 44, pageWidth - 20, 44);
 
     let yPos = 58;
     doc.setFontSize(14);
@@ -293,7 +299,7 @@ export const gerarPDFAcerto = async (data: PDFDataAcerto) => {
     doc.text('BANCO: 756 SICOOB', 25, yPos + 8);
     doc.text('AGÊNCIA: 4349  CONTA CORRENTE: 141.105-5', 25, yPos + 16);
     doc.text('PIX-CNPJ: 27.244.973/0001-22', 25, yPos + 24);
-    doc.text('VALE DO BOI CARNES LTDA', 25, yPos + 32);
+    doc.text('VALE DO BOI TRANSPORTE', 25, yPos + 32);
 
     if (yPos + 120 > pageHeight - 40) {
       doc.addPage();

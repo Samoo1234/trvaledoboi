@@ -41,23 +41,28 @@ export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
 
     await addLogo(doc, 15, 8, 25, 25);
 
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setTextColor(139, 0, 0);
-    doc.text('VALE DO BOI', pageWidth / 2, 15, { align: 'center' });
+    doc.text('VALE DO BOI TRANSPORTE', pageWidth / 2, 13, { align: 'center' });
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 22, { align: 'center' });
+    doc.text('Transporte de Bovinos', pageWidth / 2, 19, { align: 'center' });
 
-    doc.setFontSize(14);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', pageWidth / 2, 24, { align: 'center' });
+
+    doc.setFontSize(13);
     doc.setTextColor(0, 0, 0);
-    doc.text('Relatório de Controle de Fretes', pageWidth / 2, 30, { align: 'center' });
+    doc.text('Relatório de Controle de Fretes', pageWidth / 2, 32, { align: 'center' });
 
     doc.setLineWidth(0.5);
     doc.setDrawColor(139, 0, 0);
-    doc.line(15, 35, pageWidth - 15, 35);
+    doc.line(15, 37, pageWidth - 15, 37);
 
-    let yPos = 42;
+    let yPos = 44;
+
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
 

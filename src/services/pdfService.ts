@@ -497,22 +497,28 @@ export class PDFService {
     await this.addLogo(doc, 20, 10, 30, 30);
     
     // Cabeçalho da empresa
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setTextColor(139, 0, 0); // Cor vermelha
-    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 55, 18);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 55, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 55, 30);
     
     doc.setFontSize(14);
-    doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
-    
-    doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text('Relatório de Fechamento - Motorista', pageWidth / 2, 38, { align: 'center' });
+    doc.text('Relatório de Fechamento - Motorista', pageWidth / 2, 39, { align: 'center' });
     
     // Linha separadora
     doc.setLineWidth(0.5);
     doc.setDrawColor(139, 0, 0);
-    doc.line(20, 43, pageWidth - 20, 43);
+    doc.line(20, 44, pageWidth - 20, 44);
     
     // Informações do motorista
     let yPos = 58;
@@ -799,22 +805,28 @@ export class PDFService {
     // Adicionar logo
     await this.addLogo(doc, 20, 10, 30, 30);
     
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setTextColor(139, 0, 0);
-    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 55, 18);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 55, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 55, 30);
     
     doc.setFontSize(14);
-    doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
-    
-    doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Relatório Consolidado - ${periodo}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Relatório Consolidado - ${periodo}`, pageWidth / 2, 39, { align: 'center' });
     
     // Linha separadora
     doc.setLineWidth(0.5);
     doc.setDrawColor(139, 0, 0);
-    doc.line(20, 43, pageWidth - 20, 43);
+    doc.line(20, 44, pageWidth - 20, 44);
     
     // Resumo geral
     const totalMotoristas = fechamentos.length;
@@ -906,15 +918,21 @@ export class PDFService {
     await this.addLogo(doc, 20, 10, 30, 30);
     
     // Cabeçalho da empresa
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setTextColor(139, 0, 0); // Cor vermelha
-    doc.text('VALE DO BOI', pageWidth / 2, 20, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 55, 18);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 55, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 55, 30);
     
     doc.setFontSize(14);
-    doc.setTextColor(139, 0, 0);
-    doc.text('Transporte de Bovinos', pageWidth / 2, 28, { align: 'center' });
-    
-    doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     
     // Determinar título baseado no período
@@ -933,12 +951,12 @@ export class PDFService {
       titulo = 'Relatório Consolidado - Motorista (Histórico Completo)';
     }
     
-    doc.text(titulo, pageWidth / 2, 38, { align: 'center' });
+    doc.text(titulo, pageWidth / 2, 39, { align: 'center' });
     
     // Linha separadora
     doc.setLineWidth(0.5);
     doc.setDrawColor(139, 0, 0);
-    doc.line(20, 43, pageWidth - 20, 43);
+    doc.line(20, 44, pageWidth - 20, 44);
     
     // Informações do motorista
     let yPos = 58;
