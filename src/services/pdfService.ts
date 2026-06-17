@@ -57,6 +57,50 @@ interface FechamentoParaPDF {
   };
 }
 
+export interface RelatorioManutencaoPorTipo {
+  tipo: string;
+  quantidade: number;
+  valorTotal: number;
+}
+
+export interface RelatorioManutencaoPorCaminhao {
+  placa: string;
+  caminhao: string;
+  totalManutencoes: number;
+  valorTotal: number;
+}
+
+export interface RelatorioConsolidadoPDF {
+  totalManutencoes: number;
+  valorTotal: number;
+  manutencoesPorTipo: RelatorioManutencaoPorTipo[];
+  manutencoesPorCaminhao: RelatorioManutencaoPorCaminhao[];
+}
+
+export interface CaminhaoRelatorioPDF {
+  id: number;
+  placa: string;
+  modelo: string;
+  tipo: string;
+}
+
+export interface ManutencaoPDF {
+  data_manutencao: string;
+  tipo_manutencao: string;
+  descricao_servico: string;
+  km_caminhao?: number;
+  oficina_responsavel?: string;
+  valor_servico: number;
+}
+
+export interface RelatorioManutencaoCaminhaoPDF {
+  caminhao: CaminhaoRelatorioPDF;
+  totalManutencoes: number;
+  valorTotal: number;
+  ultimaManutencao: string;
+  manutencoes: ManutencaoPDF[];
+}
+
 export class PDFService {
   private formatCurrency(value: number): string {
     return new Intl.NumberFormat('pt-BR', {
@@ -1271,6 +1315,223 @@ export class PDFService {
     const nomeArquivo = `relatorio_consolidado_${fechamento.motorista?.nome.replace(/\s+/g, '_')}_historico_completo.pdf`;
     
     // Download do PDF
+    doc.save(nomeArquivo);
+  }
+
+  async gerarPDFManutencaoConsolidado(relatorioData: RelatorioConsolidadoPDF, periodoNome: string): Promise<void> {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Cabeçalho
+    doc.setFont('helvetica');
+    
+    // Adicionar logo
+    await this.addLogo(doc, 20, 10, 30, 30);
+    
+    doc.setFontSize(18);
+    doc.setTextColor(139, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 55, 18);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 55, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 55, 30);
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Relatório Consolidado de Manutenções - ${periodoNome || 'Todos os períodos'}`, pageWidth / 2, 39, { align: 'center' });
+    
+    // Linha separadora
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(139, 0, 0);
+    doc.line(20, 44, pageWidth - 20, 44);
+    
+    let yPos = 58;
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('RESUMO GERAL', 20, yPos);
+    
+    yPos += 10;
+    const resumoData = [
+      ['Total de Manutenções', relatorioData.totalManutencoes.toString()],
+      ['Valor Total Gasto', this.formatCurrency(relatorioData.valorTotal)],
+      ['Média de Custo por Serviço', this.formatCurrency(relatorioData.totalManutencoes > 0 ? relatorioData.valorTotal / relatorioData.totalManutencoes : 0)]
+    ];
+    
+    const finalYResumo = this.drawTable(
+      doc,
+      yPos,
+      ['Descrição', 'Valor'],
+      resumoData,
+      [100, 70]
+    );
+    
+    // Manutenções por Tipo
+    yPos = finalYResumo + 15;
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('MANUTENÇÕES POR TIPO', 20, yPos);
+    
+    yPos += 10;
+    const tiposData = relatorioData.manutencoesPorTipo.map(t => [
+      t.tipo,
+      t.quantidade.toString(),
+      this.formatCurrency(t.valorTotal)
+    ]);
+    
+    const finalYTipos = this.drawTable(
+      doc,
+      yPos,
+      ['Tipo de Manutenção', 'Quantidade', 'Valor Total'],
+      tiposData,
+      [60, 40, 70]
+    );
+    
+    // Manutenções por Caminhão
+    yPos = finalYTipos + 15;
+    
+    // Verificar se cabe na página atual
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (yPos + 40 > pageHeight - 20) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('MANUTENÇÕES POR CAMINHÃO', 20, yPos);
+    
+    yPos += 10;
+    const caminhoesData = relatorioData.manutencoesPorCaminhao.map(c => [
+      c.placa,
+      c.caminhao,
+      c.totalManutencoes.toString(),
+      this.formatCurrency(c.valorTotal)
+    ]);
+    
+    this.drawTable(
+      doc,
+      yPos,
+      ['Placa', 'Modelo', 'Quantidade', 'Valor Total'],
+      caminhoesData,
+      [30, 60, 30, 50]
+    );
+    
+    // Rodapé
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Relatório gerado automaticamente pelo Sistema Logística', pageWidth / 2, pageHeight - 20, { align: 'center' });
+    const agora = new Date();
+    const dataHora = `${agora.getDate().toString().padStart(2, '0')}/${(agora.getMonth() + 1).toString().padStart(2, '0')}/${agora.getFullYear()} ${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
+    doc.text(`Gerado em: ${dataHora}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+    
+    const nomeArquivo = `relatorio_consolidado_manutencoes_${(periodoNome || 'todos').replace(/\s+/g, '_').replace('/', '_')}.pdf`;
+    doc.save(nomeArquivo);
+  }
+
+  async gerarPDFManutencaoCaminhao(relatorioCaminhaoData: RelatorioManutencaoCaminhaoPDF, periodoNome: string): Promise<void> {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Cabeçalho
+    doc.setFont('helvetica');
+    
+    // Adicionar logo
+    await this.addLogo(doc, 20, 10, 30, 30);
+    
+    doc.setFontSize(18);
+    doc.setTextColor(139, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALE DO BOI TRANSPORTE', 55, 18);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Transporte de Bovinos', 55, 24);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Rua XV de novembro, 1016 - Centro - Barra do Garças - MT - CEP 78600-000 | CNPJ: 27.244.973/0001-22', 55, 30);
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    const sub = periodoNome ? ` - ${periodoNome}` : ' - Todos os períodos';
+    doc.text(`Relatório de Manutenções por Caminhão${sub}`, pageWidth / 2, 39, { align: 'center' });
+    
+    // Linha separadora
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(139, 0, 0);
+    doc.line(20, 44, pageWidth - 20, 44);
+    
+    let yPos = 58;
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('DADOS DO VEÍCULO', 20, yPos);
+    
+    yPos += 10;
+    const resumoVeiculo = [
+      ['Placa', relatorioCaminhaoData.caminhao.placa],
+      ['Modelo', relatorioCaminhaoData.caminhao.modelo],
+      ['Tipo', relatorioCaminhaoData.caminhao.tipo],
+      ['Total de Manutenções', relatorioCaminhaoData.totalManutencoes.toString()],
+      ['Valor Total Gasto', this.formatCurrency(relatorioCaminhaoData.valorTotal)],
+      ['Última Manutenção', relatorioCaminhaoData.ultimaManutencao ? this.formatDate(relatorioCaminhaoData.ultimaManutencao) : 'Sem registro']
+    ];
+    
+    const finalYResumo = this.drawTable(
+      doc,
+      yPos,
+      ['Identificação', 'Informação'],
+      resumoVeiculo,
+      [80, 90]
+    );
+    
+    // Histórico de Manutenções
+    yPos = finalYResumo + 15;
+    
+    // Verificar se cabe na página
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (yPos + 40 > pageHeight - 20) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(139, 0, 0);
+    doc.text('HISTÓRICO DE MANUTENÇÕES', 20, yPos);
+    
+    yPos += 10;
+    const historicoData = relatorioCaminhaoData.manutencoes.map(m => [
+      this.formatDate(m.data_manutencao),
+      m.tipo_manutencao,
+      m.descricao_servico.length > 35 ? m.descricao_servico.substring(0, 35) + '...' : m.descricao_servico,
+      m.km_caminhao ? `${m.km_caminhao.toLocaleString('pt-BR')} km` : '-',
+      m.oficina_responsavel ? (m.oficina_responsavel.length > 18 ? m.oficina_responsavel.substring(0, 18) + '...' : m.oficina_responsavel) : '-',
+      this.formatCurrency(m.valor_servico)
+    ]);
+    
+    this.drawTable(
+      doc,
+      yPos,
+      ['Data', 'Tipo', 'Descrição do Serviço', 'KM', 'Oficina', 'Valor'],
+      historicoData,
+      [20, 25, 55, 20, 30, 20]
+    );
+    
+    // Rodapé
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Relatório gerado automaticamente pelo Sistema Logística', pageWidth / 2, pageHeight - 20, { align: 'center' });
+    const agora = new Date();
+    const dataHora = `${agora.getDate().toString().padStart(2, '0')}/${(agora.getMonth() + 1).toString().padStart(2, '0')}/${agora.getFullYear()} ${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
+    doc.text(`Gerado em: ${dataHora}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+    
+    const nomeArquivo = `relatorio_manutencao_${relatorioCaminhaoData.caminhao.placa}_${periodoNome ? periodoNome.replace(/\s+/g, '_').replace('/', '_') : 'completo'}.pdf`;
     doc.save(nomeArquivo);
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wrench } from 'lucide-react';
-import { manutencaoService, Manutencao, ManutencaoCreateData } from '../../services/manutencaoService';
+import { manutencaoService, Manutencao, ManutencaoCreateData, RelatorioManutencao } from '../../services/manutencaoService';
+import { pdfService } from '../../services/pdfService';
 import { caminhaoService, Caminhao } from '../../services/caminhaoService';
 import { abastecimentoService, Abastecimento } from '../../services/abastecimentoService';
 import { getCurrentDate } from '../../services/dateUtils';
@@ -53,6 +54,7 @@ const ManutencaoCaminhoes: React.FC = () => {
   });
   const [activeTab, setActiveTab] = useState<'lista' | 'relatorios'>('lista');
   const [relatorioData, setRelatorioData] = useState<RelatorioConsolidado | null>(null);
+  const [relatorioCaminhaoData, setRelatorioCaminhaoData] = useState<RelatorioManutencao | null>(null);
   const [formData, setFormData] = useState<ManutencaoCreateData>({
     caminhao_id: 0,
     data_manutencao: getCurrentDate(),
@@ -197,15 +199,61 @@ const ManutencaoCaminhoes: React.FC = () => {
     setShowForm(true);
   };
 
-  const gerarRelatorioConsolidado = async () => {
+  const fetchRelatorioData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await manutencaoService.getRelatorioConsolidado(filtros.periodo);
-      setRelatorioData(data);
-      setActiveTab('relatorios');
+      console.log(`[DEBUG] Gerando relatório para caminhaoId: "${filtros.caminhaoId}", periodo: "${filtros.periodo}"`);
+      if (filtros.caminhaoId) {
+        const data = await manutencaoService.getRelatorioByCaminhao(parseInt(filtros.caminhaoId), filtros.periodo);
+        console.log(`[DEBUG] Dados retornados:`, data);
+        setRelatorioCaminhaoData(data);
+        setRelatorioData(null);
+      } else {
+        const data = await manutencaoService.getRelatorioConsolidado(filtros.periodo);
+        console.log(`[DEBUG] Dados consolidados retornados:`, data);
+        setRelatorioData(data);
+        setRelatorioCaminhaoData(null);
+      }
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
       alert('Erro ao gerar relatório.');
+    } finally {
+      setLoading(false);
+    }
+  }, [filtros]);
+
+  const gerarRelatorioConsolidado = async () => {
+    setActiveTab('relatorios');
+    await fetchRelatorioData();
+  };
+
+  useEffect(() => {
+    if (activeTab === 'relatorios') {
+      fetchRelatorioData();
+    }
+  }, [activeTab, fetchRelatorioData]);
+
+  const handleImprimirConsolidado = async () => {
+    if (!relatorioData) return;
+    try {
+      setLoading(true);
+      await pdfService.gerarPDFManutencaoConsolidado(relatorioData, periodoNome || filtros.periodo || 'Geral');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Erro ao gerar PDF.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImprimirCaminhao = async () => {
+    if (!relatorioCaminhaoData) return;
+    try {
+      setLoading(true);
+      await pdfService.gerarPDFManutencaoCaminhao(relatorioCaminhaoData, periodoNome || filtros.periodo || 'Geral');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Erro ao gerar PDF.');
     } finally {
       setLoading(false);
     }
@@ -320,10 +368,22 @@ const ManutencaoCaminhoes: React.FC = () => {
       )}
 
       {activeTab === 'relatorios' && (
-        <ManutencaoCaminhoesRelatorios
-          relatorioData={relatorioData}
-          periodoNome={periodoNome}
-        />
+        <>
+          <ManutencaoCaminhoesFilters
+            filtros={filtros}
+            setFiltros={setFiltros}
+            caminhoes={caminhoes}
+            setShowForm={setShowForm}
+            gerarRelatorioConsolidado={gerarRelatorioConsolidado}
+          />
+          <ManutencaoCaminhoesRelatorios
+            relatorioData={relatorioData}
+            relatorioCaminhaoData={relatorioCaminhaoData}
+            periodoNome={periodoNome}
+            onImprimirConsolidado={handleImprimirConsolidado}
+            onImprimirCaminhao={handleImprimirCaminhao}
+          />
+        </>
       )}
 
       <ManutencaoCaminhoesForm
