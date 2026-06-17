@@ -68,14 +68,18 @@ class ManutencaoService {
 
   // Buscar manutenções por período
   async getByPeriodo(periodo: string): Promise<Manutencao[]> {
-    const { data, error } = await supabase
+    let query = supabase
       .from('manutencoes_caminhoes')
       .select(`
         *,
         caminhao:caminhoes(id, placa, modelo, tipo, status)
-      `)
-      .eq('periodo', periodo)
-      .order('data_manutencao', { ascending: false });
+      `);
+      
+    if (periodo) {
+      query = query.eq('periodo', periodo);
+    }
+    
+    const { data, error } = await query.order('data_manutencao', { ascending: false });
     
     if (error) {
       throw new Error(error.message);
@@ -104,15 +108,19 @@ class ManutencaoService {
 
   // Buscar manutenções por caminhão e período
   async getByCaminhaoAndPeriodo(caminhaoId: number, periodo: string): Promise<Manutencao[]> {
-    const { data, error } = await supabase
+    let query = supabase
       .from('manutencoes_caminhoes')
       .select(`
         *,
         caminhao:caminhoes(id, placa, modelo, tipo, status)
       `)
-      .eq('caminhao_id', caminhaoId)
-      .eq('periodo', periodo)
-      .order('data_manutencao', { ascending: false });
+      .eq('caminhao_id', caminhaoId);
+      
+    if (periodo) {
+      query = query.eq('periodo', periodo);
+    }
+    
+    const { data, error } = await query.order('data_manutencao', { ascending: false });
     
     if (error) {
       throw new Error(error.message);
