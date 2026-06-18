@@ -741,13 +741,16 @@ export class PDFService {
     if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.abastecimentos && fechamento.abastecimentos.length > 0) {
       console.log(`[PDF DEBUG] Processando ${fechamento.abastecimentos.length} abastecimentos para o PDF`);
       
+      doc.addPage();
+      const yAbastStart = 20;
+      
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
-      doc.text('DETALHAMENTO DE ABASTECIMENTO', 20, finalYFretes + 20);
+      doc.text('DETALHAMENTO DE ABASTECIMENTO', 20, yAbastStart);
       
       finalYAbastecimentos = this.drawAbastecimentosTable(
         doc,
-        finalYFretes + 30,
+        yAbastStart + 10,
         fechamento.abastecimentos,
         doc.internal.pageSize.getHeight()
       );
@@ -1225,13 +1228,16 @@ export class PDFService {
     if (fechamento.motorista?.tipo_motorista === 'Terceiro' && fechamento.abastecimentos && fechamento.abastecimentos.length > 0) {
       console.log(`[PDF DEBUG] Processando ${fechamento.abastecimentos.length} abastecimentos históricos para o PDF`);
       
+      doc.addPage();
+      const yAbastStart = 20;
+      
       doc.setFontSize(14);
       doc.setTextColor(139, 0, 0);
-      doc.text('DETALHAMENTO DE ABASTECIMENTO', 20, finalYFretes + 20);
+      doc.text('DETALHAMENTO DE ABASTECIMENTO', 20, yAbastStart);
       
       finalYAbastecimentos = this.drawAbastecimentosTable(
         doc,
-        finalYFretes + 30,
+        yAbastStart + 10,
         fechamento.abastecimentos,
         doc.internal.pageSize.getHeight()
       );
