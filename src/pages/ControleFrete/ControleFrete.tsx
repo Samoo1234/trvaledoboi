@@ -55,6 +55,7 @@ const ControleFrete: React.FC = () => {
   const [filtroDataFim, setFiltroDataFim] = useState<string>(getUltimoDiaMes());
   const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroMotorista, setFiltroMotorista] = useState<string>('');
+  const [filtroCaminhao, setFiltroCaminhao] = useState<string>('');
 
   const [activeTab, setActiveTab] = useState<'fretes' | 'acerto' | 'recibo'>('fretes');
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
@@ -411,6 +412,10 @@ const ControleFrete: React.FC = () => {
       const vincs = vinculosMotoristas[frete.id!] || [];
       if (!vincs.some(v => v.motorista_id === parseInt(filtroMotorista))) return false;
     }
+    if (filtroCaminhao) {
+      const vincs = vinculosCaminhoes[frete.id!] || [];
+      if (!vincs.some(v => v.caminhao_id === parseInt(filtroCaminhao))) return false;
+    }
     return true;
   }).sort((a, b) => {
     // Ordenar de forma Ascendente (do mais antigo para o mais novo) no frontend
@@ -568,13 +573,16 @@ const ControleFrete: React.FC = () => {
             filtroDataFim={filtroDataFim} setFiltroDataFim={setFiltroDataFim}
             filtroCliente={filtroCliente} setFiltroCliente={setFiltroCliente}
             filtroMotorista={filtroMotorista} setFiltroMotorista={setFiltroMotorista}
+            filtroCaminhao={filtroCaminhao} setFiltroCaminhao={setFiltroCaminhao}
             clientesCadastro={getClientesParaFiltro()} motoristas={motoristas}
+            caminhoes={caminhoes}
             onClearFilters={() => {
               setFiltroSituacao(''); 
               setFiltroDataInicio(getPrimeiroDiaMes()); 
               setFiltroDataFim(getUltimoDiaMes());
               setFiltroCliente(''); 
               setFiltroMotorista('');
+              setFiltroCaminhao('');
             }}
             onGeneratePDF={handleGerarPDFControle}
             fretesFiltrados={fretesFiltrados}

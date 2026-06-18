@@ -3,6 +3,7 @@ import { Filter, Download } from 'lucide-react';
 import { formatDisplayDate } from '../../../services/dateUtils';
 import { Frete } from '../../../services/freteService';
 import { Motorista } from '../../../services/motoristaService';
+import { Caminhao } from '../../../services/caminhaoService';
 
 interface ControleFreteFiltersProps {
   filtroSituacao: string;
@@ -15,8 +16,11 @@ interface ControleFreteFiltersProps {
   setFiltroCliente: (v: string) => void;
   filtroMotorista: string;
   setFiltroMotorista: (v: string) => void;
+  filtroCaminhao: string;
+  setFiltroCaminhao: (v: string) => void;
   clientesCadastro: { id: number; razao_social: string }[];
   motoristas: Motorista[];
+  caminhoes: Caminhao[];
   onClearFilters: () => void;
   onGeneratePDF: () => void;
   fretesFiltrados: Frete[];
@@ -33,8 +37,11 @@ export const ControleFreteFilters: React.FC<ControleFreteFiltersProps> = ({
   setFiltroCliente,
   filtroMotorista,
   setFiltroMotorista,
+  filtroCaminhao,
+  setFiltroCaminhao,
   clientesCadastro,
   motoristas,
+  caminhoes,
   onClearFilters,
   onGeneratePDF,
   fretesFiltrados
@@ -111,6 +118,22 @@ export const ControleFreteFilters: React.FC<ControleFreteFiltersProps> = ({
           </div>
 
           <div className="filtro-group">
+            <label>Placa do Caminhão</label>
+            <select
+              value={filtroCaminhao}
+              onChange={(e) => setFiltroCaminhao(e.target.value)}
+              className="filtro-select"
+            >
+              <option value="">Todas as Placas</option>
+              {caminhoes.map((caminhao) => (
+                <option key={caminhao.id} value={caminhao.id}>
+                  {caminhao.placa}{caminhao.modelo ? ` - ${caminhao.modelo}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filtro-group">
             <button
               type="button"
               className="btn-clear-filters"
@@ -134,7 +157,7 @@ export const ControleFreteFilters: React.FC<ControleFreteFiltersProps> = ({
         </div>
       </div>
 
-      {(filtroSituacao || filtroDataInicio || filtroDataFim || filtroCliente || filtroMotorista) && (
+      {(filtroSituacao || filtroDataInicio || filtroDataFim || filtroCliente || filtroMotorista || filtroCaminhao) && (
         <div className="filtros-resumo">
           <p>
             <strong>{fretesFiltrados.length}</strong> frete{fretesFiltrados.length !== 1 ? 's' : ''}
@@ -144,6 +167,7 @@ export const ControleFreteFilters: React.FC<ControleFreteFiltersProps> = ({
             {filtroDataFim && ` • Até: ${formatDisplayDate(filtroDataFim)}`}
             {filtroCliente && ` • Cliente: ${clientesCadastro.find(c => c.id === parseInt(filtroCliente))?.razao_social || filtroCliente}`}
             {filtroMotorista && ` • Motorista: ${motoristas.find(m => m.id === parseInt(filtroMotorista))?.nome || ''}`}
+            {filtroCaminhao && ` • Placa: ${caminhoes.find(c => c.id === parseInt(filtroCaminhao))?.placa || ''}`}
           </p>
         </div>
       )}
