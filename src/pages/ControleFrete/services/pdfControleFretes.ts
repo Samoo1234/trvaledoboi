@@ -13,6 +13,7 @@ export interface PDFDataControle {
   filtroDataFim: string;
   filtroCliente: string;
   filtroSituacao: string;
+  filtroCaminhao?: string;
   caminhoes: Caminhao[];
   motoristas: Motorista[];
   reboques: Reboque[];
@@ -22,7 +23,7 @@ export interface PDFDataControle {
 
 export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
   const {
-    fretesFiltrados, filtroDataInicio, filtroDataFim, filtroCliente, filtroSituacao,
+    fretesFiltrados, filtroDataInicio, filtroDataFim, filtroCliente, filtroSituacao, filtroCaminhao,
     caminhoes, motoristas, vinculosCaminhoes, vinculosMotoristas
   } = data;
 
@@ -89,6 +90,12 @@ export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
       doc.text(`Situação: ${filtroSituacao}`, pageWidth / 2, yPos, { align: 'center' });
     }
 
+    if (filtroCaminhao) {
+      const placaCaminhao = caminhoes.find(c => c.id === parseInt(filtroCaminhao))?.placa || filtroCaminhao;
+      yPos += 5;
+      doc.text(`Caminhão (Placa): ${placaCaminhao}`, pageWidth / 2, yPos, { align: 'center' });
+    }
+
     const drawFretesTable = (startY: number) => {
       const headers = ['Sit.', 'Data', 'Min.', 'CB', 'Pecuarista', 'Cliente', 'Origem', 'Destino', 'Motorista', 'Caminhão', 'Conf.', 'Valor', 'T.Pag', 'D.Pag', 'Faixa', 'KM'];
       const colWidths = [14, 18, 14, 11, 20, 20, 25, 23, 24, 20, 16, 20, 14, 18, 12, 11];
@@ -125,8 +132,16 @@ export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
       doc.setFontSize(6);
 
       fretesFiltrados.forEach((frete, index) => {
-        const vincCaminhoes = vinculosCaminhoes[frete.id!] || [];
-        const vincMotoristas = vinculosMotoristas[frete.id!] || [];
+        let vincCaminhoes = vinculosCaminhoes[frete.id!] || [];
+        let vincMotoristas = vinculosMotoristas[frete.id!] || [];
+
+        if (filtroCaminhao) {
+          const caminhaoIdInt = parseInt(filtroCaminhao);
+          if (!isNaN(caminhaoIdInt)) {
+            vincCaminhoes = vincCaminhoes.filter(v => v.caminhao_id === caminhaoIdInt);
+            vincMotoristas = vincMotoristas.filter(v => v.caminhao_id === caminhaoIdInt);
+          }
+        }
 
         const placasArray = vincCaminhoes
           .map(v => caminhoes.find(c => c.id === v.caminhao_id)?.placa)
@@ -139,6 +154,14 @@ export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
         const motoristasArray = vincMotoristas
           .map(v => motoristas.find(m => m.id === v.motorista_id)?.nome)
           .filter(n => n);
+
+        let valorExibido = frete.valor_frete;
+        if (filtroCaminhao) {
+          const match = vincCaminhoes[0];
+          if (match && match.valor_frete !== null && match.valor_frete !== undefined) {
+            valorExibido = match.valor_frete;
+          }
+        }
 
         const maxItens = Math.max(
           placasArray.length || 1,
@@ -175,7 +198,7 @@ export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
           '', 
           '', 
           '', 
-          formatCurrency(frete.valor_frete),
+          formatCurrency(valorExibido),
           (frete.tipo_pagamento || '-').substring(0, 10),
           frete.data_pagamento ? formatDate(frete.data_pagamento) : '-',
           frete.faixa || '-',
@@ -255,7 +278,18 @@ export const gerarPDFControleFrentes = async (data: PDFDataControle) => {
 
     const tableEndY = drawFretesTable(yPos + 8);
 
-    const totalGeral = fretesFiltrados.reduce((sum, f) => sum + f.valor_frete, 0);
+    const totalGeral = fretesFiltrados.reduce((sum, f) => {
+      let val = f.valor_frete;
+      if (filtroCaminhao) {
+        const caminhaoIdInt = parseInt(filtroCaminhao);
+        const vincs = vinculosCaminhoes[f.id!] || [];
+        const match = vincs.find(v => v.caminhao_id === caminhaoIdInt);
+        if (match && match.valor_frete !== null && match.valor_frete !== undefined) {
+          val = match.valor_frete;
+        }
+      }
+      return sum + val;
+    }, 0);
     const resumoY = tableEndY + 10;
 
     doc.setFontSize(10);

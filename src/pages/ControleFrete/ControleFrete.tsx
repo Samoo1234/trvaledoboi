@@ -439,6 +439,7 @@ const ControleFrete: React.FC = () => {
       filtroDataFim,
       filtroCliente: nomeClienteFiltro,
       filtroSituacao,
+      filtroCaminhao,
       caminhoes,
       motoristas,
       reboques,
