@@ -1,5 +1,5 @@
-import React from 'react';
-import { Edit, Trash2, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit, Trash2, FileText, MessageSquare } from 'lucide-react';
 import { Frete } from '../../../services/freteService';
 import { Caminhao } from '../../../services/caminhaoService';
 import { Motorista } from '../../../services/motoristaService';
@@ -39,8 +39,24 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
   handleDelete,
   handleGerarRecibo
 }) => {
+  const [hoveredObs, setHoveredObs] = useState<{ text: string; x: number; y: number } | null>(null);
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>, text: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredObs({
+      text,
+      x: rect.left + rect.width / 2,
+      y: rect.top
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredObs(null);
+  };
+
   return (
-    <div className="table-container">
+    <>
+      <div className="table-container">
       <div className="scroll-indicator">
         ← Arraste para ver mais colunas →
       </div>
@@ -89,9 +105,34 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
             fretesFiltrados.map((frete) => (
               <tr key={frete.id}>
                 <td>
-                  <span className={`situacao ${getSituacaoClass(frete.situacao)}`}>
-                    {frete.situacao}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className={`situacao ${getSituacaoClass(frete.situacao)}`}>
+                      {frete.situacao}
+                    </span>
+                    {frete.observacoes && (
+                      <button 
+                        onMouseEnter={(e) => handleMouseEnter(e, frete.observacoes || '')}
+                        onMouseLeave={handleMouseLeave}
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          cursor: 'pointer', 
+                          color: '#8b5cf6',
+                          marginLeft: '4px',
+                          padding: '6px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: 'transparent',
+                          transition: 'all 0.2s'
+                        }}
+                        title="Ver observações"
+                        className="obs-icon-button"
+                      >
+                        <MessageSquare size={16} />
+                      </button>
+                    )}
+                  </div>
                 </td>
                 <td>{formatDate(frete.data_emissao)}</td>
                 <td>{frete.pecuarista}</td>
@@ -208,5 +249,49 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
         </tbody>
       </table>
     </div>
+      {hoveredObs && (
+        <div 
+          style={{
+            position: 'fixed',
+            left: `${hoveredObs.x}px`,
+            top: `${hoveredObs.y}px`,
+            transform: 'translate(-50%, -100%) translateY(-8px)',
+            width: '280px',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(4px)',
+            color: '#ffffff',
+            textAlign: 'left',
+            borderRadius: '8px',
+            padding: '12px 14px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            fontSize: '0.8rem',
+            fontWeight: 500,
+            textTransform: 'none',
+            whiteSpace: 'normal',
+            wordWrap: 'break-word',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            animation: 'fadeInTooltip 0.15s ease-out'
+          }}
+        >
+          <strong>Observações:</strong>
+          <div style={{ marginTop: '4px', lineHeight: '1.4' }}>
+            {hoveredObs.text}
+          </div>
+          <div 
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              borderWidth: '6px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(15, 23, 42, 0.95) transparent transparent transparent'
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 };
