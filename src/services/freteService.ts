@@ -7,13 +7,13 @@ export interface Frete {
   pecuarista: string;
   origem: string;
   destino: string;
-  numero_minuta?: string;
-  numero_cb?: string;
-  cliente?: string; // Campo texto (legado, mantido para compatibilidade)
+  numero_minuta?: string | null;
+  numero_cb?: string | null;
+  cliente?: string | null; // Campo texto (legado, mantido para compatibilidade)
   cliente_id?: number | null; // FK para tabela clientes (novo)
-  observacoes?: string;
-  faixa?: string;
-  total_km?: number;
+  observacoes?: string | null;
+  faixa?: string | null;
+  total_km?: number | null;
   valor_frete: number;
   situacao: string;
   tipo_pagamento?: string | null;

@@ -110,7 +110,7 @@ const HistoricoModals: React.FC<HistoricoModalsProps> = ({
                 
                 <div className="detalhe-item full-width">
                   <label>Observações:</label>
-                  <span>{freteDetalhes.observacoes || 'Sem observações'}</span>
+                  <span>{freteDetalhes.observacoes ? freteDetalhes.observacoes : 'Sem observações'}</span>
                 </div>
                 
                 {freteDetalhes.arquivado_em && (
@@ -208,7 +208,7 @@ const HistoricoModals: React.FC<HistoricoModalsProps> = ({
                 
                 <div className="detalhe-item full-width">
                   <label>Observações:</label>
-                  <span>{fechamentoDetalhes.observacoes || 'Sem observações'}</span>
+                  <span>{fechamentoDetalhes.observacoes ? fechamentoDetalhes.observacoes : 'Sem observações'}</span>
                 </div>
                 
                 {fechamentoDetalhes.arquivado_em && (

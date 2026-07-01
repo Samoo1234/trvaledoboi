@@ -111,7 +111,7 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
                     </span>
                     {frete.observacoes && (
                       <button 
-                        onMouseEnter={(e) => handleMouseEnter(e, frete.observacoes || '')}
+                        onMouseEnter={(e) => handleMouseEnter(e, frete.observacoes ? frete.observacoes : '')}
                         onMouseLeave={handleMouseLeave}
                         style={{ 
                           display: 'inline-flex', 
@@ -277,7 +277,7 @@ export const ControleFreteTable: React.FC<ControleFreteTableProps> = ({
         >
           <strong>Observações:</strong>
           <div style={{ marginTop: '4px', lineHeight: '1.4' }}>
-            {hoveredObs.text}
+            {hoveredObs.text ? hoveredObs.text : ''}
           </div>
           <div 
             style={{
