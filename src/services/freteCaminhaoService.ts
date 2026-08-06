@@ -10,6 +10,32 @@ export interface FreteCaminhao {
 }
 
 export const freteCaminhaoService = {
+  // Buscar todos os vínculos de caminhão (com paginação automática)
+  async getAll(): Promise<FreteCaminhao[]> {
+    let allData: FreteCaminhao[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from('frete_caminhao')
+        .select('*')
+        .range(from, to);
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        if (data.length < pageSize) hasMore = false;
+        else page++;
+      } else {
+        hasMore = false;
+      }
+    }
+    return allData;
+  },
+
   // Buscar todos os caminhões de um frete
   async getByFreteId(frete_id: number): Promise<FreteCaminhao[]> {
     const { data, error } = await supabase

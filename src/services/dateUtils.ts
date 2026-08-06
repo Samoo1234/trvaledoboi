@@ -6,8 +6,28 @@
  * Evita problemas de conversão UTC
  */
 export function parseLocalDate(dateString: string): Date {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  if (!dateString) return new Date(NaN);
+  const clean = dateString.split('T')[0].trim();
+  if (clean.includes('-')) {
+    const parts = clean.split('-').map(Number);
+    if (parts[0] > 1000) {
+      // YYYY-MM-DD
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    } else {
+      // DD-MM-YYYY
+      return new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+  } else if (clean.includes('/')) {
+    const parts = clean.split('/').map(Number);
+    if (parts[2] > 1000) {
+      // DD/MM/YYYY
+      return new Date(parts[2], parts[1] - 1, parts[0]);
+    } else {
+      // YYYY/MM/DD
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+  }
+  return new Date(dateString);
 }
 
 /**

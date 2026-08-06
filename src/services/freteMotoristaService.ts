@@ -8,6 +8,32 @@ export interface FreteMotorista {
 }
 
 export const freteMotoristaService = {
+  // Buscar todos os vínculos de motorista (com paginação automática)
+  async getAll(): Promise<FreteMotorista[]> {
+    let allData: FreteMotorista[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from('frete_motorista')
+        .select('*')
+        .range(from, to);
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        if (data.length < pageSize) hasMore = false;
+        else page++;
+      } else {
+        hasMore = false;
+      }
+    }
+    return allData;
+  },
+
   // Buscar todos os motoristas de um frete
   async getByFreteId(frete_id: number): Promise<FreteMotorista[]> {
     const { data, error } = await supabase

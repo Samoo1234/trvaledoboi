@@ -46,33 +46,55 @@ export interface Frete {
 export const freteService = {
   // Buscar todos os fretes com dados relacionados (apenas ativos, não arquivados)
   async getAll(): Promise<Frete[]> {
-    const { data, error } = await supabase
-      .from('fretes')
-      .select(`
-        *,
-        frete_caminhao(
-          caminhao_id,
-          configuracao,
-          reboque_id,
-          caminhoes(placa, tipo)
-        ),
-        clientes(
-          id,
-          razao_social,
-          cpf_cnpj,
-          municipio,
-          uf
-        )
-      `)
-      .or('arquivado.is.null,arquivado.eq.false') // Buscar apenas não arquivados
-      .order('data_emissao', { ascending: false }); // Descendente no Supabase (garante dados recentes no limite de 1000). Ascendente é feito no frontend.
-    
-    if (error) {
-      throw new Error(error.message);
+    let allData: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error } = await supabase
+        .from('fretes')
+        .select(`
+          *,
+          frete_caminhao(
+            caminhao_id,
+            configuracao,
+            reboque_id,
+            caminhoes(placa, tipo)
+          ),
+          clientes(
+            id,
+            razao_social,
+            cpf_cnpj,
+            municipio,
+            uf
+          )
+        `)
+        .or('arquivado.is.null,arquivado.eq.false') // Buscar apenas não arquivados
+        .order('data_emissao', { ascending: false })
+        .range(from, to);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
     }
-    
+
     // Processar os dados para incluir informações de caminhão e cliente
-    const fretesProcessados = data?.map(frete => {
+    const fretesProcessados = allData.map(frete => {
       const caminhaoInfo = frete.frete_caminhao?.[0]?.caminhoes;
       const configuracao = frete.frete_caminhao?.[0]?.configuracao;
       const clienteInfo = frete.clientes;
@@ -91,8 +113,8 @@ export const freteService = {
           uf: clienteInfo.uf
         } : undefined
       };
-    }) || [];
-    
+    });
+
     return fretesProcessados;
   },
 
@@ -275,7 +297,9 @@ export const freteService = {
       query = query.or(`numero_minuta.ilike.%${filtros.buscarTexto}%,numero_cb.ilike.%${filtros.buscarTexto}%,origem.ilike.%${filtros.buscarTexto}%,destino.ilike.%${filtros.buscarTexto}%`);
     }
 
-    const { data, error } = await query.order('arquivado_em', { ascending: false });
+    const { data, error } = await query
+      .order('arquivado_em', { ascending: false })
+      .range(0, 4999);
 
     if (error) {
       throw new Error(error.message);

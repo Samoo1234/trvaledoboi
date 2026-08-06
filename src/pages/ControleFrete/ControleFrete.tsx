@@ -7,6 +7,7 @@ import { freteCaminhaoService, FreteCaminhao } from '../../services/freteCaminha
 import { freteMotoristaService, FreteMotorista } from '../../services/freteMotoristaService';
 import { reboqueService, Reboque } from '../../services/reboqueService';
 import { supabase } from '../../services/supabaseClient';
+import { parseLocalDate } from '../../services/dateUtils';
 import { Cliente } from '../../types/cliente';
 
 import { ControleFreteFilters } from './components/ControleFreteFilters';
@@ -51,8 +52,8 @@ const ControleFrete: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   
   const [filtroSituacao, setFiltroSituacao] = useState<string>('');
-  const [filtroDataInicio, setFiltroDataInicio] = useState<string>(getPrimeiroDiaMes());
-  const [filtroDataFim, setFiltroDataFim] = useState<string>(getUltimoDiaMes());
+  const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
+  const [filtroDataFim, setFiltroDataFim] = useState<string>('');
   const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroMotorista, setFiltroMotorista] = useState<string>('');
   const [filtroCaminhao, setFiltroCaminhao] = useState<string>('');
@@ -112,25 +113,29 @@ const ControleFrete: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [fretesData, caminhoesData, motoristasData] = await Promise.all([
+      const [fretesData, caminhoesData, motoristasData, allCaminhoesVincs, allMotoristasVincs] = await Promise.all([
         freteService.getAll(),
         caminhaoService.getAll(),
-        motoristaService.getAll()
+        motoristaService.getAll(),
+        freteCaminhaoService.getAll(),
+        freteMotoristaService.getAll()
       ]);
       setFretes(fretesData);
       setCaminhoes(caminhoesData.filter(c => c.status === 'Ativo'));
       setMotoristas(motoristasData.filter(m => m.status === 'Ativo'));
       
-      const ids = fretesData.map(f => f.id).filter((id): id is number => typeof id === 'number');
-      
-      const allCaminhoes = await Promise.all(ids.map(id => freteCaminhaoService.getByFreteId(id)));
       const vincCaminhoes: { [freteId: number]: FreteCaminhao[] } = {};
-      ids.forEach((id, idx) => { vincCaminhoes[id!] = allCaminhoes[idx]; });
+      allCaminhoesVincs.forEach(v => {
+        if (!vincCaminhoes[v.frete_id]) vincCaminhoes[v.frete_id] = [];
+        vincCaminhoes[v.frete_id].push(v);
+      });
       setVinculosCaminhoes(vincCaminhoes);
       
-      const allMotoristas = await Promise.all(ids.map(id => freteMotoristaService.getByFreteId(id)));
       const vincMotoristas: { [freteId: number]: FreteMotorista[] } = {};
-      ids.forEach((id, idx) => { vincMotoristas[id!] = allMotoristas[idx]; });
+      allMotoristasVincs.forEach(v => {
+        if (!vincMotoristas[v.frete_id]) vincMotoristas[v.frete_id] = [];
+        vincMotoristas[v.frete_id].push(v);
+      });
       setVinculosMotoristas(vincMotoristas);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -373,20 +378,19 @@ const ControleFrete: React.FC = () => {
   const fretesFiltrados = fretes.filter(frete => {
     if (filtroSituacao && frete.situacao?.toUpperCase() !== filtroSituacao.toUpperCase()) return false;
     
-    // Tratamento robusto para as datas, ignorando fuso horário
+    // Tratamento robusto para as datas, usando parseLocalDate
     if (filtroDataInicio || filtroDataFim) {
       if (frete.data_emissao) {
-        const [yFrete, mFrete, dFrete] = frete.data_emissao.split('T')[0].split('-').map(Number);
-        const dataFreteCalc = new Date(yFrete, mFrete - 1, dFrete).getTime();
+        const dataFreteCalc = parseLocalDate(frete.data_emissao).getTime();
 
         if (filtroDataInicio) {
-          const [yIni, mIni, dIni] = filtroDataInicio.split('-').map(Number);
-          if (dataFreteCalc < new Date(yIni, mIni - 1, dIni).getTime()) return false;
+          const dataIniCalc = parseLocalDate(filtroDataInicio).getTime();
+          if (dataFreteCalc < dataIniCalc) return false;
         }
         
         if (filtroDataFim) {
-          const [yFim, mFim, dFim] = filtroDataFim.split('-').map(Number);
-          if (dataFreteCalc > new Date(yFim, mFim - 1, dFim).getTime()) return false;
+          const dataFimCalc = parseLocalDate(filtroDataFim).getTime();
+          if (dataFreteCalc > dataFimCalc) return false;
         }
       } else {
         return false; // se não tiver data, não mostra no filtro por período
@@ -579,8 +583,8 @@ const ControleFrete: React.FC = () => {
             caminhoes={caminhoes}
             onClearFilters={() => {
               setFiltroSituacao(''); 
-              setFiltroDataInicio(getPrimeiroDiaMes()); 
-              setFiltroDataFim(getUltimoDiaMes());
+              setFiltroDataInicio(''); 
+              setFiltroDataFim('');
               setFiltroCliente(''); 
               setFiltroMotorista('');
               setFiltroCaminhao('');
