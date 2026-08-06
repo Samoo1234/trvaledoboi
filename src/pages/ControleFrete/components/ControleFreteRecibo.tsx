@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Receipt, CheckSquare, Square } from 'lucide-react';
 import { Frete } from '../../../services/freteService';
+import { toISODateString } from '../../../services/dateUtils';
 import { formatCurrency, formatDate, getSituacaoClass } from '../utils';
 
 interface ControleFreteReciboProps {
@@ -48,17 +49,16 @@ export const ControleFreteRecibo: React.FC<ControleFreteReciboProps> = ({
       // 3. Filtrar por período de data
       if (dataInicio || dataFim) {
         if (f.data_emissao) {
-          const [yFrete, mFrete, dFrete] = f.data_emissao.split('T')[0].split('-').map(Number);
-          const dataFreteCalc = new Date(yFrete, mFrete - 1, dFrete).getTime();
+          const dateFreteStr = toISODateString(f.data_emissao);
 
           if (dataInicio) {
-            const [yIni, mIni, dIni] = dataInicio.split('-').map(Number);
-            if (dataFreteCalc < new Date(yIni, mIni - 1, dIni).getTime()) return false;
+            const dateIniStr = toISODateString(dataInicio);
+            if (dateIniStr && dateFreteStr < dateIniStr) return false;
           }
           
           if (dataFim) {
-            const [yFim, mFim, dFim] = dataFim.split('-').map(Number);
-            if (dataFreteCalc > new Date(yFim, mFim - 1, dFim).getTime()) return false;
+            const dateFimStr = toISODateString(dataFim);
+            if (dateFimStr && dateFreteStr > dateFimStr) return false;
           }
         } else {
           return false;

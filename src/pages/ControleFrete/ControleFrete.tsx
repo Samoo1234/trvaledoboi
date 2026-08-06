@@ -7,7 +7,7 @@ import { freteCaminhaoService, FreteCaminhao } from '../../services/freteCaminha
 import { freteMotoristaService, FreteMotorista } from '../../services/freteMotoristaService';
 import { reboqueService, Reboque } from '../../services/reboqueService';
 import { supabase } from '../../services/supabaseClient';
-import { parseLocalDate } from '../../services/dateUtils';
+import { parseLocalDate, toISODateString } from '../../services/dateUtils';
 import { Cliente } from '../../types/cliente';
 
 import { ControleFreteFilters } from './components/ControleFreteFilters';
@@ -378,19 +378,19 @@ const ControleFrete: React.FC = () => {
   const fretesFiltrados = fretes.filter(frete => {
     if (filtroSituacao && frete.situacao?.toUpperCase() !== filtroSituacao.toUpperCase()) return false;
     
-    // Tratamento robusto para as datas, usando parseLocalDate
+    // Tratamento robusto para as datas, usando comparações ISO (YYYY-MM-DD)
     if (filtroDataInicio || filtroDataFim) {
       if (frete.data_emissao) {
-        const dataFreteCalc = parseLocalDate(frete.data_emissao).getTime();
+        const dateFreteStr = toISODateString(frete.data_emissao);
 
         if (filtroDataInicio) {
-          const dataIniCalc = parseLocalDate(filtroDataInicio).getTime();
-          if (dataFreteCalc < dataIniCalc) return false;
+          const dateIniStr = toISODateString(filtroDataInicio);
+          if (dateIniStr && dateFreteStr < dateIniStr) return false;
         }
         
         if (filtroDataFim) {
-          const dataFimCalc = parseLocalDate(filtroDataFim).getTime();
-          if (dataFreteCalc > dataFimCalc) return false;
+          const dateFimStr = toISODateString(filtroDataFim);
+          if (dateFimStr && dateFreteStr > dateFimStr) return false;
         }
       } else {
         return false; // se não tiver data, não mostra no filtro por período
@@ -467,10 +467,19 @@ const ControleFrete: React.FC = () => {
       }
       return f.cliente === clienteSelecionado;
     });
-    if (dataInicioAcerto && dataFimAcerto) {
+    if (dataInicioAcerto || dataFimAcerto) {
       filtrados = filtrados.filter(f => {
-        const d = new Date(f.data_emissao);
-        return d >= new Date(dataInicioAcerto) && d <= new Date(dataFimAcerto);
+        if (!f.data_emissao) return false;
+        const dateFreteStr = toISODateString(f.data_emissao);
+        if (dataInicioAcerto) {
+          const dateIniStr = toISODateString(dataInicioAcerto);
+          if (dateIniStr && dateFreteStr < dateIniStr) return false;
+        }
+        if (dataFimAcerto) {
+          const dateFimStr = toISODateString(dataFimAcerto);
+          if (dateFimStr && dateFreteStr > dateFimStr) return false;
+        }
+        return true;
       });
     }
     setFretesAcerto(filtrados);

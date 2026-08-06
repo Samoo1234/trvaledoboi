@@ -42,6 +42,17 @@ export function formatLocalDate(date: Date): string {
 }
 
 /**
+ * Converte qualquer string de data para o formato padronizado YYYY-MM-DD (ISO)
+ * Permite comparações lexicográficas precisas de intervalos de datas
+ */
+export function toISODateString(dateString: string): string {
+  if (!dateString) return '';
+  const date = parseLocalDate(dateString);
+  if (isNaN(date.getTime())) return '';
+  return formatLocalDate(date);
+}
+
+/**
  * Extrai o período (MM/YYYY) de uma data sem problemas de fuso horário
  */
 export function extractPeriod(dateString: string): string {
