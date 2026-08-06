@@ -7,7 +7,7 @@ import { freteCaminhaoService, FreteCaminhao } from '../../services/freteCaminha
 import { freteMotoristaService, FreteMotorista } from '../../services/freteMotoristaService';
 import { reboqueService, Reboque } from '../../services/reboqueService';
 import { supabase } from '../../services/supabaseClient';
-import { parseLocalDate, toISODateString } from '../../services/dateUtils';
+import { toISODateString } from '../../services/dateUtils';
 import { Cliente } from '../../types/cliente';
 
 import { ControleFreteFilters } from './components/ControleFreteFilters';
@@ -28,17 +28,6 @@ type CaminhaoSelecionado = {
 type MotoristaSelecionado = {
   motorista_id: string;
   caminhao_id: string;
-};
-
-const getPrimeiroDiaMes = () => {
-  const data = new Date();
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-01`;
-};
-
-const getUltimoDiaMes = () => {
-  const data = new Date();
-  const ultimoDia = new Date(data.getFullYear(), data.getMonth() + 1, 0);
-  return `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth() + 1).padStart(2, '0')}-${String(ultimoDia.getDate()).padStart(2, '0')}`;
 };
 
 const ControleFrete: React.FC = () => {
