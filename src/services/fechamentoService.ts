@@ -868,17 +868,28 @@ class FechamentoService {
         // Somar TODOS os valores individuais do motorista para este frete
         let valorTotalIndividual = 0;
         
-        // Buscar o valor individual do motorista (uma entrada por motorista)
-        if (fretesMotorista.length > 0 && fretesMotorista[0].caminhao_id) {
-          const { data: freteCaminhao, error: freteCaminhaoError } = await supabase
+        // Buscar e somar todos os valores individuais do motorista para este frete
+        // (suporta múltiplos caminhões ou múltiplas configurações como Truck + Julieta)
+        const caminhaoIds = Array.from(
+          new Set(
+            fretesMotorista
+              .map(fm => fm.caminhao_id)
+              .filter((id): id is number => id !== null && id !== undefined)
+          )
+        );
+
+        for (const caminhaoId of caminhaoIds) {
+          const { data: freteCaminhoes, error: freteCaminhaoError } = await supabase
             .from('frete_caminhao')
             .select('valor_frete')
             .eq('frete_id', frete.id)
-            .eq('caminhao_id', fretesMotorista[0].caminhao_id)
-            .limit(1);
+            .eq('caminhao_id', caminhaoId);
 
-          if (!freteCaminhaoError && freteCaminhao && freteCaminhao.length > 0) {
-            valorTotalIndividual = parseFloat(freteCaminhao[0].valor_frete) || 0;
+          if (!freteCaminhaoError && freteCaminhoes && freteCaminhoes.length > 0) {
+            valorTotalIndividual += freteCaminhoes.reduce(
+              (sum, fc) => sum + (parseFloat(fc.valor_frete) || 0),
+              0
+            );
           }
         }
         
@@ -948,9 +959,9 @@ class FechamentoService {
       }
     }
 
-    // Calcular valores consolidados
-    const totalFretes = fretes?.length || 0;
-    const valorBruto = fretes?.reduce((sum, f) => sum + (parseFloat(f.valor_frete) || 0), 0) || 0;
+    // Calcular valores consolidados usando os valores individuais do motorista
+    const totalFretes = fretesComComissao.length;
+    const valorBruto = fretesComComissao.reduce((sum, f) => sum + (Number(f.valor_frete) || 0), 0);
     const valorComissao = valorBruto * porcentagemComissao;
 
     // Buscar total de vales (com filtro de data opcional)
@@ -991,7 +1002,9 @@ class FechamentoService {
     const fechamentosHistoricos = await this.getHistoricoCompleto(motoristaId);
     const totalBonus = fechamentosHistoricos.reduce((sum, f) => sum + (f.bonus || 0), 0);
 
-    const valorLiquido = valorComissao - totalVales + totalBonus;
+    const valorLiquido = motorista?.tipo_motorista === 'Terceiro'
+      ? valorComissao - totalAbastecimentos - totalVales + totalBonus
+      : valorComissao - totalVales + totalBonus;
 
     // Data atual
     const dataAtual = new Date();
